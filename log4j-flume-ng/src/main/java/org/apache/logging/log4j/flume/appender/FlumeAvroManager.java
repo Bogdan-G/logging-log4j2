@@ -17,7 +17,6 @@
 package org.apache.logging.log4j.flume.appender;
 
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.flume.Event;
 import org.apache.flume.api.RpcClient;
@@ -39,21 +38,15 @@ public class FlumeAvroManager extends AbstractFlumeManager {
 
     private final int batchSize;
 
-    private final long delayNanos;
-    private final int delayMillis;
-
     private final int retries;
 
-    private final int connectTimeoutMillis;
+    private final int connectTimeout;
 
-    private final int requestTimeoutMillis;
+    private final int requestTimeout;
 
     private final int current = 0;
 
     private RpcClient rpcClient = null;
-
-    private BatchEvent batchEvent = new BatchEvent();
-    private long nextSend = 0;
 
     /**
      * Constructor
@@ -66,15 +59,13 @@ public class FlumeAvroManager extends AbstractFlumeManager {
      *
      */
     protected FlumeAvroManager(final String name, final String shortName, final Agent[] agents, final int batchSize,
-                               final int delayMillis, final int retries, final int connectTimeout, final int requestTimeout) {
+                               final int retries, final int connectTimeout, final int requestTimeout) {
         super(name);
         this.agents = agents;
         this.batchSize = batchSize;
-        this.delayMillis = delayMillis;
-        this.delayNanos = TimeUnit.MILLISECONDS.toNanos(delayMillis);
         this.retries = retries;
-        this.connectTimeoutMillis = connectTimeout;
-        this.requestTimeoutMillis = requestTimeout;
+        this.connectTimeout = connectTimeout;
+        this.requestTimeout = requestTimeout;
         this.rpcClient = connect(agents, retries, connectTimeout, requestTimeout);
     }
 
@@ -83,14 +74,13 @@ public class FlumeAvroManager extends AbstractFlumeManager {
      * @param name The name of the manager.
      * @param agents The agents to use.
      * @param batchSize The number of events to include in a batch.
-     * @param delayMillis The number of milliseconds to wait before sending an incomplete batch.
      * @param retries The number of times to retry connecting before giving up.
-     * @param connectTimeoutMillis The connection timeout in ms.
-     * @param requestTimeoutMillis The request timeout in ms.
+     * @param connectTimeout The connection timeout in ms.
+     * @param requestTimeout The request timeout in ms.
      * @return A FlumeAvroManager.
      */
-    public static FlumeAvroManager getManager(final String name, final Agent[] agents, int batchSize, final int delayMillis,
-                                              final int retries, final int connectTimeoutMillis, final int requestTimeoutMillis) {
+    public static FlumeAvroManager getManager(final String name, final Agent[] agents, int batchSize,
+                                              final int retries, final int connectTimeout, final int requestTimeout) {
         if (agents == null || agents.length == 0) {
             throw new IllegalArgumentException("At least one agent is required");
         }
@@ -103,14 +93,14 @@ public class FlumeAvroManager extends AbstractFlumeManager {
         boolean first = true;
         for (final Agent agent : agents) {
             if (!first) {
-                sb.append(',');
+                sb.append(",");
             }
-            sb.append(agent.getHost()).append(':').append(agent.getPort());
+            sb.append(agent.getHost()).append(":").append(agent.getPort());
             first = false;
         }
-        sb.append(']');
+        sb.append("]");
         return getManager(sb.toString(), factory,
-                new FactoryData(name, agents, batchSize, delayMillis, retries, connectTimeoutMillis, requestTimeoutMillis));
+                new FactoryData(name, agents, batchSize, retries, connectTimeout, requestTimeout));
     }
 
     /**
@@ -133,25 +123,21 @@ public class FlumeAvroManager extends AbstractFlumeManager {
         return retries;
     }
 
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
+    public int getConnectTimeout() {
+        return connectTimeout;
     }
 
-    public int getRequestTimeoutMillis() {
-        return requestTimeoutMillis;
+    public int getRequestTimeout() {
+        return requestTimeout;
     }
 
     public int getBatchSize() {
         return batchSize;
     }
 
-    public int getDelayMillis() {
-        return delayMillis;
-    }
-
     public synchronized void send(final BatchEvent events) {
         if (rpcClient == null) {
-            rpcClient = connect(agents, retries, connectTimeoutMillis, requestTimeoutMillis);
+            rpcClient = connect(agents, retries, connectTimeout, requestTimeout);
         }
 
         if (rpcClient != null) {
@@ -161,13 +147,13 @@ public class FlumeAvroManager extends AbstractFlumeManager {
             } catch (final Exception ex) {
                 rpcClient.close();
                 rpcClient = null;
-                final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ':' +
+                final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ":" +
                     agents[current].getPort();
                 LOGGER.warn(msg, ex);
                 throw new AppenderLoggingException("No Flume agents are available");
             }
         }  else {
-            final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ':' +
+            final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ":" +
                 agents[current].getPort();
             LOGGER.warn(msg);
             throw new AppenderLoggingException("No Flume agents are available");
@@ -176,38 +162,26 @@ public class FlumeAvroManager extends AbstractFlumeManager {
 
     @Override
     public synchronized void send(final Event event)  {
-        if (batchSize == 1) {
-            if (rpcClient == null) {
-                rpcClient = connect(agents, retries, connectTimeoutMillis, requestTimeoutMillis);
-            }
+        if (rpcClient == null) {
+            rpcClient = connect(agents, retries, connectTimeout, requestTimeout);
+        }
 
-            if (rpcClient != null) {
-                try {
-                    rpcClient.append(event);
-                } catch (final Exception ex) {
-                    rpcClient.close();
-                    rpcClient = null;
-                    final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ':' +
-                            agents[current].getPort();
-                    LOGGER.warn(msg, ex);
-                    throw new AppenderLoggingException("No Flume agents are available");
-                }
-            } else {
-                final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ':' +
-                        agents[current].getPort();
-                LOGGER.warn(msg);
+        if (rpcClient != null) {
+            try {
+                rpcClient.append(event);
+            } catch (final Exception ex) {
+                rpcClient.close();
+                rpcClient = null;
+                final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ":" +
+                    agents[current].getPort();
+                LOGGER.warn(msg, ex);
                 throw new AppenderLoggingException("No Flume agents are available");
             }
         } else {
-            batchEvent.addEvent(event);
-            final int eventCount = batchEvent.getEvents().size();
-            if (eventCount == 1) {
-                nextSend = System.nanoTime() + delayNanos;
-            }
-            if (eventCount >= batchSize || System.nanoTime() >= nextSend) {
-                send(batchEvent);
-                batchEvent = new BatchEvent();
-            }
+            final String msg = "Unable to write to " + getName() + " at " + agents[current].getHost() + ":" +
+                agents[current].getPort();
+            LOGGER.warn(msg);
+            throw new AppenderLoggingException("No Flume agents are available");
         }
     }
 
@@ -216,20 +190,21 @@ public class FlumeAvroManager extends AbstractFlumeManager {
      * @param agents The list of agents to choose from
      * @return The FlumeEventAvroServer.
      */
-    private RpcClient connect(final Agent[] agents, int retries, final int connectTimeoutMillis, final int requestTimeoutMillis) {
+
+    private RpcClient connect(final Agent[] agents, int retries, final int connectTimeout, final int requestTimeout) {
         try {
             final Properties props = new Properties();
 
-            props.put("client.type", "default_failover");
+            props.put("client.type", agents.length > 1 ? "default_failover" : "default");
 
-            int agentCount = 1;
+            int count = 1;
             final StringBuilder sb = new StringBuilder();
             for (final Agent agent : agents) {
                 if (sb.length() > 0) {
-                    sb.append(' ');
+                    sb.append(" ");
                 }
-                final String hostName = "host" + agentCount++;
-                props.put("hosts." + hostName, agent.getHost() + ':' + agent.getPort());
+                final String hostName = "host" + count++;
+                props.put("hosts." + hostName, agent.getHost() + ":" + agent.getPort());
                 sb.append(hostName);
             }
             props.put("hosts", sb.toString());
@@ -242,11 +217,11 @@ public class FlumeAvroManager extends AbstractFlumeManager {
                 }
                 props.put("max-attempts", Integer.toString(retries * agents.length));
             }
-            if (requestTimeoutMillis >= MINIMUM_TIMEOUT) {
-                props.put("request-timeout", Integer.toString(requestTimeoutMillis));
+            if (requestTimeout >= MINIMUM_TIMEOUT) {
+                props.put("request-timeout", Integer.toString(requestTimeout));
             }
-            if (connectTimeoutMillis >= MINIMUM_TIMEOUT) {
-                props.put("connect-timeout", Integer.toString(connectTimeoutMillis));
+            if (connectTimeout >= MINIMUM_TIMEOUT) {
+                props.put("connect-timeout", Integer.toString(connectTimeout));
             }
             return RpcClientFactory.getInstance(props);
         } catch (final Exception ex) {
@@ -256,28 +231,15 @@ public class FlumeAvroManager extends AbstractFlumeManager {
     }
 
     @Override
-    protected boolean releaseSub(final long timeout, final TimeUnit timeUnit) {
-    	boolean closed = true;
+    protected void releaseSub() {
         if (rpcClient != null) {
             try {
-                synchronized(this) {
-                    try {
-                        if (batchSize > 1 && batchEvent.getEvents().size() > 0) {
-                            send(batchEvent);
-                        }
-                    } catch (final Exception ex) {
-                        LOGGER.error("Error sending final batch: {}", ex.getMessage());
-                        closed = false;
-                    }
-                }
                 rpcClient.close();
             } catch (final Exception ex) {
                 LOGGER.error("Attempt to close RPC client failed", ex);
-                closed = false;
             }
         }
         rpcClient = null;
-        return closed;
     }
 
     /**
@@ -287,10 +249,9 @@ public class FlumeAvroManager extends AbstractFlumeManager {
         private final String name;
         private final Agent[] agents;
         private final int batchSize;
-        private final int delayMillis;
         private final int retries;
-        private final int conntectTimeoutMillis;
-        private final int requestTimeoutMillis;
+        private final int conntectTimeout;
+        private final int requestTimeout;
 
         /**
          * Constructor.
@@ -298,15 +259,14 @@ public class FlumeAvroManager extends AbstractFlumeManager {
          * @param agents The agents.
          * @param batchSize The number of events to include in a batch.
          */
-        public FactoryData(final String name, final Agent[] agents, final int batchSize, final int delayMillis,
-                final int retries, final int connectTimeoutMillis, final int requestTimeoutMillis) {
+        public FactoryData(final String name, final Agent[] agents, final int batchSize, final int retries,
+                           final int connectTimeout, final int requestTimeout) {
             this.name = name;
             this.agents = agents;
             this.batchSize = batchSize;
-            this.delayMillis = delayMillis;
             this.retries = retries;
-            this.conntectTimeoutMillis = connectTimeoutMillis;
-            this.requestTimeoutMillis = requestTimeoutMillis;
+            this.conntectTimeout = connectTimeout;
+            this.requestTimeout = requestTimeout;
         }
     }
 
@@ -325,8 +285,8 @@ public class FlumeAvroManager extends AbstractFlumeManager {
         public FlumeAvroManager createManager(final String name, final FactoryData data) {
             try {
 
-                return new FlumeAvroManager(name, data.name, data.agents, data.batchSize, data.delayMillis,
-                        data.retries, data.conntectTimeoutMillis, data.requestTimeoutMillis);
+                return new FlumeAvroManager(name, data.name, data.agents, data.batchSize, data.retries,
+                    data.conntectTimeout, data.requestTimeout);
             } catch (final Exception ex) {
                 LOGGER.error("Could not create FlumeAvroManager", ex);
             }

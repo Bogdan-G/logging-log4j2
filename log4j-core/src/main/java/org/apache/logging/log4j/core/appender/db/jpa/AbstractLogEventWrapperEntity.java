@@ -17,6 +17,7 @@
 package org.apache.logging.log4j.core.appender.db.jpa;
 
 import java.util.Map;
+
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
@@ -25,11 +26,7 @@ import javax.persistence.Transient;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.core.AbstractLogEvent;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.db.jpa.converter.ContextDataAttributeConverter;
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.message.Message;
 
 /**
@@ -51,12 +48,12 @@ import org.apache.logging.log4j.message.Message;
  * </p>
  * <p>
  * Many of the return types of {@link LogEvent} methods (e.g., {@link StackTraceElement}, {@link Message},
- * {@link Marker}, {@link Throwable},
- * {@link org.apache.logging.log4j.ThreadContext.ContextStack ThreadContext.ContextStack}, and
- * {@link Map Map&lt;String, String&gt;}) will not be recognized by the JPA provider. In conjunction with
- * {@link javax.persistence.Convert @Convert}, you can use the converters in the
+ * {@link Marker}, {@link Throwable}, 
+ * {@link org.apache.logging.log4j.ThreadContext.ContextStack ThreadContext.ContextStack}, and 
+ * {@link Map Map&lt;String, String&gt}) will not be recognized by the JPA provider. In conjunction with 
+ * {@link javax.persistence.Convert @Convert}, you can use the converters in the 
  * {@link org.apache.logging.log4j.core.appender.db.jpa.converter} package to convert these types to database columns.
- * If you want to retrieve log events from the database, you can create a true POJO entity and also use these
+ * If you want to retrieve log events from the database, you can create a true POJO entity and also use these 
  * converters for extracting persisted values.<br>
  * </p>
  * <p>
@@ -95,11 +92,6 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
             throw new IllegalArgumentException("The wrapped event cannot be null.");
         }
         this.wrappedEvent = wrappedEvent;
-    }
-
-    @Override
-    public LogEvent toImmutable() {
-        return Log4jLogEvent.createMemento(this);
     }
 
     /**
@@ -166,16 +158,6 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
     /**
      * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
      *
-     * @param threadId Ignored.
-     */
-    @SuppressWarnings("unused")
-    public void setThreadId(final long threadId) {
-        // this entity is write-only
-    }
-
-    /**
-     * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
-     *
      * @param threadName Ignored.
      */
     @SuppressWarnings("unused")
@@ -186,30 +168,10 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
     /**
      * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
      *
-     * @param threadPriority Ignored.
-     */
-    @SuppressWarnings("unused")
-    public void setThreadPriority(final int threadPriority) {
-        // this entity is write-only
-    }
-
-    /**
-     * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
-     *
-     * @param nanoTime Ignored.
-     */
-    @SuppressWarnings("unused")
-    public void setNanoTime(final long nanoTime) {
-        // this entity is write-only
-    }
-
-    /**
-     * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
-     *
      * @param millis Ignored.
      */
     @SuppressWarnings("unused")
-    public void setTimeMillis(final long millis) {
+    public void setMillis(final long millis) {
         // this entity is write-only
     }
 
@@ -226,20 +188,10 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
     /**
      * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
      *
-     * @param contextData Ignored.
+     * @param contextMap Ignored.
      */
     @SuppressWarnings("unused")
-    public void setContextData(final ReadOnlyStringMap contextData) {
-        // this entity is write-only
-    }
-
-    /**
-     * A no-op mutator to satisfy JPA requirements, as this entity is write-only.
-     *
-     * @param map Ignored.
-     */
-    @SuppressWarnings("unused")
-    public void setContextMap(final Map<String, String> map) {
+    public void setContextMap(final Map<String, String> contextMap) {
         // this entity is write-only
     }
 
@@ -259,7 +211,7 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
      * @param fqcn Ignored.
      */
     @SuppressWarnings("unused")
-    public void setLoggerFqcn(final String fqcn) {
+    public void setFQCN(final String fqcn) {
         // this entity is write-only
     }
 
@@ -298,26 +250,85 @@ public abstract class AbstractLogEventWrapperEntity implements LogEvent {
     }
 
     /**
-     * Gets the context map. Transient, since the String version of the data is obtained via ReadOnlyStringMap.
-     *
-     * @return the context data.
-     * @see ContextDataAttributeConverter
-     * @see org.apache.logging.log4j.core.appender.db.jpa.converter.ContextDataAttributeConverter
-     */
-    @Override
-    @Transient
-    //@Convert(converter = ContextDataAttributeConverter.class)
-    public ReadOnlyStringMap getContextData() {
-        return this.getWrappedEvent().getContextData();
-    }
-
-    /**
      * A no-op log event class to prevent {@code NullPointerException}s. O/RMs tend to create instances of entities in
      * order to "play around" with them.
      */
-    private static class NullLogEvent extends AbstractLogEvent {
-
+    private static class NullLogEvent implements LogEvent {
         private static final long serialVersionUID = 1L;
-        // Inherits everything
+
+        @Override
+        public Level getLevel() {
+            return null;
+        }
+
+        @Override
+        public String getLoggerName() {
+            return null;
+        }
+
+        @Override
+        public StackTraceElement getSource() {
+            return null;
+        }
+
+        @Override
+        public Message getMessage() {
+            return null;
+        }
+
+        @Override
+        public Marker getMarker() {
+            return null;
+        }
+
+        @Override
+        public String getThreadName() {
+            return null;
+        }
+
+        @Override
+        public long getMillis() {
+            return 0;
+        }
+
+        @Override
+        public Throwable getThrown() {
+            return null;
+        }
+
+        @Override
+        public Map<String, String> getContextMap() {
+            return null;
+        }
+
+        @Override
+        public ThreadContext.ContextStack getContextStack() {
+            return null;
+        }
+
+        @Override
+        public String getFQCN() {
+            return null;
+        }
+
+        @Override
+        public boolean isIncludeLocation() {
+            return false;
+        }
+
+        @Override
+        public void setIncludeLocation(final boolean locationRequired) {
+
+        }
+
+        @Override
+        public boolean isEndOfBatch() {
+            return false;
+        }
+
+        @Override
+        public void setEndOfBatch(final boolean endOfBatch) {
+
+        }
     }
 }

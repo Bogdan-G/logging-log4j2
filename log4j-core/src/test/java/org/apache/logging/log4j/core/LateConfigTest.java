@@ -16,19 +16,24 @@
  */
 package org.apache.logging.log4j.core;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.DefaultConfiguration;
-import org.apache.logging.log4j.core.config.xml.XmlConfiguration;
+import org.apache.logging.log4j.core.config.XMLConfiguration;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.test.appender.ListAppender;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.File;
+import java.net.URL;
+import java.util.Map;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -36,32 +41,30 @@ import org.junit.Test;
 public class LateConfigTest {
 
     private static final String CONFIG = "target/test-classes/log4j-test1.xml";
-    private static LoggerContext context;
+    private static Configuration config;
+    private static ListAppender app;
+    private static LoggerContext ctx;
+
+    private final org.apache.logging.log4j.Logger logger = LogManager.getLogger("LoggerTest");
 
     @BeforeClass
     public static void setupClass() {
-        context = LoggerContext.getContext(false);
+        ctx = (LoggerContext) LogManager.getContext(false);
     }
-
-    @AfterClass
-    public static void tearDownClass() {
-        Configurator.shutdown(context);
-        StatusLogger.getLogger().reset();
-    }    
 
     @Test
     public void testReconfiguration() throws Exception {
-        final Configuration cfg = context.getConfiguration();
+        final Configuration cfg = ctx.getConfiguration();
         assertNotNull("No configuration", cfg);
         assertTrue("Not set to default configuration", cfg instanceof DefaultConfiguration);
         final File file = new File(CONFIG);
-        final LoggerContext loggerContext = LoggerContext.getContext(null, false, file.toURI());
+        LoggerContext loggerContext = (LoggerContext) LogManager.getContext(null, false, file.toURI());
         assertNotNull("No Logger Context", loggerContext);
         final Configuration newConfig = loggerContext.getConfiguration();
         assertTrue("Configuration not reset", cfg != newConfig);
-        assertTrue("Reconfiguration failed", newConfig instanceof XmlConfiguration);
-        context = LoggerContext.getContext(false);
-        final Configuration sameConfig = context.getConfiguration();
+        assertTrue("Reconfiguration failed", newConfig instanceof XMLConfiguration);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        final Configuration sameConfig = ctx.getConfiguration();
         assertTrue("Configuration should not have been reset", newConfig == sameConfig);
     }
 }

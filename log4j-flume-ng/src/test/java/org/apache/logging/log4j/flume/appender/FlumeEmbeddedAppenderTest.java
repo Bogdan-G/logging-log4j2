@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,6 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -89,20 +89,19 @@ public class FlumeEmbeddedAppenderTest {
     public void setUp() throws Exception {
 
         final File file = new File("target/file-channel");
-        deleteFiles(file);
+        final boolean result = deleteFiles(file);
 
         /*
         * Clear out all other appenders associated with this logger to ensure we're
         * only hitting the Avro appender.
         */
-        final int primaryPort = AvailablePortFinder.getNextAvailable();
-        final int altPort = AvailablePortFinder.getNextAvailable();
-        System.setProperty("primaryPort", Integer.toString(primaryPort));
-        System.setProperty("alternatePort", Integer.toString(altPort));
-        primary = new EventCollector(primaryPort);
-        alternate = new EventCollector(altPort);
+        final int[] ports = findFreePorts(2);
+        System.setProperty("primaryPort", Integer.toString(ports[0]));
+        System.setProperty("alternatePort", Integer.toString(ports[1]));
+        primary = new EventCollector(ports[0]);
+        alternate = new EventCollector(ports[1]);
         System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
-        ctx = LoggerContext.getContext(false);
+        ctx = (LoggerContext) LogManager.getContext(false);
         ctx.reconfigure();
     }
 
@@ -113,7 +112,7 @@ public class FlumeEmbeddedAppenderTest {
         primary.stop();
         alternate.stop();
         final File file = new File("target/file-channel");
-        deleteFiles(file);
+        final boolean result = deleteFiles(file);
         final MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         final Set<ObjectName> names = server.queryNames(new ObjectName("org.apache.flume.*:*"), null);
         for (final ObjectName name : names) {
@@ -126,20 +125,20 @@ public class FlumeEmbeddedAppenderTest {
     }
 
     @Test
-    public void testLog4Event() throws IOException {
+    public void testLog4Event() throws InterruptedException, IOException {
 
         final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Log4j", "Test");
         EventLogger.logEvent(msg);
 
         final Event event = primary.poll();
-        Assert.assertNotNull("Event should not be null", event);
+        Assert.assertNotNull(event);
         final String body = getBody(event);
         Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
             body.endsWith("Test Log4j"));
     }
 
     @Test
-    public void testMultiple() throws IOException {
+    public void testMultiple() throws InterruptedException, IOException {
 
         for (int i = 0; i < 10; ++i) {
             final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Multiple " + i, "Test");
@@ -147,7 +146,7 @@ public class FlumeEmbeddedAppenderTest {
         }
         for (int i = 0; i < 10; ++i) {
             final Event event = primary.poll();
-            Assert.assertNotNull("Event should not be null", event);
+            Assert.assertNotNull(event);
             final String body = getBody(event);
             final String expected = "Test Multiple " + i;
             Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
@@ -166,7 +165,7 @@ public class FlumeEmbeddedAppenderTest {
         }
         for (int i = 0; i < 10; ++i) {
             final Event event = primary.poll();
-            Assert.assertNotNull("Event should not be null", event);
+            Assert.assertNotNull(event);
             final String body = getBody(event);
             final String expected = "Test Primary " + i;
             Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
@@ -185,7 +184,7 @@ public class FlumeEmbeddedAppenderTest {
         }
         for (int i = 0; i < 10; ++i) {
             final Event event = alternate.poll();
-            Assert.assertNotNull("Event should not be null", event);
+            Assert.assertNotNull(event);
             final String body = getBody(event);
             final String expected = "Test Alternate " + i;
             /* When running in Gump Flume consistently returns the last event from the primary channel after
@@ -194,20 +193,20 @@ public class FlumeEmbeddedAppenderTest {
                 " Received: " + body, body.endsWith(expected));
         }
     }
-    /* Flume 1.4.0 does not support interceptors on the embedded agent
-    @Test      */
-    public void testHeaderAddedByInterceptor() {
+
+    @Test
+    public void testHeaderAddedByInterceptor() throws InterruptedException, IOException {
 
         final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Log4j", "Test");
         EventLogger.logEvent(msg);
 
         final Event event = primary.poll();
-        Assert.assertNotNull("Event should not be null", event);
+        Assert.assertNotNull(event);
         final String environmentHeader = event.getHeaders().get("environment");
         Assert.assertEquals("local", environmentHeader);
     }
 
-    /* @Test */
+    @Test
     public void testPerformance() throws Exception {
         final long start = System.currentTimeMillis();
         final int count = 10000;
@@ -232,33 +231,30 @@ public class FlumeEmbeddedAppenderTest {
 
     }
 
-	private static boolean deleteFiles(final File file) {
-		boolean result = true;
-		if (file.isDirectory()) {
+    private static boolean deleteFiles(final File file) {
+        boolean result = true;
+        if (file.isDirectory()) {
 
-			final File[] files = file.listFiles();
-			if (files != null) {
-				for (final File child : files) {
-					result &= deleteFiles(child);
-				}
-			}
+            final File[] files = file.listFiles();
+            for (final File child : files) {
+                result &= deleteFiles(child);
+            }
 
-		} else if (!file.exists()) {
-			return true;
-		}
+        } else if (!file.exists()) {
+            return true;
+        }
 
-		return result && file.delete();
-	}
+        return result &= file.delete();
+    }
 
     private static class EventCollector implements AvroSourceProtocol {
-        private final LinkedBlockingQueue<AvroFlumeEvent> eventQueue = new LinkedBlockingQueue<>();
+        private final LinkedBlockingQueue<AvroFlumeEvent> eventQueue = new LinkedBlockingQueue<AvroFlumeEvent>();
 
         private final NettyServer nettyServer;
 
 
         public EventCollector(final int port) {
             final Responder responder = new SpecificResponder(AvroSourceProtocol.class, this);
-            System.out.println("Collector listening on port " + port);
             nettyServer = new NettyServer(responder, new InetSocketAddress(HOSTNAME, port));
             nettyServer.start();
         }
@@ -276,9 +272,11 @@ public class FlumeEmbeddedAppenderTest {
                 // Ignore the exception.
             }
             if (avroEvent != null) {
-                return EventBuilder.withBody(avroEvent.getBody().array(), toStringMap(avroEvent.getHeaders()));
+                return EventBuilder.withBody(avroEvent.getBody().array(),
+                    toStringMap(avroEvent.getHeaders()));
+            } else {
+                System.out.println("No Event returned");
             }
-            System.out.println("No Event returned");
             return null;
         }
 
@@ -297,10 +295,32 @@ public class FlumeEmbeddedAppenderTest {
     }
 
     private static Map<String, String> toStringMap(final Map<CharSequence, CharSequence> charSeqMap) {
-        final Map<String, String> stringMap = new HashMap<>();
+        final Map<String, String> stringMap = new HashMap<String, String>();
         for (final Map.Entry<CharSequence, CharSequence> entry : charSeqMap.entrySet()) {
             stringMap.put(entry.getKey().toString(), entry.getValue().toString());
         }
         return stringMap;
+    }
+
+    private static int[] findFreePorts(final int count) throws IOException {
+        final int[] ports = new int[count];
+        final ServerSocket[] sockets = new ServerSocket[count];
+        try {
+            for (int i = 0; i < count; ++i) {
+                sockets[i] = new ServerSocket(0);
+                ports[i] = sockets[i].getLocalPort();
+            }
+        } finally {
+            for (int i = 0; i < count; ++i) {
+                if (sockets[i] != null) {
+                    try {
+                        sockets[i].close();
+                    } catch (final Exception ex) {
+                        // Ignore the error.
+                    }
+                }
+            }
+        }
+        return ports;
     }
 }

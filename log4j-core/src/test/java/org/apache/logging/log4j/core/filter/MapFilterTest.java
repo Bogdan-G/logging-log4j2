@@ -16,31 +16,40 @@
  */
 package org.apache.logging.log4j.core.filter;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.helpers.KeyValuePair;
+import org.apache.logging.log4j.message.MapMessage;
+import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.test.appender.ListAppender;
+import org.junit.After;
+import org.junit.Test;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.util.KeyValuePair;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.apache.logging.log4j.message.StringMapMessage;
-import org.apache.logging.log4j.test.appender.ListAppender;
-import org.junit.ClassRule;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
  */
 public class MapFilterTest {
 
-    @ClassRule
-    public static LoggerContextRule context = new LoggerContextRule("log4j2-mapfilter.xml");
+    @After
+    public void cleanup() {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
+    }
 
     @Test
     public void testFilter() {
@@ -48,29 +57,30 @@ public class MapFilterTest {
                                                     new KeyValuePair("ToAccount", "123456")};
         MapFilter filter = MapFilter.createFilter(pairs, "and", null, null);
         filter.start();
-        StringMapMessage msg = new StringMapMessage();
+        MapMessage msg = new MapMessage();
         msg.put("ToAccount", "123456");
         msg.put("FromAccount", "211000");
         msg.put("Amount", "1000.00");
         assertTrue(filter.isStarted());
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.DEBUG, null, msg, null));
+        assertTrue(filter.filter(null, Level.DEBUG, null, msg, null) == Filter.Result.NEUTRAL);
         msg.put("ToAccount", "111111");
-        assertSame(Filter.Result.DENY, filter.filter(null, Level.ERROR, null, msg, null));
+        assertTrue(filter.filter(null, Level.ERROR, null, msg, null) == Filter.Result.DENY);
         filter = MapFilter.createFilter(pairs, "or", null, null);
         filter.start();
-        msg = new StringMapMessage();
+        msg = new MapMessage();
         msg.put("ToAccount", "123456");
         msg.put("FromAccount", "211000");
         msg.put("Amount", "1000.00");
         assertTrue(filter.isStarted());
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.DEBUG, null, msg, null));
+        assertTrue(filter.filter(null, Level.DEBUG, null, msg, null) == Filter.Result.NEUTRAL);
         msg.put("ToAccount", "111111");
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.ERROR, null, msg, null));
+        assertTrue(filter.filter(null, Level.ERROR, null, msg, null) == Filter.Result.NEUTRAL);
     }
 
     @Test
     public void testConfig() {
-        final Configuration config = context.getConfiguration();
+        final LoggerContext ctx = Configurator.initialize("Test1", "target/test-classes/log4j2-mapfilter.xml");
+        final Configuration config = ctx.getConfiguration();
         final Filter filter = config.getFilter();
         assertNotNull("No MapFilter", filter);
         assertTrue("Not a MapFilter", filter instanceof  MapFilter);
@@ -78,18 +88,20 @@ public class MapFilterTest {
         assertFalse("Should not be And filter", mapFilter.isAnd());
         final Map<String, List<String>> map = mapFilter.getMap();
         assertNotNull("No Map", map);
-        assertFalse("No elements in Map", map.isEmpty());
-        assertEquals("Incorrect number of elements in Map", 1, map.size());
+        assertTrue("No elements in Map", map.size() != 0);
+        assertTrue("Incorrect number of elements in Map", map.size() == 1);
         assertTrue("Map does not contain key eventId", map.containsKey("eventId"));
-        assertEquals("List does not contain 2 elements", 2, map.get("eventId").size());
+        assertTrue("List does not contain 2 elements", map.get("eventId").size() == 2);
         final Logger logger = LogManager.getLogger(MapFilterTest.class);
-        final Map<String, String> eventMap = new HashMap<>();
+        final Map<String, String> eventMap = new HashMap<String, String>();
         eventMap.put("eventId", "Login");
-        logger.debug(new StringMapMessage(eventMap));
-        final ListAppender app = context.getListAppender("LIST");
-        final List<String> msgs = app.getMessages();
+        logger.debug(new MapMessage(eventMap));
+        final Map<String,Appender> appenders = config.getAppenders();
+        final Appender app = appenders.get("LIST");
+        assertNotNull("No List appender", app);
+        final List<String> msgs = ((ListAppender) app).getMessages();
         assertNotNull("No messages", msgs);
-        assertFalse("No messages", msgs.isEmpty());
+        assertTrue("No messages", msgs.size() > 0);
 
 
     }

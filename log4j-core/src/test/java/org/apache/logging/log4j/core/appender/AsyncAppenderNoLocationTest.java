@@ -16,53 +16,57 @@
  */
 package org.apache.logging.log4j.core.appender;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.test.appender.ListAppender;
 import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  *
  */
 public class AsyncAppenderNoLocationTest {
-    private ListAppender app;
+    private static final String CONFIG = "log4j-asynch-no-location.xml";
+    private static Configuration config;
+    private static ListAppender app;
+    private static LoggerContext ctx;
 
-    @ClassRule
-    public static LoggerContextRule init = null;
-
-            static {
-                try {
-                    init = new LoggerContextRule("log4j-asynch-no-location.xml");
-                } catch (final Exception ex) {
-                    ex.printStackTrace();
-                }
+    @BeforeClass
+    public static void setupClass() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        config = ctx.getConfiguration();
+        for (final Map.Entry<String, Appender> entry : config.getAppenders().entrySet()) {
+            if (entry.getKey().equals("List")) {
+                app = (ListAppender) entry.getValue();
+                break;
             }
+        }
+    }
 
-    @Before
-    public void setUp() throws Exception {
-                try {
-                    this.app = (ListAppender) init.getAppender("List");
-                    assertNotNull("No List appender found", app);
-                } catch (final Exception ex) {
-                    System.out.println("init = " + init == null ? "null" : init);
-
-                }
-
+    @AfterClass
+    public static void cleanupClass() {
+        System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
     }
 
     @After
     public void after() {
-        if (app != null) {
-            app.clear();
-        }
+        app.clear();
     }
 
     @Test
@@ -71,15 +75,14 @@ public class AsyncAppenderNoLocationTest {
         logger.error("This is a test");
         logger.warn("Hello world!");
         Thread.sleep(100);
-        System.out.println("app = " + app == null ? "null" : app);
         final List<String> list = app.getMessages();
         assertNotNull("No events generated", list);
-        assertEquals("Incorrect number of events. Expected 2, got " + list.size(), list.size(), 2);
+        assertTrue("Incorrect number of events. Expected 2, got " + list.size(), list.size() == 2);
         String msg = list.get(0);
         String expected = "?  This is a test";
-        assertEquals("Expected " + expected + ", Actual " + msg, expected, msg);
+        assertTrue("Expected " + expected + ", Actual " + msg, expected.equals(msg));
         msg = list.get(1);
         expected = "?  Hello world!";
-        assertEquals("Expected " + expected + ", Actual " + msg, expected, msg);
+        assertTrue("Expected " + expected + ", Actual " + msg, expected.equals(msg));
     }
 }

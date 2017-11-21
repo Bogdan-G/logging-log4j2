@@ -23,12 +23,6 @@
         <author email="ggregory@apache.org">Gary Gregory</author>
     </properties>
   #set($dollar = '$')
-  #set($sharp = '#')
-  #set($javadocRoot = 'http://docs.oracle.com/javase/6/docs/api')
-  #macro(javadoc $path $class)
-      <a class="javadoc" href="${javadocRoot}/${path}/${class}.html">${class}</a>
-  #end
-  #set($Charset = "<a class='javadoc' href='${javadocRoot}/java/nio/charset/Charset.html'>Charset</a>")
   #if (!$alignedFileName)
     #set ($isPDF = true)
     #set ($break = '<br />')
@@ -41,238 +35,66 @@
         <p>An Appender uses a Layout to format a LogEvent into a form that meets the needs of whatever will be
           consuming the log event. In Log4j 1.x and Logback Layouts were expected to transform an event into a
           String. In Log4j 2 Layouts return a byte array. This allows the result of the Layout to be useful in
-          many more types of Appenders. However, this means you need to configure most Layouts with a ${Charset} to
-          ensure the byte array contains correct values.
+          many more types of Appenders. However, this means you need to configure most Layouts with a
+          <a href="http://download.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Charset</a> to
+          insure the byte array contains correct values.
         </p>
-        <p>
-          The root class for layouts that use a Charset is <code>org.apache.logging.log4j.core.layout.AbstractStringLayout</code>
-          where the default is UTF-8. Each layout that extends <code>AbstractStringLayout</code>
-          can provide its own default. See each layout below.
-        </p>
-        <p>
-          A custom character encoder was added to Log4j 2.4.1 for the ISO-8859-1 and US-ASCII charsets,
-          to bring some of the performance improvements built-in to Java 8 to Log4j for use on Java 7.
-          For applications that log only ISO-8859-1 characters, specifying this charset will improve performance significantly.
-        </p>
-        <a name="CSVLayouts"/>
-        <subsection name="CSV Layouts">
+        <a name="JSONLayout"/>
+        <subsection name="JSONLayout">
+          <!-- From Javadoc of org.apache.logging.log4j.core.layout.JSONLayout -->
           <p>
-            This layout creates <a href="https://en.wikipedia.org/wiki/Comma-separated_values">Comma Separated Value (CSV)</a>
-            records and requires <a href="https://commons.apache.org/proper/commons-csv/">Apache Commons CSV</a> 1.4.
+          Appends a series of JSON events as strings serialized as bytes..
+          </p>
+          <h4>Complete well-formed JSON vs. fragment JSON</h4>
+          <p>
+          If you configure <code>complete="true"</code>, the appender outputs a well-formed JSON document. By default, 
+          with <code>complete="false"</code>, you should include the output as an <em>external file</em> in a 
+          separate file to form a well-formed JSON document.
           </p>
           <p>
-            The CSV layout can be used in two ways: First, using <code>CsvParameterLayout</code> to log event parameters
-            to create a custom database, usually to a logger and file appender uniquely configured for this purpose.
-            Second, using <code>CsvLogEventLayout</code> to log events to create a database, as an alternative to using a
-            full DBMS or using a JDBC driver that supports the CSV format.
+          A well-formed JSON document follows this pattern:
           </p>
-          <p>
-            The <code>CsvParameterLayout</code> converts an event's parameters into a CSV record, ignoring the message.
-            To log CSV records, you can use the usual Logger methods <code>info()</code>, <code>debug()</code>, and so on:
-          </p>
-          <pre class="prettyprint linenums">
-logger.info("Ignored", value1, value2, value3);
+          <pre class="prettyprint linenums">[
+  {
+    "logger":"com.foo.Bar",
+    "timestamp":"1376681196470",
+    "level":"INFO",
+    "thread":"main",
+    "message":"Message flushed with immediate flush=true"
+  },
+  {
+    "logger":"com.foo.Bar",
+    "timestamp":"1376681196471",
+    "level":"ERROR",
+    "thread":"main",
+    "message":"Message flushed with immediate flush=true",
+    "throwable":"java.lang.IllegalArgumentException: badarg\\n\\tat org.apache.logging.log4j.core.appender.JSONCompleteFileAppenderTest.testFlushAtEndOfBatch(JSONCompleteFileAppenderTest.java:54)\\n\\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\\n\\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)\\n\\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\\n\\tat java.lang.reflect.Method.invoke(Method.java:606)\\n\\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)\\n\\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\\n\\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)\\n\\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\\n\\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)\\n\\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)\\n\\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)\\n\\tat org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)\\n\\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)\\n\\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)\\n\\tat org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)\\n\\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)\\n\\tat org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)\\n\\tat org.junit.runners.ParentRunner.run(ParentRunner.java:309)\\n\\tat org.eclipse.jdt.internal.junit4.runner.JUnit4TestReference.run(JUnit4TestReference.java:50)\\n\\tat org.eclipse.jdt.internal.junit.runner.TestExecution.run(TestExecution.java:38)\\n\\tat org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:467)\\n\\tat org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(RemoteTestRunner.java:683)\\n\\tat org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run(RemoteTestRunner.java:390)\\n\\tat org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main(RemoteTestRunner.java:197)\\n"
+  }
+]
 </pre>
           <p>
-            Which will create the CSV record:
-          </p>
-          <pre class="prettyprint linenums">
-value1, value2, value3
-</pre>
-          <p>
-            Alternatively, you can use a <code>ObjectArrayMessage</code>, which only carries parameters:
-          </p>
-          <pre class="prettyprint linenums">
-logger.info(new ObjectArrayMessage(value1, value2, value3));
-</pre>
-          <p>
-            The layouts <code>CsvParameterLayout</code> and <code>CsvLogEventLayout</code> are configured with the following parameters:
-          </p>
-          <table>
-            <caption>CsvParameterLayout and CsvLogEventLayout</caption>
-            <tr>
-              <th>Parameter Name</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <td>format</td>
-              <td>String</td>
-              <td>
-                One of the predefined formats: <code>Default</code>, <code>Excel</code>, <code>MySQL</code>,
-                <code>RFC4180</code>, <code>TDF</code>.
-                See
-                  <a href="https://commons.apache.org/proper/commons-csv/archives/1.4/apidocs/org/apache/commons/csv/CSVFormat.Predefined.html">CSVFormat.Predefined</a>.
-              </td>
-            </tr>
-            <tr>
-              <td>delimiter</td>
-              <td>Character</td>
-              <td>Sets the delimiter of the format to the specified character.</td>
-            </tr>
-            <tr>
-              <td>escape</td>
-              <td>Character</td>
-              <td>Sets the escape character of the format to the specified character.</td>
-            </tr>
-            <tr>
-              <td>quote</td>
-              <td>Character</td>
-              <td>Sets the quoteChar of the format to the specified character.</td>
-            </tr>
-            <tr>
-              <td>quoteMode</td>
-              <td>String</td>
-              <td>
-                Sets the output quote policy of the format to the specified value. One of: <code>ALL</code>,
-                <code>MINIMAL</code>, <code>NON_NUMERIC</code>, <code>NONE</code>.
-              </td>
-            </tr>
-            <tr>
-              <td>nullString</td>
-              <td>String</td>
-              <td>Writes null as the given nullString when writing records.</td>
-            </tr>
-            <tr>
-              <td>recordSeparator</td>
-              <td>String</td>
-              <td>Sets the record separator of the format to the specified String.</td>
-            </tr>
-            <tr>
-              <td>charset</td>
-              <td>Charset</td>
-              <td>The output Charset.</td>
-            </tr>
-            <tr>
-              <td>header</td>
-              <td>Sets the header to include when the stream is opened.</td>
-              <td>Desc.</td>
-            </tr>
-            <tr>
-              <td>footer</td>
-              <td>Sets the footer to include when the stream is closed.</td>
-              <td>Desc.</td>
-            </tr>
-        </table>
-        <p>
-          Logging as a CSV events looks like this:
-        </p>
-        <pre class="prettyprint linenums">
-logger.debug("one={}, two={}, three={}", 1, 2, 3);
-</pre>
-        <p>
-          Produces a CSV record with the following fields:
-          <ol>
-            <li>Time Nanos</li>
-            <li>Time Millis</li>
-            <li>Level</li>
-            <li>Thread ID</li>
-            <li>Thread Name</li>
-            <li>Thread Priority</li>
-            <li>Formatted Message</li>
-            <li>Logger FQCN</li>
-            <li>Logger Name</li>
-            <li>Marker</li>
-            <li>Thrown Proxy</li>
-            <li>Source</li>
-            <li>Context Map</li>
-            <li>Context Stack</li>
-          </ol>
-        </p>
-        <pre class="prettyprint linenums">
-0,1441617184044,DEBUG,main,"one=1, two=2, three=3",org.apache.logging.log4j.spi.AbstractLogger,,,,org.apache.logging.log4j.core.layout.CsvLogEventLayoutTest.testLayout(CsvLogEventLayoutTest.java:98),{},[]
-</pre>
-          <p>
-            Additional <a href="../runtime-dependencies.html">runtime dependencies</a> are required for using CSV layouts.
-          </p>
-        </subsection>
-        <a name="GELFLayout"/>
-        <subsection name="GELF Layout">
-          <!-- From Javadoc of org.apache.logging.log4j.core.layout.GelfLayout -->
-          <p>
-            Lays out events in the Graylog Extended Log Format (GELF) 1.1.
+          If <code>complete="false"</code>, the appender does not write the JSON open array character "[" at the start 
+          of the document. and "]" and the end.
           </p>
           <p>
-            This layout compresses JSON to GZIP or ZLIB (the <code>compressionType</code>) if log event data is larger than 1024 bytes
-            (the <code>compressionThreshold</code>). This layout does not implement chunking.
+          This approach enforces the independence of the JSONLayout and the appender where you embed it.
           </p>
+          <h4>Encoding</h4>
           <p>
-            Configure as follows to send to a Graylog 2.x server with UDP:
+          Appenders using this layout should have their <code>charset</code> set to <code>UTF-8</code> or 
+          <code>UTF-16</code>, otherwise events containing non ASCII characters could result in corrupted log files.
           </p>
-          <pre class="prettyprint linenums">
-  &lt;Appenders&gt;
-    &lt;Socket name="Graylog" protocol="udp" host="graylog.domain.com" port="12201"&gt;
-        &lt;GelfLayout host="someserver" compressionType="ZLIB" compressionThreshold="1024"&gt;
-            &lt;KeyValuePair key="additionalField1" value="constant value"/&gt;
-            &lt;KeyValuePair key="additionalField2" value="${dollar}${dollar}{ctx:key}"/&gt;
-        &lt;/GelfLayout&gt;
-    &lt;/Socket&gt;
-  &lt;/Appenders&gt;
-</pre>
+          <h4>Pretty vs. compact XML</h4>
           <p>
-            Configure as follows to send to a Graylog 2.x server with TCP:
+          By default, the JSON layout is not compact (a.k.a. not "pretty") with <code>compact="false"</code>, which 
+          means the appender uses end-of-line characters and indents lines to format the text. If 
+          <code>compact="true"</code>,  then no end-of-line or indentation is used. Message content may contain, 
+          of course, escaped end-of-lines.
           </p>
-          <pre class="prettyprint linenums">
-  &lt;Appenders&gt;
-    &lt;Socket name="Graylog" protocol="tcp" host="graylog.domain.com" port="12201"&gt;
-        &lt;GelfLayout host="someserver" compressionType="OFF" includeNullDelimiter="true"&gt;
-            &lt;KeyValuePair key="additionalField1" value="constant value"/&gt;
-            &lt;KeyValuePair key="additionalField2" value="${dollar}${dollar}{ctx:key}"/&gt;
-        &lt;/GelfLayout&gt;
-    &lt;/Socket&gt;
-  &lt;/Appenders&gt;
-</pre>
-          <table>
-            <tr>
-              <th>Parameter Name</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <td>host</td>
-              <td>String</td>
-              <td>The value of the <code>host</code> property (optional, defaults to local host name).</td>
-            </tr>
-            <tr>
-              <td>compressionType</td>
-              <td><code>GZIP</code>, <code>ZLIB</code> or <code>OFF</code></td>
-              <td>Compression to use (optional, defaults to <code>GZIP</code>)</td>
-            </tr>
-            <tr>
-              <td>compressionThreshold</td>
-              <td>int</td>
-              <td>Compress if data is larger than this number of bytes (optional, defaults to 1024)</td>
-            </tr>
-            <tr>
-              <td>includeStacktrace</td>
-              <td>boolean</td>
-              <td>Whether to include full stacktrace of logged Throwables (optional, default to true).
-                  If set to false, only the class name and message of the #javadoc('java/lang', 'Throwable')
-                  will be included.</td>
-            </tr>
-            <tr>
-              <td>includeThreadContext</td>
-              <td>boolean</td>
-              <td>Whether to include thread context as additional fields (optional, default to true).</td>
-            </tr>
-            <tr>
-              <td>includeNullDelimiter</td>
-              <td>boolean</td>
-              <td>Whether to include NULL byte as delimiter after each event (optional, default to false).
-                  Useful for Graylog GELF TCP input. Cannot be used with compression.</td>
-            </tr>
-            <caption align="top">GelfLayout Parameters</caption>
-          </table>
-           <p>
-             See also:
-           </p>
-           <ul>
-             <li>The <a href="http://docs.graylog.org/en/latest/pages/gelf.html#gelf">GELF specification</a></li>
-           </ul>
         </subsection>
         <a name="HTMLLayout"/>
-        <subsection name="HTML Layout">
-          <p>The HtmlLayout generates an HTML page and adds each LogEvent to a row in a table.
+        <subsection name="HTMLLayout">
+          <p>The HTMLLayout generates an HTML page and adds each LogEvent to a row in a table.
           </p>
           <table>
             <tr>
@@ -284,7 +106,8 @@ logger.debug("one={}, two={}, three={}", 1, 2, 3);
               <td>charset</td>
               <td>String</td>
               <td>The character set to use when converting the HTML String to a byte array. The value must be
-                a valid ${Charset}. If not specified, this layout uses UTF-8.</td>
+                a valid <a href="http://download.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Charset</a>.
+                If not specified, the default system Charset will be used.</td>
             </tr>
             <tr>
               <td>contentType</td>
@@ -307,177 +130,11 @@ logger.debug("one={}, two={}, three={}", 1, 2, 3);
               <td>String</td>
               <td>A String that will appear as the HTML title.</td>
             </tr>
-            <tr>
-              <td>fontName</td>
-              <td>String</td>
-              <td>The <code>font-family</code> to use. The default is "arial,sans-serif".</td>
-            </tr>
-            <tr>
-              <td>fontSize</td>
-              <td>String</td>
-              <td>The <code>font-size</code> to use. The default is "small".</td>
-            </tr>
-            <caption align="top">HtmlLayout Parameters</caption>
+            <caption align="top">HTML Layout Parameters</caption>
           </table>
-        </subsection>
-        <a name="JSONLayout"/>
-        <subsection name="JSON Layout">
-          <p>
-          Appends a series of JSON events as strings serialized as bytes.
-          </p>
-          <h4>Complete well-formed JSON vs. fragment JSON</h4>
-          <p>
-          If you configure <code>complete="true"</code>, the appender outputs a well-formed JSON document. By default,
-          with <code>complete="false"</code>, you should include the output as an <em>external file</em> in a
-          separate file to form a well-formed JSON document.
-          </p>
-          <p>
-          If <code>complete="false"</code>, the appender does not write the JSON open array character "[" at the start
-          of the document, "]" and the end, nor comma "," between records.
-          </p>
-          <p>
-          Log event follows this pattern:
-          </p>
-          <pre class="prettyprint linenums">{
-  "timeMillis" : 1493121664118,
-  "thread" : "main",
-  "level" : "INFO",
-  "loggerName" : "HelloWorld",
-  "marker" : {
-    "name" : "child",
-    "parents" : [ {
-      "name" : "parent",
-      "parents" : [ {
-        "name" : "grandparent"
-      } ]
-    } ]
-  },
-  "message" : "Hello, world!",
-  "thrown" : {
-    "commonElementCount" : 0,
-    "message" : "error message",
-    "name" : "java.lang.RuntimeException",
-    "extendedStackTrace" : [ {
-      "class" : "logtest.Main",
-      "method" : "main",
-      "file" : "Main.java",
-      "line" : 29,
-      "exact" : true,
-      "location" : "classes/",
-      "version" : "?"
-    } ]
-  },
-  "contextStack" : [ "one", "two" ],
-  "endOfBatch" : false,
-  "loggerFqcn" : "org.apache.logging.log4j.spi.AbstractLogger",
-  "contextMap" : {
-    "bar" : "BAR",
-    "foo" : "FOO"
-  },
-  "threadId" : 1,
-  "threadPriority" : 5,
-  "source" : {
-    "class" : "logtest.Main",
-    "method" : "main",
-    "file" : "Main.java",
-    "line" : 29
-  }
-}</pre>
-          <p>
-          If <code>complete="false"</code>, the appender does not write the JSON open array character "[" at the start
-          of the document, "]" and the end, nor comma "," between records.
-          </p>
-          <h4>Pretty vs. compact JSON</h4>
-          <p>
-          By default, the JSON layout is not compact (a.k.a. not "pretty") with <code>compact="false"</code>, which
-          means the appender uses end-of-line characters and indents lines to format the text. If
-          <code>compact="true"</code>,  then no end-of-line or indentation is used. Message content may contain,
-          of course, escaped end-of-lines.
-          </p>
-          <table>
-            <tr>
-              <th>Parameter Name</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <td>charset</td>
-              <td>String</td>
-              <td>The character set to use when converting to a byte array. The value must be a valid ${Charset}.
-                 If not specified, UTF-8 will be used.</td>
-            </tr>
-            <tr>
-              <td>compact</td>
-              <td>boolean</td>
-              <td>If true, the appender does not use end-of-lines and indentation. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>eventEol</td>
-              <td>boolean</td>
-              <td>
-                If true, the appender appends an end-of-line after each record. Defaults to false.
-                Use with eventEol=true and compact=true to get one record per line.
-              </td>
-            </tr>
-            <tr>
-              <td>complete</td>
-              <td>boolean</td>
-              <td>If true, the appender includes the JSON header and footer, and comma between records. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>properties</td>
-              <td>boolean</td>
-              <td>If true, the appender includes the thread context map in the generated JSON. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>propertiesAsList</td>
-              <td>boolean</td>
-              <td>If true, the thread context map is included as a list of map entry objects, where each entry has
-              a "key" attribute (whose value is the key) and a "value" attribute (whose value is the value).
-              Defaults to false, in which case the thread context map is included as a simple map of key-value pairs.</td>
-            </tr>
-            <tr>
-              <td>locationInfo</td>
-              <td>boolean</td>
-              <td>
-              <p>If true, the appender includes the location information in the generated JSON. Defaults to false.</p>
-              <p>Generating <a href="#LocationInformation">location information</a>
-                is an expensive operation and may impact performance. Use with caution.</p>
-              </td>
-            </tr>
-            <tr>
-              <td>includeStacktrace</td>
-              <td>boolean</td>
-              <td>If true, include full stacktrace of any logged #javadoc('java/lang', 'Throwable') (optional, default to true).</td>
-            </tr>
-            <tr>
-              <td>stacktraceAsString</td>
-              <td>boolean</td>
-              <td>Whether to format the stacktrace as a string, and not a nested object (optional, defaults to false).</td>
-            </tr>
-            <tr>
-              <td>includeNullDelimiter</td>
-              <td>boolean</td>
-              <td>Whether to include NULL byte as delimiter after each event (optional, default to false).</td>
-            </tr>
-            <caption align="top">JsonLayout Parameters</caption>
-          </table>
-          <p>
-              To include any custom field in the output, use following syntax:
-              <pre class="prettyprint linenums">
-  &lt;JsonLayout&gt;
-    &lt;KeyValuePair key="additionalField1" value="constant value"/&gt;
-    &lt;KeyValuePair key="additionalField2" value="${dollar}${dollar}{ctx:key}"/&gt;
-  &lt;/JsonLayout&gt;
-</pre>
-              Custom fields are always last, in the order they are declared.
-          </p>
-          <p>
-            Additional <a href="../runtime-dependencies.html">runtime dependencies</a> are required for using JsonLayout.
-          </p>
         </subsection>
         <a name="PatternLayout"/>
-        <subsection name="Pattern Layout">
+        <subsection name="PatternLayout">
           <p>A flexible layout configurable with pattern string. The goal of this class is to format a LogEvent and
             return the results. The format of the result depends on the <em>conversion pattern</em>.
           </p>
@@ -485,9 +142,7 @@ logger.debug("one={}, two={}, three={}", 1, 2, 3);
             A conversion pattern is composed of literal text and format control expressions called
             <em>conversion specifiers</em>.
           </p>
-          <p><i>Note that any literal text, including <b>Special Characters</b>, may be included in the conversion
-            pattern.</i> Special Characters include <b>\t</b>, <b>\n</b>, <b>\r</b>, <b>\f</b>. Use <b>\\</b> to
-            insert a single backslash into the output.
+          <p><i>Note that any literal text may be included in the conversion pattern.</i>
           </p>
           <p>Each conversion specifier starts with a percent sign (%) and is followed by optional <em>format
             modifiers</em> and a <em>conversion character</em>. The conversion character specifies the type of
@@ -523,20 +178,14 @@ WARN  [main]: Message 2</pre>
               <td>charset</td>
               <td>String</td>
               <td>The character set to use when converting the syslog String to a byte array. The String must be
-                a valid ${Charset}. If not specified, this layout uses the platform default character set.
+                a valid <a href="http://download.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Charset</a>.
+                If not specified, the default system Charset will be used.
               </td>
             </tr>
             <tr>
               <td>pattern</td>
               <td>String</td>
-              <td>A composite pattern string of one or more conversion patterns from the table below. Cannot be
-                specified with a PatternSelector.</td>
-            </tr>
-            <tr>
-              <td>patternSelector</td>
-              <td>PatternSelector</td>
-              <td>A component that analyzes information in the LogEvent and determines which pattern should be
-                  used to format the event. The pattern and patternSelector parameters are mutually exclusive.</td>
+              <td>A composite pattern string of one or more conversion patterns from the table below.</td>
             </tr>
             <tr>
               <td>replace</td>
@@ -556,26 +205,6 @@ WARN  [main]: Message 2</pre>
                 <code>false</code> disables this behavior and allows you to exclude exceptions from your pattern
                 output.</td>
             </tr>
-            <tr>
-              <td>header</td>
-              <td>String</td>
-              <td>The optional header string to include at the top of each log file.</td>
-            </tr>
-            <tr>
-              <td>footer</td>
-              <td>String</td>
-              <td>The optional footer string to include at the bottom of each log file.</td>
-            </tr>
-            <tr>
-              <td>disableAnsi</td>
-              <td>boolean</td>
-              <td>If <code>true</code> (default is false), do not output ANSI escape codes.</td>
-            </tr>
-            <tr>
-              <td>noConsoleNoAnsi</td>
-              <td>boolean</td>
-              <td>If <code>true</code> (default is false) and <code>System.console()</code> is null, do not output ANSI escape codes.</td>
-            </tr>
             <caption align="top">PatternLayout Parameters</caption>
           </table>
           <table>
@@ -588,7 +217,8 @@ WARN  [main]: Message 2</pre>
               <td>regex</td>
               <td>String</td>
               <td>A Java-compliant regular expression to match in the resulting string. See
-                  #javadoc('java/util/regex', 'Pattern').</td>
+                <a href="http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html"
+                   target="_blank">java.util.regex.Pattern</a>.</td>
             </tr>
             <tr>
               <td>replacement</td>
@@ -612,18 +242,14 @@ WARN  [main]: Message 2</pre>
               </td>
               <td>
                 <p>Outputs the name of the logger that published the logging event. The logger conversion
-                  specifier can be optionally followed by <em>precision specifier</em>, which consists of a
+                  specifier can be optionally followed by<em>precision specifier</em>, which consists of a
                   decimal integer, or a pattern starting with a decimal integer.
                 </p>
-                <p>When the precision specifier is an integer value, it reduces the size of the logger name.
-                  If the number is positive, the layout prints the corresponding number of rightmost logger
-                  name components. If negative, the layout removes the corresponding number of leftmost logger
-                  name components.
-                </p>
-                <p>
-                   If the precision contains any non-integer characters, then the layout abbreviates the name
-                   based on the pattern. If the precision integer is less than one, the layout still prints
-                   the right-most token in full. By default, the layout prints the logger name in full.
+                <p>If a precision specifier is given and it is an integer value, then only the corresponding number
+                  of right most components of the logger name will be printed. If the precision contains
+                  other non-integer characters then the name will be abbreviated based on the pattern. If the
+                  precision integer is less than one the right-most token will still be printed in full.
+                  By default the logger name is printed in full.
                 </p>
                 <table>
                   <tr>
@@ -640,26 +266,6 @@ WARN  [main]: Message 2</pre>
                     <td>%c{2}</td>
                     <td>org.apache.${break}commons.Foo</td>
                     <td>commons.Foo</td>
-                  </tr>
-                  <tr>
-                    <td>%c{10}</td>
-                    <td>org.apache.${break}commons.Foo</td>
-                    <td>org.apache.${break}commons.Foo</td>
-                  </tr>
-                  <tr>
-                    <td>%c{-1}</td>
-                    <td>org.apache.${break}commons.Foo</td>
-                    <td>apache.${break}commons.Foo</td>
-                  </tr>
-                  <tr>
-                    <td>%c{-2}</td>
-                    <td>org.apache.${break}commons.Foo</td>
-                    <td>${break}commons.Foo</td>
-                  </tr>
-                  <tr>
-                    <td>%c{-10}</td>
-                    <td>org.apache.${break}commons.Foo</td>
-                    <td>org.apache.${break}commons.Foo</td>
                   </tr>
                   <tr>
                     <td>%c{1.}</td>
@@ -687,7 +293,7 @@ WARN  [main]: Message 2</pre>
               </td>
               <td>
                 <p>Outputs the fully qualified class name of the caller issuing the logging request.
-                  This conversion specifier can be optionally followed by <em>precision specifier</em>, that
+                  This conversion specifier can be optionally followed by<em>precision specifier</em>, that
                   follows the same rules as the logger name converter.
                 </p>
                 <p>Generating the class name of the caller (<a href="#LocationInformation">location information</a>)
@@ -702,10 +308,10 @@ WARN  [main]: Message 2</pre>
               <td>
                 <p>Outputs the date of the logging event. The date conversion specifier may be
                   followed by a set of braces containing a date and time pattern string per
-                  #javadoc('java/text', 'SimpleDateFormat').
+                  <a href="http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html">
+                    SimpleDateFormat</a>.
                 </p>
                 <p>The predefined formats are
-                  <code>DEFAULT</code>,
                   <code>ABSOLUTE</code>,
                   <code>COMPACT</code>,
                   <code>DATE</code>,
@@ -714,24 +320,20 @@ WARN  [main]: Message 2</pre>
                   <code>ISO8601_BASIC</code>.
                 </p>
                 <p>You can also use a set of braces containing a time zone id per
-                  <a class="javadoc" href="${javadocRoot}/java/util/TimeZone.html${sharp}getTimeZone(java.lang.String)">
-                    java.util.TimeZone.getTimeZone</a>. If no date format specifier is given then the DEFAULT format is used.
+                  <a href="http://docs.oracle.com/javase/6/docs/api/java/util/TimeZone.html#getTimeZone(java.lang.String)">
+                    java.util.TimeZone.getTimeZone</a>. If no date format specifier is given then ISO8601 format is assumed.
                   <table>
                     <tr>
                       <th>Pattern</th>
                       <th>Example</th>
                     </tr>
                     <tr>
-                      <td>%d{DEFAULT}</td>
+                      <td>%d{ISO8601}</td>
                       <td>2012-11-02 14:34:02,781</td>
                     </tr>
                     <tr>
-                      <td>%d{ISO8601}</td>
-                      <td>2012-11-02T14:34:02,781</td>
-                    </tr>
-                    <tr>
                       <td>%d{ISO8601_BASIC}</td>
-                      <td>20121102T143402,781</td>
+                      <td>20121102 143402,781</td>
                     </tr>
                     <tr>
                       <td>%d{ABSOLUTE}</td>
@@ -755,198 +357,60 @@ WARN  [main]: Message 2</pre>
                     </tr>
                     <tr>
                       <td>%d{HH:mm:ss}{GMT+0}</td>
-                      <td>18:34:02</td>
-                    </tr>
-                    <tr>
-                      <td>%d{UNIX}</td>
-                      <td>1351866842</td>
-                    </tr>
-                    <tr>
-                      <td>%d{UNIX_MILLIS}</td>
-                      <td>1351866842781</td>
+                      <td>18:34:02,781</td>
                     </tr>
                   </table>
                 </p>
-                <p>
-                  %d{UNIX} outputs the UNIX time in seconds. %d{UNIX_MILLIS} outputs the UNIX time in milliseconds.
-                  The UNIX time is the difference, in seconds for UNIX and in milliseconds for UNIX_MILLIS, between
-                  the current time and midnight, January 1, 1970 UTC. While the time unit is milliseconds, the
-                  granularity depends on the operating system
-                  (<a href="http://msdn.microsoft.com/en-us/windows/hardware/gg463266.aspx">Windows</a>).
-                  This is an efficient way to output the event time because only a conversion from long to String
-                  takes place, there is no Date formatting involved.
-                </p>
               </td>
             </tr>
             <tr>
               <td align="center">
-                <b>enc</b>{<i>pattern</i>}{[HTML|XML|JSON|CRLF]}<br />
-                <b>encode</b>{<i>pattern</i>}{[HTML|XML|JSON|CRLF]}
+                <b>ex</b>|<b>exception</b>|<b>throwable</b><br />
+                &nbsp;&nbsp;{["none"<br />
+                &nbsp;&nbsp;|"full"<br />
+                &nbsp;&nbsp;|depth<br />
+                &nbsp;&nbsp;|"short"<br />
+                &nbsp;&nbsp;|"short.className"<br />
+                &nbsp;&nbsp;|"short.fileName"<br />
+                &nbsp;&nbsp;|"short.lineNumber"<br />
+                &nbsp;&nbsp;|"short.methodName"<br />
+                &nbsp;&nbsp;|"short.message"<br />
+                &nbsp;&nbsp;|"short.localizedMessage"]}
               </td>
               <td>
                 <p>
-                  Encodes and escapes special characters suitable for output in specific markup languages.
-                  By default, this encodes for HTML if only one option is specified. The second option is used to
-                  specify which encoding format should be used. This converter is particularly useful for encoding
-                  user provided data so that the output data is not written improperly or insecurely.
+                  Outputs the Throwable trace bound to the LoggingEvent, by default this will output the full trace 
+                  as one would normally find with a call to Throwable.printStackTrace().
                 </p>
                 <p>
-                  A typical usage would encode the message
-                  <code>%enc{%m}</code>
-                  but user input could come from other locations as well, such as the MDC
-                  <code>%enc{%mdc{key}}</code>
+                  You can follow the throwable conversion word with an option in the form <b>%throwable{option}</b>.
                 </p>
-                <p>Using the HTML encoding format, the following characters are replaced:</p>
-                <table>
-                  <tr>
-                    <th>Character</th>
-                    <th>Replacement</th>
-                  </tr>
-                  <tr>
-                    <td>'\r', '\n'</td>
-                    <td>Converted into escaped strings "\\r" and "\\n" respectively</td>
-                  </tr>
-                  <tr>
-                    <td>&amp;, &lt;, &gt;, &quot;, &apos;, &#x2F;</td>
-                    <td>Replaced with the corresponding HTML entity</td>
-                  </tr>
-                </table>
-                <p>Using the XML encoding format, this follows the escaping rules specified by
-                   <a href="https://www.w3.org/TR/xml/">the XML specification</a>:</p>
-                <table>
-                  <tr>
-                    <th>Character</th>
-                    <th>Replacement</th>
-                  </tr>
-                  <tr>
-                    <td>&amp;, &lt;, &gt;, &quot;, &apos;</td>
-                    <td>Replaced with the corresponding XML entity</td>
-                  </tr>
-                </table>
-                <p>
-                  Using the JSON encoding format, this follows the escaping rules specified by
-                  <a href="https://www.ietf.org/rfc/rfc4627.txt">RFC 4627 section 2.5</a>:
+                <p> 
+                  <b>%throwable{short}</b> outputs the first line of the Throwable.
                 </p>
-                <table>
-                  <tr>
-                    <th>Character</th>
-                    <th>Replacement</th>
-                  </tr>
-                  <tr>
-                    <td>U+0000 - U+001F</td>
-                    <td>\u0000 - \u001F</td>
-                  </tr>
-                  <tr>
-                    <td>Any other control characters</td>
-                    <td>Encoded into its <code>\uABCD</code> equivalent escaped code point</td>
-                  </tr>
-                  <tr>
-                    <td>&quot;</td>
-                    <td>\&quot;</td>
-                  </tr>
-                  <tr>
-                    <td>\</td>
-                    <td>\\</td>
-                  </tr>
-                </table>
-                <p>
-                  For example, the pattern <code>{"message": "%enc{%m}{JSON}"}</code> could be used to output a
-                  valid JSON document containing the log message as a string value.
+                <p> 
+                  <b>%throwable{short.className}</b> outputs the name of the class where the exception occurred.
                 </p>
-                <p>Using the CRLF encoding format, the following characters are replaced:</p>
-                <table>
-                  <tr>
-                    <th>Character</th>
-                    <th>Replacement</th>
-                  </tr>
-                  <tr>
-                    <td>'\r', '\n'</td>
-                    <td>Converted into escaped strings "\\r" and "\\n" respectively</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <b>equals</b>{pattern}{test}{substitution}<br />
-                <b>equalsIgnoreCase</b>{pattern}{test}{substitution}
-              </td>
-              <td>
-                <p>Replaces occurrences of 'test', a string, with its replacement 'substitution' in the
-                  string resulting from evaluation of the pattern. For example, "%equals{[%marker]}{[]}{}" will
-                  replace '[]' strings produces by events without markers with an empty string.
+                <p> 
+                  <b>%throwable{short.methodName}</b> outputs the method name where the exception occurred.
                 </p>
-                <p>The pattern can be arbitrarily complex and in particular can contain multiple conversion keywords.
+                <p> 
+                  <b>%throwable{short.fileName}</b> outputs the name of the class where the exception occurred.
                 </p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-				<b>ex</b>|<b>exception</b>|<b>throwable</b><br/>
-                {<br/>
-                &nbsp;&nbsp;[ "none"<br />
-                &nbsp;&nbsp;&nbsp;| "full"<br />
-                &nbsp;&nbsp;&nbsp;| depth<br />
-                &nbsp;&nbsp;&nbsp;| "short"<br />
-                &nbsp;&nbsp;&nbsp;| "short.className"<br />
-                &nbsp;&nbsp;&nbsp;| "short.fileName"<br />
-                &nbsp;&nbsp;&nbsp;| "short.lineNumber"<br />
-                &nbsp;&nbsp;&nbsp;| "short.methodName"<br />
-                &nbsp;&nbsp;&nbsp;| "short.message"<br />
-                &nbsp;&nbsp;&nbsp;| "short.localizedMessage"]}<br />
-                &nbsp;&nbsp;[,filters(package,package,...)]<br/>
-                &nbsp;&nbsp;[,separator(<i>separator</i>)]<br/>
-                }<br/>
-                {suffix(<i>pattern</i>)<br/>
-                }<br/>
-              </td>
-              <td>
-                <p>
-                  Outputs the Throwable trace bound to the logging event, by default this will output the full trace
-                  as one would normally find with a call to <code>Throwable.printStackTrace()</code>.
+                <p> 
+                  <b>%throwable{short.lineNumber}</b> outputs the line number where the exception occurred.
                 </p>
-                <p>
-                  You can follow the throwable conversion word with an option in the form <code>%throwable{option}</code>.
+                <p> 
+                  <b>%throwable{short.message}</b> outputs the message.
                 </p>
-                <p>
-                  <code>%throwable{short}</code> outputs the first line of the Throwable.
+                <p> 
+                  <b>%throwable{short.localizedMessage}</b> outputs the localized message.
                 </p>
-                <p>
-                  <code>%throwable{short.className}</code> outputs the name of the class where the exception occurred.
-                </p>
-                <p>
-                  <code>%throwable{short.methodName}</code> outputs the method name where the exception occurred.
-                </p>
-                <p>
-                  <code>%throwable{short.fileName}</code> outputs the name of the class where the exception occurred.
-                </p>
-                <p>
-                  <code>%throwable{short.lineNumber}</code> outputs the line number where the exception occurred.
-                </p>
-                <p>
-                  <code>%throwable{short.message}</code> outputs the message.
-                </p>
-                <p>
-                  <code>%throwable{short.localizedMessage}</code> outputs the localized message.
-                </p>
-                <p>
-                  <code>%throwable{n}</code> outputs the first n lines of the stack trace.
-                </p>
-                <p>
-                  Specifying <code>%throwable{none}</code> or <code>%throwable{0}</code> suppresses output of the exception.
-                </p>
-                <p>
-                  Use <code>filters(<i>packages</i>)</code> where <i>packages</i> is a list of package names to
-                  suppress matching stack frames from stack traces.
-                </p>
-                <p>
-                  Use a <code>separator</code> string to separate the lines of a stack trace. For example:
-                  <code>separator(|)</code>. The default value is the <code>line.separator</code> system property,
-                  which is operating system dependent.
-                </p>
-                <p>
-                  Use <code>ex{suffix(<i>pattern</i>)</code> to add the output of <i>pattern</i> to the output only
-                  when there is a throwable to print.
+                <p> 
+                  <b>%throwable{n}</b> outputs the first n lines of the stack trace. 
+                </p> 
+                <p> 
+                  Specifying <b>%throwable{none}</b> or <b>%throwable{0}</b> suppresses output of the exception.
                 </p>
               </td>
             </tr>
@@ -967,7 +431,6 @@ WARN  [main]: Message 2</pre>
               </td>
               <td>
                 <p>Adds ANSI colors to the result of the enclosed pattern based on the current event's logging level.
-                   (See Jansi <a href="#enable-jansi">configuration</a>.)
                 </p>
                 <p>The default colors for each level are:
                  <table>
@@ -1001,8 +464,7 @@ WARN  [main]: Message 2</pre>
                    </tr>
                  </table>
                 </p>
-                <p>The color names are ANSI names defined in the
-                  <a class="javadoc" href="../log4j-core/apidocs/org/apache/logging/log4j/core/pattern/AnsiEscape.html">AnsiEscape</a> class.
+                <p>The color names are ANSI names defined in the <a href="../log4j-core/apidocs/index.html">AnsiEscape</a> class.
                 </p>
                 <p>The color and attribute names and are standard, but the exact shade, hue, or value.
                 </p>
@@ -1129,14 +591,13 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternMap"/>
                 <b>K</b>{key}<br />
                 <b>map</b>{key}<br />
                 <b>MAP</b>{key}
               </td>
               <td>
                 <p>Outputs the entries in a
-                  <a class="javadoc" href="../log4j-api/apidocs/org/apache/logging/log4j/message/MapMessage.html">MapMessage</a>,
+                  <a href="../log4j-api/apidocs/org/apache/logging/log4j/message/MapMessage.html">MapMessage</a>,
                   if one is present in the event. The <b>K</b> conversion character can be followed by the key
                   for the map placed between braces, as in
                   <b>%K{clientNumber}</b> where <code>clientNumber</code> is the key. The value in the Map
@@ -1177,50 +638,11 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternMessage"/>
-                <b>m</b>{nolookups}{ansi}<br />
-                <b>msg</b>{nolookups}{ansi}<br />
-                <b>message</b>{nolookups}{ansi}
+                <b>m</b><br />
+                <b>msg</b><br />
+                <b>message</b>
               </td>
-              <td>
-                <p>
-                  Outputs the application supplied message associated with the logging event.
-                </p>
-                <!-- Copied and tweaked from Javadoc for org.apache.logging.log4j.core.pattern.JAnsiMessageRenderer -->
-                <p>
-                  Add <code>{ansi}</code> to render messages with ANSI escape codes (requires JAnsi,
-                    see <a href="#enable-jansi">configuration</a>.)
-                </p>
-                <p>
-                  The default syntax for embedded ANSI codes is:
-                </p>
-                <pre class="prettyprint linenums">&#64;|<em>code</em>(,<em>code</em>)* <em>text</em>|@</pre>
-                <p>
-                  For example, to render the message <code>"Hello"</code> in green, use:
-                </p>
-                <pre class="prettyprint linenums">&#64;|green Hello|@</pre>
-                <p>
-                  To render the message <code>"Hello"</code> in bold and red, use:
-                </p>
-                <pre class="prettyprint linenums">&#64;|bold,red Warning!|@</pre>
-                <p>
-                  You can also define custom style names in the configuration with the syntax:
-                </p>
-                <pre class="prettyprint linenums">%message{ansi}{StyleName=value(,value)*( StyleName=value(,value)*)*}%n</pre>
-                <p>
-                  For example:
-                </p>
-                <pre class="prettyprint linenums">%message{ansi}{WarningStyle=red,bold KeyStyle=white ValueStyle=blue}%n</pre>
-                <p>
-                  The call site can look like this:
-                </p>
-                <pre class="prettyprint linenums">logger.info("@|KeyStyle {}|@ = @|ValueStyle {}|@", entry.getKey(), entry.getValue());</pre>
-                <p>
-                  Use <code>{nolookups}</code> to log messages like <code>"${esc.d}{date:YYYY-MM-dd}"</code>
-                  without using any lookups. Normally calling <code>logger.info("Try ${esc.d}{date:YYYY-MM-dd}")</code>
-                  would replace the date template <code>${esc.d}{date:YYYY-MM-dd}</code> with an actual date.
-                  Using <code>nolookups</code> disables this feature and logs the message string untouched.
-                </p>
+              <td>Outputs the application supplied message associated with the logging event.
               </td>
             </tr>
             <tr>
@@ -1236,40 +658,12 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternMarker"/>
                 <b>marker</b>
               </td>
-              <td>The full name of the marker, including parents, if one is present.</td>
+              <td>The name of the marker, if one is present.</td>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternMarkerSimpleName"/>
-                <b>markerSimpleName</b>
-              </td>
-              <td>The simple name of the marker (not including parents), if one is present.</td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="PatternMaxLength"/>
-                <b>maxLen</b><br/>
-                <b>maxLength</b>
-              </td>
-              <td>
-                <p>
-                  Outputs the result of evaluating the pattern and truncating the result. If the length is greater
-                  than 20, then the output will contain a trailing ellipsis. If the provided length is invalid, a
-                  default value of 100 is used.
-                </p>
-                <p>
-                  Example syntax: <code>%maxLen{%p: %c{1} - %m%notEmpty{ =>%ex{short}}}{160}</code> will be limited to
-                  160 characters with a trailing ellipsis. Another example: <code>%maxLen{%m}{20}</code> will be
-                  limited to 20 characters and no trailing ellipsis.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="PatternNewLine"/>
                 <b>n</b>
               </td>
               <td>
@@ -1284,43 +678,6 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-              <a name="NanoTime" />
-                <b>N</b><br />
-                <b>nano</b>
-              </td>
-              <td><p>Outputs the result of <code>System.nanoTime()</code> at the time the log event was created.</p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="Process ID" />
-                <b>pid</b>{[defaultValue]}<br />
-                <b>processId</b>{[defaultValue]}
-              </td>
-              <td><p>Outputs the process ID if supported by the underlying platform. An optional default value may be
-                specified to be shown if the platform does not support process IDs.</p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-              <a name="VariablesNotEmpty" />
-                <b>variablesNotEmpty</b>{pattern}<br />
-                <b>varsNotEmpty</b>{pattern}<br />
-                <b>notEmpty</b>{pattern}
-              </td>
-              <td>
-                <p>
-                  Outputs the result of evaluating the pattern if and only if all variables in the pattern are not empty.
-                </p>
-                <p>
-                  For example:
-                  <pre>%notEmpty{[%marker]}</pre>
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="PatternLevel"/>
                 <b>p</b>|<b>level</b>{<em>level</em>=<em>label</em>, <em>level</em>=<em>label</em>, ...}
                 <b>p</b>|<b>level</b>{length=<em>n</em>}
                 <b>p</b>|<b>level</b>{lowerCase=<em>true</em>|<em>false</em>}
@@ -1357,7 +714,6 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternRelative"/>
                 <b>r</b><br />
                 <b>relative</b>
               </td>
@@ -1367,12 +723,11 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternReplace"/>
                 <b>replace</b>{pattern}{regex}{substitution}
               </td>
               <td>
                 <p>Replaces occurrences of 'regex', a regular expression, with its replacement 'substitution' in the
-                  string resulting from evaluation of the pattern. For example, "%replace{%msg}{\s}{}" will remove
+                  string resulting from evaluation of the pattern. For example, "%replace(%msg}{\s}{}" will remove
                   all spaces contained in the event message.
                 </p>
                 <p>The pattern can be arbitrarily complex and in particular can contain multiple conversion keywords.
@@ -1383,51 +738,26 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternException"/>
-                <b>rEx</b>|<b>rException</b>|<b>rThrowable</b><br/>
-                &nbsp;&nbsp;{<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;["none" | "short" | "full" | depth]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;[,filters(package,package,...)]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;[,separator(<i>separator</i>)]<br/>
-                &nbsp;&nbsp;}<br/>
-                &nbsp;&nbsp;{ansi(<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;Key=Value,Value,...<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;Key=Value,Value,...<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;...)<br/>
-                &nbsp;&nbsp;}<br/>
-                &nbsp;&nbsp;{suffix(<i>pattern</i>)}<br/>
+                <b>rEx</b>["none"|"short"|"full"|depth],[filters(packages)}<br />
+                <b>rException</b>["none"|"short"|"full"|depth],[filters(packages)}<br />
+                <b>rThrowable</b>["none"|"short"|"full"|depth],[filters(packages)}
               </td>
               <td>
-                <p>
-                  The same as the %throwable conversion word but the stack trace is printed starting with the
+                <p>The same as the %throwable conversion word but the stack trace is printed starting with the
                   first exception that was thrown followed by each subsequent wrapping exception.
                 </p>
-                <p>
-                  The throwable conversion word can be followed by an option in the form
-                  <code>%rEx{short}</code> which will only output the first line of the Throwable or
-                  <code>%rEx{n}</code> where the first n lines of the stack trace will be printed.
-                </p>
-                <p>
-                  Specifying <code>%rEx{none}</code> or <code>%rEx{0}</code> will suppress printing of the exception.
-                </p>
-                <p>
-                  Use <code>filters(<i>packages</i>)</code> where <i>packages</i> is a list of package names to
-                  suppress matching stack frames from stack traces.
-                </p>
-                <p>
-                  Use a <code>separator</code> string to separate the lines of a stack trace. For example:
-                  <code>separator(|)</code>. The default value is the <code>line.separator</code> system property,
-                  which is operating system dependent.
-                </p>
-                <p>
-                  Use <code>rEx{suffix(<i>pattern</i>)</code> to add the output of <i>pattern</i> to the output only
-                  when there is a throwable to print.
+                <p>The throwable conversion word can be followed by an option in the form
+                  <b>%rEx{short}</b>
+                  which will only output the first line of the Throwable or <b>%rEx{n}</b> where
+                  the first n lines of the stacktrace will be printed. The conversion word can also be
+                  followed by "filters(packages)" where packages is a list of package names that should
+                  be suppressed from stack traces. Specifying <b>%rEx{none}</b>
+                  or <b>%rEx{0}</b> will suppress printing of the exception.
                 </p>
               </td>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternSequenceNumber"/>
                 <b>sn</b><br />
                 <b>sequenceNumber</b>
               </td>
@@ -1437,13 +767,11 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternStyle"/>
                 <b>style</b>{pattern}{ANSI style}
               </td>
               <td>
                 <p>Uses ANSI escape sequences to style the result of the enclosed pattern. The style can consist of
                   a comma separated list of style names from the following table.
-                  (See Jansi <a href="#enable-jansi">configuration</a>.)
                   <table>
                     <tr>
                       <th>Style Name</th>
@@ -1560,34 +888,13 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternThreadId"/>
-                <b>T</b><br />
-                <b>tid</b><br />
-                <b>threadId</b>
-              </td>
-              <td>Outputs the ID of the thread that generated the logging event.</td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="PatternThreadName"/>
                 <b>t</b><br />
-                <b>tn</b><br />
-                <b>thread</b><br />
-                <b>threadName</b>
+                <b>thread</b>
               </td>
               <td>Outputs the name of the thread that generated the logging event.</td>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternThreadPriority"/>
-                <b>tp</b><br />
-                <b>threadPriority</b>
-              </td>
-              <td>Outputs the priority of the thread that generated the logging event.</td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a name="PatternNDC"/>
                 <b>x</b><br />
                 <b>NDC</b>
               </td>
@@ -1597,37 +904,32 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternMDC"/>
-                <b>X</b>{key[,key2...]}<br />
-                <b>mdc</b>{key[,key2...]}<br />
-                <b>MDC</b>{key[,key2...]}
+                <b>X</b>{key}<br />
+                <b>mdc</b>{key}<br />
+                <b>MDC</b>{key}
               </td>
               <td>
                 <p>Outputs the Thread Context Map (also known as the Mapped Diagnostic Context or MDC)
                   associated with the thread that generated the logging event. The
                   <b>X</b>
-                  conversion character can be followed by one or more keys for the
+                  conversion character can be followed by the key for the
                   map placed between braces, as in
                   <b>%X{clientNumber}</b>
                   where
                   <code>clientNumber</code>
                   is the key. The value in the MDC
-                  corresponding to the key will be output.</p>
-                <p>If a list of keys are provided, such as <b>%X{name, number}</b>, then each key that is present in the
-                    ThreadContext will be output using the format {name=val1, number=val2}. The key/value pairs will be
-                  printed in the order they appear in the list.</p>
-                <p>If no sub-options are specified then the entire contents of the MDC key value pair set
-                  is output using a format {key1=val1, key2=val2}. The key/value pairs will be printed in sorted order.
+                  corresponding to the key will be output. If no additional sub-option
+                  is specified, then the entire contents of the MDC key value pair set
+                  is output using a format {{key1,val1},{key2,val2}}
                 </p>
                 <p>See the
-                  <a class="javadoc" href="../log4j-api/apidocs/org/apache/logging/log4j/ThreadContext.html">ThreadContext</a>
+                  <a href="../log4j-api/apidocs/org/apache/logging/log4j/ThreadContext.html">ThreadContext</a>
                   class for more details.
                 </p>
               </td>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternUUID"/>
                 <b>u</b>{"RANDOM" | "TIME"}<br />
                 <b>uuid</b>
               </td>
@@ -1642,93 +944,30 @@ WARN  [main]: Message 2</pre>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternExtendedException"/>
-                <b>xEx</b>|<b>xException</b>|<b>xThrowable</b><br/>
-                &nbsp;&nbsp;{<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;["none" | "short" | "full" | depth]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;[,filters(package,package,...)]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;[,separator(<i>separator</i>)]<br/>
-                &nbsp;&nbsp;}<br/>
-                &nbsp;&nbsp;{ansi(<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;Key=Value,Value,...<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;Key=Value,Value,...<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;...)<br/>
-                &nbsp;&nbsp;}<br/>
-                &nbsp;&nbsp;{suffix(<i>pattern</i>)}<br/>
+                <b>xEx</b>{"none"|"short"|"full"|depth],[filters(packages)}<br />
+                <b>xException</b>["none"|"short"|"full"|depth],[filters(packages)}<br />
+                <b>xThrowable</b>["none"|"short"|"full"|depth],[filters(packages)}
               </td>
               <td>
                 <p>The same as the %throwable conversion word but also includes class packaging information.
                 </p>
-                <p>
-                  At the end of each stack element of the exception, a string containing the name of the jar file
+                <p>At the end of each stack element of the exception, a string containing the name of the jar file
                   that contains the class or the directory the class is located in and the "Implementation-Version"
                   as found in that jar's manifest will be added. If the information is uncertain, then the class
                   packaging data will be preceded by a tilde, i.e. the '~' character.
                 </p>
                 <p>The throwable conversion word can be followed by an option in the form
-                  <code>%xEx{short}</code>
-                  which will only output the first line of the Throwable or <code>%xEx{n}</code> where
-                  the first n lines of the stack trace will be printed. Specifying <code>%xEx{none}</code>
-                  or <code>%xEx{0}</code> will suppress printing of the exception.
-                </p>
-                <p>
-                  Use <code>filters(<i>packages</i>)</code> where <i>packages</i> is a list of package names to
-                  suppress matching stack frames from stack traces.
-                </p>
-                <p>
-                  Use a <code>separator</code> string to separate the lines of a stack trace. For example:
-                  <code>separator(|)</code>. The default value is the <code>line.separator</code> system property,
-                  which is operating system dependent.
-                </p>
-                <p>
-                 The <code>ansi</code> option renders stack traces with ANSI escapes code using the JAnsi library.
-                    (See <a href="#enable-jansi">configuration</a>.)
-                 Use <code>{ansi}</code> to use the default color mapping. You can specify your own mappings with
-                 <code>key=value</code> pairs. The keys are:
-                </p>
-                  <ul>
-                    <li>Prefix</li>
-                    <li>Name</li>
-                    <li>NameMessageSeparator</li>
-                    <li>Message</li>
-                    <li>At</li>
-                    <li>CauseLabel</li>
-                    <li>Text</li>
-                    <li>More</li>
-                    <li>Suppressed</li>
-                    <li>StackTraceElement.ClassName</li>
-                    <li>StackTraceElement.ClassMethodSeparator</li>
-                    <li>StackTraceElement.MethodName</li>
-                    <li>StackTraceElement.NativeMethod</li>
-                    <li>StackTraceElement.FileName</li>
-                    <li>StackTraceElement.LineNumber</li>
-                    <li>StackTraceElement.Container</li>
-                    <li>StackTraceElement.ContainerSeparator</li>
-                    <li>StackTraceElement.UnknownSource</li>
-                    <li>ExtraClassInfo.Inexact</li>
-                    <li>ExtraClassInfo.Container</li>
-                    <li>ExtraClassInfo.ContainerSeparator</li>
-                    <li>ExtraClassInfo.Location</li>
-                    <li>ExtraClassInfo.Version</li>
-                  </ul>
-                <p>
-                  The values are names from JAnsi's
-                  <a href="https://fusesource.github.io/jansi/documentation/api/org/fusesource/jansi/AnsiRenderer.Code.html">Code</a>
-                  class like <code>blue</code>, <code>bg_red</code>, and so on (Log4j ignores case.)
-                </p>
-                <p>
-                  The special key <code>StyleMapName</code> can be set to one of the following predefined maps:
-                  <code>Spock</code>, <code>Kirk</code>.
-                </p>
-                <p>
-                  As with %throwable, the <b>%xEx{suffix(<i>pattern</i>)</b> conversion will add the output of
-                  <i>pattern</i> to the output only if there is a throwable to print.
+                  <b>%xEx{short}</b>
+                  which will only output the first line of the Throwable or <b>%xEx{n}</b> where
+                  the first n lines of the stacktrace will be printed. The conversion word can also be
+                  followed by "filters(packages)" where packages is a list of package names that should
+                  be suppressed from stack traces. Specifying <b>%xEx{none}</b>
+                  or <b>%xEx{0}</b> will suppress printing of the exception.
                 </p>
               </td>
             </tr>
             <tr>
               <td align="center">
-                <a name="PatternPercentLiteral"/>
                 <b>%</b>
               </td>
               <td>The sequence %% outputs a single percent sign.
@@ -1773,11 +1012,6 @@ WARN  [main]: Message 2</pre>
             are dropped. This behavior deviates from the printf function in C
             where truncation is done from the end.
           </p>
-          <p>Truncation from the end is possible by appending a minus character
-            right after the period. In that case, if the maximum field width
-            is eight and the data item is ten characters long, then the last
-            two characters of the data item are dropped.
-          </p>
           <p>Below are various format modifier examples for the category
             conversion specifier.
           </p>
@@ -1801,7 +1035,9 @@ WARN  [main]: Message 2</pre>
             <tr>
               <td align="center">%-20c</td>
               <td align="center">true</td>
-              <td align="center">20</td>
+              <td
+                  align="center">20
+              </td>
               <td align="center">none</td>
               <td>Right pad with
                 spaces if the category name is less than 20 characters long.
@@ -1836,29 +1072,13 @@ WARN  [main]: Message 2</pre>
                 then truncate from the beginning.
               </td>
             </tr>
-            <tr>
-              <td align="center">%-20.-30c</td>
-              <td align="center">true</td>
-              <td align="center">20</td>
-              <td align="center">30</td>
-              <td>Right pad with spaces if the category name is shorter than 20
-                characters. However, if category name is longer than 30 characters,
-                then truncate from the end.
-              </td>
-            </tr>
             <caption align="top">Pattern Converters</caption>
           </table>
-          <a name="enable-jansi"></a>
           <h4>ANSI Styling on Windows</h4>
           <p>ANSI escape sequences are supported natively on many platforms but are not by default on Windows. To
-            enable ANSI support add the <a href="http://jansi.fusesource.org/">Jansi</a> jar to your application
-            and set property <code>log4j.skipJansi</code> to <code>false</code>.
-            This allows Log4j to use Jansi to add ANSI escape codes when writing to the console.
+            enable ANSI support simply add the <a href="http://jansi.fusesource.org/">Jansi</a> jar to your
+            application and Log4j will automatically make use of it when writing to the console.
           </p>
-          <p>NOTE: Prior to Log4j 2.10, Jansi was enabled by default. The fact that Jansi requires native code
-              means that Jansi can only be loaded by a single class loader. For web applications this means the
-              Jansi jar has to be in the web container's classpath. To avoid causing problems for web applications,
-              Log4j will no longer automatically try to load Jansi without explicit configuration from Log4j 2.10 onward.</p>
           <h4>Example Patterns</h4>
           <h5>Filtered Throwables</h5>
           <p>This example shows how to filter out classes from unimportant packages in stack traces.
@@ -1882,7 +1102,7 @@ WARN  [main]: Message 2</pre>
               testException(ExtendedThrowableTest.java:71) ~[test-classes/:?]
          ... 30 more</pre>
  #else
-          <pre>Exception java.lang.IllegalArgumentException: IllegalArgument
+          <pre class="prettyprint linenums">Exception java.lang.IllegalArgumentException: IllegalArgument
 at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(ExtendedThrowableTest.java:72) [test-classes/:?]
 ... suppressed 26 lines
 at ${dollar}Proxy0.invoke(Unknown Source)} [?:?]
@@ -1897,52 +1117,10 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
           <pre class="prettyprint linenums"><![CDATA[<PatternLayout>
   <pattern>%d %highlight{%p} %style{%C{1.} [%t] %m}{bold,green}%n</pattern>
 </PatternLayout>]]></pre>
-
-        <h4>Pattern Selectors</h4>
-        <p>
-          The PatternLayout can be configured with a PatternSelector to allow it to choose a pattern to use based on
-          attributes of the log event or other factors. A PatternSelector will normally be configured with a defaultPattern
-          attribute, which is used when other criteria don't match, and a set of PatternMatch elements that identify
-          the various patterns that can be selected.
-        </p>
-          <h5>MarkerPatternSelector</h5>
-          <p>
-            The MarkerPatternSelector selects patterns based on the Marker included in the log event. If the Marker in
-            the log event is equal to or is an ancestor of the name specified on the PatternMatch key attribute, then the
-            pattern specified on that PatternMatch element will be used.
-          </p>
-          <pre class="prettyprint linenums"><![CDATA[<PatternLayout>
-  <MarkerPatternSelector defaultPattern="[%-5level] %c{1.} %msg%n">
-    <PatternMatch key="FLOW" pattern="[%-5level] %c{1.} ====== %C{1.}.%M:%L %msg ======%n"/>
-  </MarkerPatternSelector>
-</PatternLayout>]]></pre>
-          <h5>ScriptPatternSelector</h5>
-          <p>
-            The ScriptPatternSelector executes a script as descibed in the <a href="../configuration.html#Scripts">Scripts</a> section of the
-            Configuration chapter. The script is passed all the properties configured in the Properties section of the
-            configuration, the StrSubstitutor used by the Confguration in the "substitutor" vairables, and the
-            log event in the "logEvent" variable, and is expected to return the value of the PatternMatch key that
-            should be used, or null if the default pattern should be used.
-          </p>
-          <pre class="prettyprint linenums"><![CDATA[<PatternLayout>
-  <ScriptPatternSelector defaultPattern="[%-5level] %c{1.} %C{1.}.%M.%L %msg%n">
-    <Script name="BeanShellSelector" language="bsh"><![CDATA[
-      if (logEvent.getLoggerName().equals("NoLocation")) {
-        return "NoLocation";
-      } else if (logEvent.getMarker() != null && logEvent.getMarker().isInstanceOf("FLOW")) {
-        return "Flow";
-      } else {
-        return null;
-      }]]]]><![CDATA[>
-    </Script>
-    <PatternMatch key="NoLocation" pattern="[%-5level] %c{1.} %msg%n"/>
-    <PatternMatch key="Flow" pattern="[%-5level] %c{1.} ====== %C{1.}.%M:%L %msg ======%n"/>
-  </ScriptPatternSelector>
-</PatternLayout>]]></pre>
-      </subsection>
+        </subsection>
         <a name="RFC5424Layout"/>
-        <subsection name="RFC5424 Layout">
-          <p>As the name implies, the Rfc5424Layout formats LogEvents in accordance with
+        <subsection name="RFC5424Layout">
+          <p>As the name implies, the RFC5424Layout formats LogEvents in accordance with
             <a href="http://tools.ietf.org/html/rfc5424">RFC 5424</a>, the enhanced Syslog specification. Although the specification
             is primarily directed at sending messages via Syslog, this format is quite useful for
             other purposes since items are passed in the message as self-describing key/value pairs.
@@ -1962,7 +1140,8 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
               <td>charset</td>
               <td>String</td>
               <td>The character set to use when converting the syslog String to a byte array. The String must be
-                a valid ${Charset}. If not specified, the default system Charset will be used.</td>
+                a valid <a href="http://download.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Charset</a>.
+                If not specified, the default system Charset will be used.</td>
             </tr>
             <tr>
               <td>enterpriseNumber</td>
@@ -2001,6 +1180,12 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
                 a StructuredDataMessage the id from the Message will be used instead of this value.</td>
             </tr>
             <tr>
+              <td>immediateFlush</td>
+              <td>boolean</td>
+              <td>When set to true, each write will be followed by a flush. This will guarantee the data is written
+                to disk but could impact performance.</td>
+            </tr>
+            <tr>
               <td>includeMDC</td>
               <td>boolean</td>
               <td>Indicates whether data from the ThreadContextMap will be included in the RFC 5424 Syslog record.
@@ -2010,8 +1195,8 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
               <td>loggerFields</td>
               <td>List of KeyValuePairs</td>
               <td>Allows arbitrary PatternLayout patterns to be included as specified ThreadContext fields; no default
-                specified. To use, include a &lt;LoggerFields&gt; nested element, containing one or more
-                &lt;KeyValuePair&gt; elements. Each &lt;KeyValuePair&gt; must have a key attribute, which
+                specified. To use, include a &gt;LoggerFields&lt; nested element, containing one or more
+                &gt;KeyValuePair&lt; elements. Each &gt;KeyValuePair&lt; must have a key attribute, which
                 specifies the key name which will be used to identify the field within the MDC Structured Data element,
                 and a value attribute, which specifies the PatternLayout pattern to use as the value.</td>
             </tr>
@@ -2041,11 +1226,6 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
                 The default string is "mdc:". This attribute only applies to RFC 5424 syslog records.</td>
             </tr>
             <tr>
-              <td>mdcId</td>
-              <td>String</td>
-              <td>A required MDC ID. This attribute only applies to RFC 5424 syslog records.</td>
-            </tr>
-            <tr>
               <td>messageId</td>
               <td>String</td>
               <td>The default value to be used in the MSGID field of RFC 5424 syslog records. </td>
@@ -2060,22 +1240,17 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
               <td>String</td>
               <td>String that should be used to replace newlines within the message text.</td>
             </tr>
-            <caption align="top">Rfc5424Layout Parameters</caption>
+            <caption align="top">RFC5424Layout Parameters</caption>
           </table>
         </subsection>
         <a name="SerializedLayout"/>
-        <subsection name="Serialized Layout">
-          <p>The SerializedLayout simply serializes the LogEvent into a byte array using Java Serialization.
-          The SerializedLayout accepts no parameters.
-          </p>
-          <p>
-          This layout is deprecated since version 2.9. Java Serialization has inherent security weaknesses,
-          using this layout is no longer recommended. An alternative layout containing the same information
-          is <a href="#JSONLayout">JsonLayout</a>, configured with <code>properties="true"</code>.
+        <subsection name="SerializedLayout">
+          <p>The SerializedLayout simply serializes the LogEvent into a byte array. This is useful when
+            sending messages via JMS or via a Socket connection. The SerializedLayout accepts no parameters.
           </p>
         </subsection>
         <a name="SyslogLayout"/>
-        <subsection name="Syslog Layout">
+        <subsection name="SyslogLayout">
           <p>The SyslogLayout formats the LogEvent as BSD Syslog records matching the same format used by
             Log4j 1.2.
           </p>
@@ -2089,7 +1264,8 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
               <td>charset</td>
               <td>String</td>
               <td>The character set to use when converting the syslog String to a byte array. The String must be
-                a valid ${Charset}. If not specified, this layout uses UTF-8.</td>
+                a valid <a href="http://download.oracle.com/javase/6/docs/api/java/nio/charset/Charset.html">Charset</a>.
+                If not specified, the default system Charset will be used.</td>
             </tr>
             <tr>
               <td>facility</td>
@@ -2113,254 +1289,49 @@ at org.apache.logging.log4j.core.pattern.ExtendedThrowableTest.testException(Ext
           </table>
         </subsection>
         <a name="XMLLayout"/>
-        <subsection name="XML Layout">
+        <subsection name="XMLLayout">
+          <!-- From Javadoc of org.apache.logging.log4j.core.layout.XMLLayout -->
           <p>
-            <!-- FIXME: log4j.dtd link is broken -->
-          Appends a series of <code>Event</code> elements as defined in the <a href="log4j.dtd">log4j.dtd</a>.
+          Appends a series of <code>event</code> elements as defined in the <a href="log4j.dtd">log4j.dtd</a>.
           </p>
           <h4>Complete well-formed XML vs. fragment XML</h4>
           <p>
-          If you configure <code>complete="true"</code>, the appender outputs a well-formed XML document where the
-          default namespace is the Log4j namespace <code>"http://logging.apache.org/log4j/2.0/events"</code>.  By default,
-          with <code>complete="false"</code>, you should include the output as an <em>external entity</em> in a
-          separate file to form a well-formed XML document, in which case the appender uses
+          If you configure <code>complete="true"</code>, the appender outputs a well-formed XML document where the 
+          default namespace is the Log4j namespace <code>"http://logging.apache.org/log4j/2.0/events"</code>.  By default, 
+          with <code>complete="false"</code>, you should include the output as an <em>external entity</em> in a 
+          separate file to form a well-formed XML document, in which case the appender uses 
           <code>namespacePrefix</code> with a default of <code>"log4j"</code>.
           </p>
           <p>
           A well-formed XML document follows this pattern:
           </p>
-          <pre class="prettyprint linenums">&lt;Event xmlns="http://logging.apache.org/log4j/2.0/events"
-       timeMillis="1493122559666"
-       level="INFO"
-       loggerName="HelloWorld"
-       endOfBatch="false"
-       thread="main"
-       loggerFqcn="org.apache.logging.log4j.spi.AbstractLogger"
-       threadId="1"
-       threadPriority="5"&gt;
-  &lt;Marker name="child"&gt;
-    &lt;Parents&gt;
-      &lt;Marker name="parent"&gt;
-        &lt;Parents&gt;
-          &lt;Marker name="grandparent"/&gt;
-        &lt;/Parents&gt;
-      &lt;/Marker&gt;
-    &lt;/Parents&gt;
-  &lt;/Marker&gt;
-  &lt;Message&gt;Hello, world!&lt;/Message&gt;
-  &lt;ContextMap&gt;
-    &lt;item key="bar" value="BAR"/&gt;
-    &lt;item key="foo" value="FOO"/&gt;
-  &lt;/ContextMap&gt;
-  &lt;ContextStack&gt;
-    &lt;ContextStackItem&gt;one&lt;/ContextStackItem&gt;
-    &lt;ContextStackItem&gt;two&lt;/ContextStackItem&gt;
-  &lt;/ContextStack&gt;
-  &lt;Source
-      class="logtest.Main"
-      method="main"
-      file="Main.java"
-      line="29"/&gt;
-  &lt;Thrown commonElementCount="0" message="error message" name="java.lang.RuntimeException"&gt;
-    &lt;ExtendedStackTrace&gt;
-      &lt;ExtendedStackTraceItem
-          class="logtest.Main"
-          method="main"
-          file="Main.java"
-          line="29"
-          exact="true"
-          location="classes/"
-          version="?"/&gt;
-    &lt;/ExtendedStackTrace&gt;
-  &lt;/Thrown&gt;
-&lt;/Event&gt;
-</pre>
+          <pre class="prettyprint linenums">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;events xmlns=&quot;http://logging.apache.org/log4j/2.0/events&quot;&gt;
+  &lt;event logger=&quot;com.foo.Bar&quot; timestamp=&quot;1373436580419&quot; level=&quot;INFO&quot; thread=&quot;main&quot;&gt;
+    &lt;message&gt;&lt;![CDATA[This is a log message 1]]&gt;&lt;/message&gt;
+  &lt;/event&gt;
+  &lt;event logger=&quot;com.foo.Baz&quot; timestamp=&quot;1373436580420&quot; level=&quot;INFO&quot; thread=&quot;main&quot;&gt;
+    &lt;message&gt;&lt;![CDATA[This is a log message 2]]&gt;&lt;/message&gt;
+  &lt;/event&gt;
+&lt;/events&gt;</pre>
           <p>
-          If <code>complete="false"</code>, the appender does not write the XML processing instruction and the root
+          If <code>complete="false"</code>, the appender does not write the XML processing instruction and the root 
           element.
           </p>
-          <h4>Marker</h4>
-          <p>Markers are represented by a <code>Marker</code> element within the <code>Event</code> element.
-          The <code>Marker</code> element appears only when a marker is used in the log message. The name of the marker's
-          parent will be provided in the <code>parent</code> attribute of the <code>Marker</code> element.
+          <p>
+          This approach enforces the independence of the XMLLayout and the appender where you embed it.
+          </p>
+          <h4>Encoding</h4>
+          <p>
+          Appenders using this layout should have their <code>charset</code> set to <code>UTF-8</code> or 
+          <code>UTF-16</code>, otherwise events containing non ASCII characters could result in corrupted log files.
           </p>
           <h4>Pretty vs. compact XML</h4>
           <p>
-          By default, the XML layout is not compact (a.k.a. not "pretty") with <code>compact="false"</code>, which
-          means the appender uses end-of-line characters and indents lines to format the XML. If
-          <code>compact="true"</code>,  then no end-of-line or indentation is used. Message content may contain,
+          By default, the XML layout is not compact (a.k.a. not "pretty") with <code>compact="false"</code>, which 
+          means the appender uses end-of-line characters and indents lines to format the XML. If 
+          <code>compact="true"</code>,  then no end-of-line or indentation is used. Message content may contain, 
           of course, end-of-lines.
-          </p>
-          <table>
-            <tr>
-              <th>Parameter Name</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <td>charset</td>
-              <td>String</td>
-              <td>The character set to use when converting to a byte array. The value must be a valid ${Charset}.
-                 If not specified, UTF-8 will be used.</td>
-            </tr>
-            <tr>
-              <td>compact</td>
-              <td>boolean</td>
-              <td>If true, the appender does not use end-of-lines and indentation. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>complete</td>
-              <td>boolean</td>
-              <td>If true, the appender includes the XML header and footer. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>properties</td>
-              <td>boolean</td>
-              <td>If true, the appender includes the thread context map in the generated XML. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>locationInfo</td>
-              <td>boolean</td>
-              <td>
-              <p>If true, the appender includes the location information in the generated XML. Defaults to false.</p>
-              <p>Generating <a href="#LocationInformation">location information</a>
-                is an expensive operation and may impact performance. Use with caution.</p>
-              </td>
-            </tr>
-            <tr>
-              <td>includeStacktrace</td>
-              <td>boolean</td>
-              <td>If true, include full stacktrace of any logged #javadoc('java/lang', 'Throwable') (optional, default to true).</td>
-            </tr>
-            <tr>
-              <td>stacktraceAsString</td>
-              <td>boolean</td>
-              <td>Whether to format the stacktrace as a string, and not a nested object (optional, defaults to false).</td>
-            </tr>
-            <tr>
-              <td>includeNullDelimiter</td>
-              <td>boolean</td>
-              <td>Whether to include NULL byte as delimiter after each event (optional, default to false).</td>
-            </tr>
-            <caption align="top">XmlLayout Parameters</caption>
-          </table>
-          <p>
-              To include any custom field in the output, use following syntax:
-              <pre class="prettyprint linenums">
-  &lt;XmlLayout&gt;
-    &lt;KeyValuePair key="additionalField1" value="constant value"/&gt;
-    &lt;KeyValuePair key="additionalField2" value="${dollar}${dollar}{ctx:key}"/&gt;
-  &lt;/XmlLayout&gt;
-</pre>
-              Custom fields are always last, in the order they are declared.
-          </p>
-          <p>
-            Additional <a href="../runtime-dependencies.html">runtime dependencies</a> are required for using XmlLayout.
-          </p>
-        </subsection>
-        <a name="YamlLayout"/>
-        <subsection name="YAML Layout">
-          <p>
-            Appends a series of YAML events as strings serialized as bytes.
-          </p>
-          <p>
-            A YAML log event follows this pattern:
-          </p>
-          <pre class="prettyprint linenums">---
-timeMillis: 1493122307075
-thread: "main"
-level: "INFO"
-loggerName: "HelloWorld"
-marker:
- name: "child"
- parents:
- - name: "parent"
-   parents:
-   - name: "grandparent"
-message: "Hello, world!"
-thrown:
- commonElementCount: 0
- message: "error message"
- name: "java.lang.RuntimeException"
- extendedStackTrace:
- - class: "logtest.Main"
-   method: "main"
-   file: "Main.java"
-   line: 29
-   exact: true
-   location: "classes/"
-   version: "?"
-contextStack:
-- "one"
-- "two"
-endOfBatch: false
-loggerFqcn: "org.apache.logging.log4j.spi.AbstractLogger"
-contextMap:
- bar: "BAR"
- foo: "FOO"
-threadId: 1
-threadPriority: 5
-source:
- class: "logtest.Main"
- method: "main"
- file: "Main.java"
- line: 29
-</pre>
-          <table>
-            <tr>
-              <th>Parameter Name</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <td>charset</td>
-              <td>String</td>
-              <td>The character set to use when converting to a byte array. The value must be a valid ${Charset}.
-                 If not specified, UTF-8 will be used.</td>
-            </tr>
-            <tr>
-              <td>properties</td>
-              <td>boolean</td>
-              <td>If true, the appender includes the thread context map in the generated YAML. Defaults to false.</td>
-            </tr>
-            <tr>
-              <td>locationInfo</td>
-              <td>boolean</td>
-              <td>
-              <p>If true, the appender includes the location information in the generated YAML. Defaults to false.</p>
-              <p>Generating <a href="#LocationInformation">location information</a>
-                is an expensive operation and may impact performance. Use with caution.</p>
-              </td>
-            </tr>
-            <tr>
-              <td>includeStacktrace</td>
-              <td>boolean</td>
-              <td>If true, include full stacktrace of any logged #javadoc('java/lang', 'Throwable') (optional, default to true).</td>
-            </tr>
-            <tr>
-              <td>stacktraceAsString</td>
-              <td>boolean</td>
-              <td>Whether to format the stacktrace as a string, and not a nested object (optional, defaults to false).</td>
-            </tr>
-            <tr>
-              <td>includeNullDelimiter</td>
-              <td>boolean</td>
-              <td>Whether to include NULL byte as delimiter after each event (optional, default to false).</td>
-            </tr>
-            <caption align="top">YamlLayout Parameters</caption>
-          </table>
-          <p>
-              To include any custom field in the output, use following syntax:
-              <pre class="prettyprint linenums">
-  &lt;YamlLayout&gt;
-    &lt;KeyValuePair key="additionalField1" value="constant value"/&gt;
-    &lt;KeyValuePair key="additionalField2" value="${dollar}${dollar}{ctx:key}"/&gt;
-  &lt;/YamlLayout&gt;
-</pre>
-              Custom fields are always last, in the order they are declared.
-          </p>
-          <p>
-            Additional <a href="../runtime-dependencies.html">runtime dependencies</a> are required for using YamlLayout.
           </p>
         </subsection>
         <a name="LocationInformation"/>
@@ -2370,7 +1341,7 @@ source:
 			configured with a location-related attribute like
 			HTML <a href="#HtmlLocationInfo">locationInfo</a>,
 			or one of the patterns
-			<a href="#PatternClass">%C or %class</a>,
+			<a href="#PatternClass">%C or $class</a>,
 			<a href="#PatternFile">%F or %file</a>,
 			<a href="#PatternLocation">%l or %location</a>,
 			<a href="#PatternLine">%L or %line</a>,
@@ -2384,12 +1355,15 @@ source:
 			long as possible before they take this stack snapshot. If no
 			location is required, the snapshot will never be taken.
 			</p><p>
-              However, asynchronous loggers need to make this decision before passing the
-              log message to another thread; the location information will be lost after that point.
-              The <a href="../performance.html#asyncLoggingWithLocation">performance impact</a>
-              of taking a stack trace snapshot is even higher for asynchronous loggers:
-              logging with location is 30-100 times slower than without location.
-              For this reason, asynchronous loggers and asynchronous appenders do not include location information by default.
+			However,
+			asynchronous loggers need to make this decision before passing the
+			log message to another thread; the location information will be
+			lost after that point.
+			The performance impact of taking a stack trace snapshot is even
+			higher for asynchronous loggers: logging with location is
+			4 - 20 times slower than without location.
+			For this reason, asynchronous loggers and asynchronous
+			appenders do not include location information by default.
 			</p><p>
 			You can override the default behaviour in your logger
 			or asynchronous appender configuration

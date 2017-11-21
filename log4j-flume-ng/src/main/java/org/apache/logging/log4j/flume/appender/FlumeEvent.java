@@ -30,16 +30,11 @@ import org.apache.logging.log4j.LoggingException;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.impl.ThrowableProxy;
-import org.apache.logging.log4j.core.util.Patterns;
-import org.apache.logging.log4j.core.util.UuidUtil;
+import org.apache.logging.log4j.core.helpers.UUIDUtil;
 import org.apache.logging.log4j.message.MapMessage;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataId;
 import org.apache.logging.log4j.message.StructuredDataMessage;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Class that is both a Flume and Log4j Event.
@@ -52,9 +47,9 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
      */
     private static final long serialVersionUID = -8988674608627854140L;
 
-    private static final String DEFAULT_MDC_PREFIX = Strings.EMPTY;
+    private static final String DEFAULT_MDC_PREFIX = "";
 
-    private static final String DEFAULT_EVENT_PREFIX = Strings.EMPTY;
+    private static final String DEFAULT_EVENT_PREFIX = "";
 
     private static final String EVENT_TYPE = "eventType";
 
@@ -64,7 +59,7 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
 
     private final LogEvent event;
 
-    private final Map<String, String> contextMap = new HashMap<>();
+    private final Map<String, String> ctx = new HashMap<String, String>();
 
     private final boolean compress;
 
@@ -83,43 +78,43 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         this.event = event;
         this.compress = compress;
         final Map<String, String> headers = getHeaders();
-        headers.put(TIMESTAMP, Long.toString(event.getTimeMillis()));
+        headers.put(TIMESTAMP, Long.toString(event.getMillis()));
         if (mdcPrefix == null) {
             mdcPrefix = DEFAULT_MDC_PREFIX;
         }
         if (eventPrefix == null) {
             eventPrefix = DEFAULT_EVENT_PREFIX;
         }
-        final Map<String, String> mdc = event.getContextData().toMap();
+        final Map<String, String> mdc = event.getContextMap();
         if (includes != null) {
-            final String[] array = includes.split(Patterns.COMMA_SEPARATOR);
+            final String[] array = includes.split(",");
             if (array.length > 0) {
                 for (String str : array) {
                     str = str.trim();
                     if (mdc.containsKey(str)) {
-                        contextMap.put(str, mdc.get(str));
+                        ctx.put(str, mdc.get(str));
                     }
                 }
             }
         } else if (excludes != null) {
-            final String[] array = excludes.split(Patterns.COMMA_SEPARATOR);
+            final String[] array = excludes.split(",");
             if (array.length > 0) {
-                final List<String> list = new ArrayList<>(array.length);
+                final List<String> list = new ArrayList<String>(array.length);
                 for (final String value : array) {
                     list.add(value.trim());
                 }
                 for (final Map.Entry<String, String> entry : mdc.entrySet()) {
                     if (!list.contains(entry.getKey())) {
-                        contextMap.put(entry.getKey(), entry.getValue());
+                        ctx.put(entry.getKey(), entry.getValue());
                     }
                 }
             }
         } else {
-            contextMap.putAll(mdc);
+            ctx.putAll(mdc);
         }
 
         if (required != null) {
-            final String[] array = required.split(Patterns.COMMA_SEPARATOR);
+            final String[] array = required.split(",");
             if (array.length > 0) {
                 for (String str : array) {
                     str = str.trim();
@@ -129,23 +124,20 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
                 }
             }
         }
-        final String guid =  UuidUtil.getTimeBasedUuid().toString();
+        final String guid =  UUIDUtil.getTimeBasedUUID().toString();
         final Message message = event.getMessage();
         if (message instanceof MapMessage) {
             // Add the guid to the Map so that it can be included in the Layout.
-        	@SuppressWarnings("unchecked")
-            final
-			MapMessage<?, String> stringMapMessage = (MapMessage<?, String>) message;
-        	stringMapMessage.put(GUID, guid);
+            ((MapMessage) message).put(GUID, guid);
             if (message instanceof StructuredDataMessage) {
                 addStructuredData(eventPrefix, headers, (StructuredDataMessage) message);
             }
-            addMapData(eventPrefix, headers, stringMapMessage);
+            addMapData(eventPrefix, headers, (MapMessage) message);
         } else {
             headers.put(GUID, guid);
         }
 
-        addContextData(mdcPrefix, headers, contextMap);
+        addContextData(mdcPrefix, headers, ctx);
     }
 
     protected void addStructuredData(final String prefix, final Map<String, String> fields,
@@ -155,7 +147,7 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         fields.put(prefix + EVENT_ID, id.getName());
     }
 
-    protected void addMapData(final String prefix, final Map<String, String> fields, final MapMessage<?, String> msg) {
+    protected void addMapData(final String prefix, final Map<String, String> fields, final MapMessage msg) {
         final Map<String, String> data = msg.getData();
         for (final Map.Entry<String, String> entry : data.entrySet()) {
             fields.put(prefix + entry.getKey(), entry.getValue());
@@ -164,7 +156,7 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
 
     protected void addContextData(final String prefix, final Map<String, String> fields,
                                   final Map<String, String> context) {
-        final Map<String, String> map = new HashMap<>();
+        Map<String, String> map = new HashMap<String, String>();
         for (final Map.Entry<String, String> entry : context.entrySet()) {
             if (entry.getKey() != null && entry.getValue() != null) {
                 fields.put(prefix + entry.getKey(), entry.getValue());
@@ -174,11 +166,6 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         context.clear();
         context.putAll(map);
     }
-
-	@Override
-	public LogEvent toImmutable() {
-		return Log4jLogEvent.createMemento(this);
-	}
 
     /**
      * Set the body in the event.
@@ -192,8 +179,10 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         }
         if (compress) {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (GZIPOutputStream os = new GZIPOutputStream(baos)) {
+            try {
+                final GZIPOutputStream os = new GZIPOutputStream(baos);
                 os.write(body);
+                os.close();
             } catch (final IOException ioe) {
                 throw new LoggingException("Unable to compress message", ioe);
             }
@@ -208,8 +197,8 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
      * @return the FQCN String.
      */
     @Override
-    public String getLoggerFqcn() {
-        return event.getLoggerFqcn();
+    public String getFQCN() {
+        return event.getFQCN();
     }
 
     /**
@@ -258,24 +247,6 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
     }
 
     /**
-     * Returns the ID of the Thread.
-     * @return the ID of the Thread.
-     */
-    @Override
-    public long getThreadId() {
-        return event.getThreadId();
-    }
-
-    /**
-     * Returns the priority of the Thread.
-     * @return the priority of the Thread.
-     */
-    @Override
-    public int getThreadPriority() {
-        return event.getThreadPriority();
-    }
-
-    /**
      * Returns the name of the Thread.
      * @return the name of the Thread.
      */
@@ -289,18 +260,8 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
      * @return the event timestamp.
      */
     @Override
-    public long getTimeMillis() {
-        return event.getTimeMillis();
-    }
-
-    /**
-     * Returns the value of the running Java Virtual Machine's high-resolution time source when this event was created,
-     * or a dummy value if it is known that this value will not be used downstream.
-     * @return the event nanosecond timestamp.
-     */
-    @Override
-    public long getNanoTime() {
-        return event.getNanoTime();
+    public long getMillis() {
+        return event.getMillis();
     }
 
     /**
@@ -313,30 +274,12 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
     }
 
     /**
-     * Returns the Throwable associated with the event, if any.
-     * @return the Throwable.
-     */
-    @Override
-    public ThrowableProxy getThrownProxy() {
-        return event.getThrownProxy();
-    }
-
-    /**
      * Returns a copy of the context Map.
      * @return a copy of the context Map.
      */
     @Override
     public Map<String, String> getContextMap() {
-        return contextMap;
-    }
-
-    /**
-     * Returns the context data of the {@code LogEvent} that this {@code FlumeEvent} was constructed with.
-     * @return the context data of the {@code LogEvent} that this {@code FlumeEvent} was constructed with.
-     */
-    @Override
-    public ReadOnlyStringMap getContextData() {
-        return event.getContextData();
+        return ctx;
     }
 
     /**
@@ -367,5 +310,4 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
     public void setEndOfBatch(final boolean endOfBatch) {
         event.setEndOfBatch(endOfBatch);
     }
-
 }

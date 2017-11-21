@@ -16,9 +16,7 @@
     limitations under the License.
 -->
 
-<document xmlns="http://maven.apache.org/XDOC/2.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+<document>
     <properties>
         <title>Log4j 2 API</title>
         <author email="rgoers@apache.org">Ralph Goers</author>
@@ -100,7 +98,7 @@ public class RequestFilter implements Filter {
         }
         ThreadContext.put("hostname", servletRequest.getServerName());
         ThreadContext.put("productName", filterConfig.getInitParameter("ProductName"));
-        ThreadContext.put("locale", servletRequest.getLocale().getDisplayName());
+        Threadcontext.put("locale", servletRequest.getLocale().getDisplayName());
         if (timeZone == null) {
             timeZone = TimeZone.getDefault();
         }
@@ -126,18 +124,18 @@ public class MyApp {
         toAccount.deposit(amount);
         fromAccount.withdraw(amount);
         String confirm = UUID.randomUUID().toString();
-        StructuredDataMessage msg = new StructuredDataMessage(confirm, null, "transfer");
+        StructuredDataMessage msg = new StructureDataMessage(confirm, null, "transfer");
         msg.put("toAccount", toAccount);
         msg.put("fromAccount", fromAccount);
         msg.put("amount", amount);
-        EventLogger.logEvent(msg);
+        EventLogger.logEvent(data);
         return confirm;
     }
 }</pre>
             <p>The EventLogger class uses a Logger named "EventLogger". EventLogger uses a logging level
               of OFF as the default to indicate that it cannot be filtered. These events can be
               formatted for printing using the
-              <a class="javadoc" href="../log4j-core/apidocs/org/apache/logging/log4j/core/layout/StructuredDataLayout.html">StructuredDataLayout</a>.
+              <a href="../log4j-core/apidocs/org/apache/logging/log4j/core/layout/StructuredDataLayout.html">StructuredDataLayout</a>.
             </p>
           </subsection>
         </section>

@@ -28,7 +28,7 @@ import org.apache.logging.log4j.core.config.Configurator;
  * Running from a Windows command line from the root of the project:
  * </p>
  * <pre>
- * java -classpath log4j-core\target\test-classes;log4j-core\target\classes;log4j-api\target\classes;%HOME%\.m2\repository\org\fusesource\jansi\jansi\1.14\jansi-1.14.jar; org.apache.logging.log4j.core.appender.ConsoleAppenderAnsiStyleJira272Main log4j-core/target/test-classes/log4j2-272.xml
+ * java -classpath log4j-core\target\test-classes;log4j-core\target\classes;log4j-api\target\classes;%HOME%\.m2\repository\org\fusesource\jansi\jansi\1.11\jansi-1.11.jar; org.apache.logging.log4j.core.appender.ConsoleAppenderAnsiStyleJira272Main log4j-core/target/test-classes/log4j2-272.xml
  * </pre>
  */
 public class ConsoleAppenderAnsiStyleJira272Main {
@@ -36,10 +36,10 @@ public class ConsoleAppenderAnsiStyleJira272Main {
     private static final Logger LOG = LogManager.getLogger(ConsoleAppenderAnsiStyleJira272Main.class);
 
     public static void main(final String[] args) {
-        System.setProperty("log4j.skipJansi", "false"); // LOG4J2-2087: explicitly enable
         // System.out.println(System.getProperty("java.class.path"));
-        final String config = args.length == 0 ? "target/test-classes/log4j2-272.xml" : args[0];
-        try (final LoggerContext ctx = Configurator.initialize(ConsoleAppenderAnsiMessagesMain.class.getName(), config)) {
+        String config = args.length == 0 ? "target/test-classes/log4j2-272.xml" : args[0];
+        final LoggerContext ctx = Configurator.initialize(ConsoleAppenderAnsiMessagesMain.class.getName(), config);
+        try {
             LOG.fatal("Fatal message.");
             LOG.error("Error message.");
             LOG.warn("Warning message.");
@@ -48,12 +48,14 @@ public class ConsoleAppenderAnsiStyleJira272Main {
             LOG.trace("Trace message.");
             try {
                 throw new NullPointerException();
-            } catch (final Exception e) {
+            } catch (Exception e) {
                 LOG.error("Error message.", e);
                 LOG.catching(Level.ERROR, e);
             }
             LOG.warn("this is ok \n And all \n this have only\t\tblack colour \n and here is colour again?");
             LOG.info("Information message.");
+        } finally {
+            Configurator.shutdown(ctx);
         }
     }
 

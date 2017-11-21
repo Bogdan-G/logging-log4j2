@@ -16,14 +16,9 @@
  */
 package org.apache.logging.log4j.message;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
-
-import org.apache.logging.log4j.junit.Mutable;
-import org.apache.logging.log4j.junit.SerialUtil;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests {@link ObjectMessage}.
@@ -43,67 +38,5 @@ public class ObjectMessageTest {
         final ObjectMessage msg = new ObjectMessage(testMsg);
         final String result = msg.getFormattedMessage();
         assertEquals(testMsg, result);
-    }
-
-    @Test
-    public void testUnsafeWithMutableParams() { // LOG4J2-763
-        final Mutable param = new Mutable().set("abc");
-        final ObjectMessage msg = new ObjectMessage(param);
-
-        // modify parameter before calling msg.getFormattedMessage
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Expected most recent param value", "XYZ", actual);
-    }
-
-    @Test
-    public void testSafeAfterGetFormattedMessageIsCalled() { // LOG4J2-763
-        final Mutable param = new Mutable().set("abc");
-        final ObjectMessage msg = new ObjectMessage(param);
-
-        // modify parameter after calling msg.getFormattedMessage
-        msg.getFormattedMessage();
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "abc", actual);
-    }
-
-    @Test
-    public void testSerializeWithSerializableParam() {
-        final BigDecimal big = BigDecimal.valueOf(123.456);
-        final ObjectMessage msg = new ObjectMessage(big);
-        final ObjectMessage other = SerialUtil.deserialize(SerialUtil.serialize(msg));
-        assertEquals(msg, other);
-    }
-
-    @Test
-    public void testDeserializeNonSerializableParamEqualIfToStringSame() {
-        class NonSerializable {
-            @Override
-            public boolean equals(final Object other) {
-                return other instanceof NonSerializable; // a very lenient equals()
-            }
-        }
-        final NonSerializable nonSerializable = new NonSerializable();
-        assertFalse(nonSerializable instanceof Serializable);
-        final ObjectMessage msg = new ObjectMessage(nonSerializable);
-        final ObjectMessage other = SerialUtil.deserialize(SerialUtil.serialize(msg));
-
-        assertEquals(msg, other);
-        assertEquals(other, msg);
-    }
-
-    @Test
-    public void formatTo_usesCachedMessageString() throws Exception {
-        final StringBuilder charSequence = new StringBuilder("initial value");
-        final ObjectMessage message = new ObjectMessage(charSequence);
-        assertEquals("initial value", message.getFormattedMessage());
-
-        charSequence.setLength(0);
-        charSequence.append("different value");
-
-        final StringBuilder result = new StringBuilder();
-        message.formatTo(result);
-        assertEquals("initial value", result.toString());
     }
 }

@@ -16,10 +16,9 @@
  */
 package org.apache.logging.log4j.core.jmx;
 
-import java.util.Objects;
-
 import javax.management.ObjectName;
 
+import org.apache.logging.log4j.core.helpers.Assert;
 import org.apache.logging.log4j.core.selector.ContextSelector;
 
 /**
@@ -32,22 +31,14 @@ public class ContextSelectorAdmin implements ContextSelectorAdminMBean {
 
     /**
      * Constructs a new {@code ContextSelectorAdmin}.
-     * 
-     * @param contextName name of the LoggerContext under which to register this
-     *            ContextSelectorAdmin. Note that the ContextSelector may be
-     *            registered multiple times, once for each LoggerContext. In web
-     *            containers, each web application has its own LoggerContext and
-     *            by associating the ContextSelector with the LoggerContext, all
-     *            associated MBeans can be unloaded when the web application is
-     *            undeployed.
+     *
      * @param selector the instrumented object
      */
-    public ContextSelectorAdmin(final String contextName, final ContextSelector selector) {
+    public ContextSelectorAdmin(final ContextSelector selector) {
         super();
-        this.selector = Objects.requireNonNull(selector, "ContextSelector");
+        this.selector = Assert.isNotNull(selector, "ContextSelector");
         try {
-            final String mbeanName = String.format(PATTERN, Server.escape(contextName));
-            objectName = new ObjectName(mbeanName);
+            objectName = new ObjectName(NAME);
         } catch (final Exception e) {
             throw new IllegalStateException(e);
         }
@@ -55,9 +46,9 @@ public class ContextSelectorAdmin implements ContextSelectorAdminMBean {
 
     /**
      * Returns the {@code ObjectName} of this mbean.
-     * 
+     *
      * @return the {@code ObjectName}
-     * @see ContextSelectorAdminMBean#PATTERN
+     * @see ContextSelectorAdminMBean#NAME
      */
     public ObjectName getObjectName() {
         return objectName;

@@ -29,7 +29,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 /**
  * An Appender reference.
  */
-@Plugin(name = "AppenderRef", category = Node.CATEGORY, printObject = true)
+@Plugin(name = "AppenderRef", category = "Core", printObject = true)
 @PluginAliases("appender-ref")
 public final class AppenderRef {
     private static final Logger LOGGER = StatusLogger.getLogger();
@@ -64,20 +64,29 @@ public final class AppenderRef {
     /**
      * Create an Appender reference.
      * @param ref The name of the Appender.
-     * @param level The Level to filter against.
+     * @param levelName The Level to filter against.
      * @param filter The filter(s) to use.
      * @return The name of the Appender.
      */
     @PluginFactory
     public static AppenderRef createAppenderRef(
             @PluginAttribute("ref") final String ref,
-            @PluginAttribute("level") final Level level,
-            @PluginElement("Filter") final Filter filter) {
+            @PluginAttribute("level") final String levelName,
+            @PluginElement("Filters") final Filter filter) {
 
         if (ref == null) {
             LOGGER.error("Appender references must contain a reference");
             return null;
         }
+        Level level = null;
+
+        if (levelName != null) {
+            level = Level.toLevel(levelName, null);
+            if (level == null) {
+                LOGGER.error("Invalid level " + levelName + " on Appender reference " + ref);
+            }
+        }
+
         return new AppenderRef(ref, level, filter);
     }
 }

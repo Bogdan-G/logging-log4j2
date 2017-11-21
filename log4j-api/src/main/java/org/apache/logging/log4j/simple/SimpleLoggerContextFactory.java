@@ -29,19 +29,17 @@ public class SimpleLoggerContextFactory implements LoggerContextFactory {
     private static LoggerContext context = new SimpleLoggerContext();
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final Object externalContext,
-            final boolean currentContext) {
+    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext) {
         return context;
     }
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final Object externalContext,
-            final boolean currentContext, final URI configLocation, final String name) {
+    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext,
+                                    final URI configLocation) {
         return context;
     }
 
     @Override
-    public void removeContext(final LoggerContext removeContext) {
-        // do nothing
+    public void removeContext(final LoggerContext context) {
     }
 }

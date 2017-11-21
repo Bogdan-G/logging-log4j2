@@ -16,6 +16,10 @@
  */
 package org.apache.logging.log4j.core.net;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,24 +31,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.apache.logging.log4j.test.AvailablePortFinder;
-import org.junit.ClassRule;
-import org.junit.Ignore;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-@Ignore("Currently needs better port choosing support")
 public class SocketMessageLossTest {
-    private static final int SOCKET_PORT = AvailablePortFinder.getNextAvailable();
+    private static final int SOCKET_PORT = 5514;
 
     private static final String CONFIG = "log4j-socket2.xml";
 
-    @ClassRule
-    public static LoggerContextRule context = new LoggerContextRule(CONFIG);
+    @BeforeClass
+    public static void before() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+    }
 
     @Test
     public void testSocket() throws Exception {
@@ -59,7 +61,7 @@ public class SocketMessageLossTest {
             futureIn = executor.submit(testServer);
 
             //System.err.println("Initializing logger");
-            final Logger logger = context.getLogger();
+            final Logger logger = LogManager.getLogger(SocketMessageLossTest.class);
 
             String message = "Log #1";
             logger.error(message);
@@ -114,7 +116,7 @@ public class SocketMessageLossTest {
             closeQuietly(server);
         }
 
-        private static void closeQuietly(final ServerSocket socket) {
+        private void closeQuietly(final ServerSocket socket) {
             if (null != socket) {
                 try {
                     socket.close();
@@ -123,7 +125,7 @@ public class SocketMessageLossTest {
             }
         }
 
-        private static void closeQuietly(final Socket socket) {
+        private void closeQuietly(final Socket socket) {
             if (null != socket) {
                 try {
                     socket.setSoLinger(true, 0);

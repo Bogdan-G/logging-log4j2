@@ -19,15 +19,12 @@ package org.apache.logging.log4j.core.pattern;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.StringBuilders;
 
 /**
- * Returns events' full marker string in a StringBuilder.
+ * Returns the event's rendered message in a StringBuilder.
  */
-@Plugin(name = "MarkerPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "marker" })
-@PerformanceSensitive("allocation")
+@Plugin(name = "MarkerPatternConverter", category = "Converter")
+@ConverterKeys({"marker" })
 public final class MarkerPatternConverter extends LogEventPatternConverter {
 
     /**
@@ -55,7 +52,7 @@ public final class MarkerPatternConverter extends LogEventPatternConverter {
     public void format(final LogEvent event, final StringBuilder toAppendTo) {
         final Marker marker = event.getMarker();
         if (marker != null) {
-            StringBuilders.appendValue(toAppendTo, marker);
+            toAppendTo.append(marker.toString());
         }
     }
 }

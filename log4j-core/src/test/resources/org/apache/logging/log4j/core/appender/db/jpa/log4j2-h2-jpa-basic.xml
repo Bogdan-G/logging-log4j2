@@ -15,7 +15,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-<Configuration status="OFF">
+<Configuration status="debug">
 
   <Appenders>
     <Console name="STDOUT">
@@ -30,7 +30,7 @@
       <AppenderRef ref="databaseAppender" />
     </Logger>
 
-    <Root level="fatal">
+    <Root level="error">
       <AppenderRef ref="STDOUT"/>
     </Root>
   </Loggers>

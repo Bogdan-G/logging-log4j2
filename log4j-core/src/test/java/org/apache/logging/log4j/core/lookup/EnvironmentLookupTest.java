@@ -18,7 +18,8 @@ package org.apache.logging.log4j.core.lookup;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  *

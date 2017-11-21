@@ -45,10 +45,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -59,14 +60,25 @@ import org.junit.Test;
  */
 public class FlumeAppenderTest {
 
+    private static LoggerContext ctx;
+
+    private static final int testServerPort = 12345;
+
     private AvroSource eventSource;
     private Channel channel;
     private Logger avroLogger;
+
     private String testPort;
 
     @BeforeClass
     public static void setupClass() {
         StatusLogger.getLogger().setLevel(Level.OFF);
+        ctx = (LoggerContext) LogManager.getContext();
+    }
+
+    @AfterClass
+    public static void cleanupClass() {
+
     }
 
     @Before
@@ -83,12 +95,12 @@ public class FlumeAppenderTest {
          */
         removeAppenders(avroLogger);
         final Context context = new Context();
-        testPort = String.valueOf(AvailablePortFinder.getNextAvailable());
+        testPort = String.valueOf(testServerPort);
         context.put("port", testPort);
         context.put("bind", "0.0.0.0");
         Configurables.configure(eventSource, context);
 
-        final List<Channel> channels = new ArrayList<>();
+        final List<Channel> channels = new ArrayList<Channel>();
         channels.add(channel);
 
         final ChannelSelector cs = new ReplicatingChannelSelector();
@@ -115,11 +127,12 @@ public class FlumeAppenderTest {
     }
 
     @Test
-    public void testLog4jAvroAppender() throws IOException {
+    public void testLog4jAvroAppender() throws InterruptedException,
+            IOException {
         final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
                 testPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "1",
                 null, null, null, null);
         avroAppender.start();
@@ -144,39 +157,11 @@ public class FlumeAppenderTest {
     }
 
     @Test
-    public void testLog4jAvroAppenderWithHostsParam() throws IOException {
-        final String hosts = String.format("localhost:%s", testPort);
-        final FlumeAppender avroAppender = FlumeAppender.createAppender(null,
-                null, hosts, "false", "Avro", null, "1000", "1000", "1", "1000",
-                "avro", "false", null, null, null, null, null, "true", "1",
-                null, null, null, null);
-        avroAppender.start();
-        avroLogger.addAppender(avroAppender);
-        avroLogger.setLevel(Level.ALL);
-
-        Assert.assertNotNull(avroLogger);
-
-        avroLogger.info("Test message");
-
-        final Transaction transaction = channel.getTransaction();
-        transaction.begin();
-
-        final Event event = channel.take();
-        Assert.assertNotNull(event);
-        Assert.assertTrue("Channel contained event, but not expected message",
-                getBody(event).endsWith("Test message"));
-        transaction.commit();
-        transaction.close();
-
-        eventSource.stop();
-    }
-
-    @Test
-    public void testStructured() throws IOException {
+    public void testStructured() throws InterruptedException, IOException {
         final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
                 testPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, "ReqCtx_", null, "true",
                 "1", null, null, null, null);
         avroAppender.start();
@@ -201,7 +186,8 @@ public class FlumeAppenderTest {
 
         final Event event = channel.take();
         Assert.assertNotNull(event);
-        Assert.assertTrue("Channel contained event, but not expected message", getBody(event).endsWith("Success"));
+        Assert.assertTrue("Channel contained event, but not expected message",
+                getBody(event).endsWith("Success"));
         transaction.commit();
         transaction.close();
 
@@ -211,11 +197,11 @@ public class FlumeAppenderTest {
     }
 
     @Test
-    public void testMultiple() throws IOException {
+    public void testMultiple() throws InterruptedException, IOException {
         final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
                 testPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "1",
                 null, null, null, null);
         avroAppender.start();
@@ -244,87 +230,12 @@ public class FlumeAppenderTest {
         eventSource.stop();
     }
 
-    //@Ignore //(Remko: this test hangs my build...)
     @Test
-    public void testIncompleteBatch() throws IOException {
+    public void testBatch() throws InterruptedException, IOException {
         final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
                 testPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "500",
-                "avro", "false", null, null, null, null, null, "true", "10",
-                null, null, null, null);
-        avroAppender.start();
-        avroLogger.addAppender(avroAppender);
-        avroLogger.setLevel(Level.ALL);
-
-        Assert.assertNotNull(avroLogger);
-
-        avroLogger.info("Test message 0");
-
-        final Transaction transaction = channel.getTransaction();
-        transaction.begin();
-
-        Event event = channel.take();
-        Assert.assertNull("Received event", event);
-
-        try {
-            Thread.sleep(500);
-        } catch (final InterruptedException ie) {
-        }
-
-        avroLogger.info("Test message 1");
-        for (int i = 0; i < 2; ++i) {
-            event = channel.take();
-            Assert.assertNotNull("No event for item " + i, event);
-            Assert.assertTrue("Channel contained event, but not expected message",
-                    getBody(event).endsWith("Test message " + i));
-        }
-        transaction.commit();
-        transaction.close();
-
-        eventSource.stop();
-    }
-
-    @Test
-    public void testIncompleteBatch2() throws IOException {
-        final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
-                testPort) };
-        final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "500",
-                "avro", "false", null, null, null, null, null, "true", "10",
-                null, null, null, null);
-        avroAppender.start();
-        avroLogger.addAppender(avroAppender);
-        avroLogger.setLevel(Level.ALL);
-
-        Assert.assertNotNull(avroLogger);
-
-        avroLogger.info("Test message 0");
-
-        final Transaction transaction = channel.getTransaction();
-        transaction.begin();
-
-        avroLogger.info("Test message 1");
-        avroLogger.info("Test message 2");
-        avroAppender.stop();
-        for (int i = 0; i < 3; ++i) {
-            final Event event = channel.take();
-            Assert.assertNotNull("No event for item " + i, event);
-            Assert.assertTrue("Channel contained event, but not expected message. Received : " + getBody(event),
-                    getBody(event).endsWith("Test message " + i));
-        }
-        transaction.commit();
-        transaction.close();
-
-        eventSource.stop();
-    }
-
-    @Test
-    public void testBatch() throws IOException {
-        final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
-                testPort) };
-        final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "10",
                 null, null, null, null);
         avroAppender.start();
@@ -358,7 +269,7 @@ public class FlumeAppenderTest {
         final Agent[] agents = new Agent[] { Agent.createAgent("localhost",
                 testPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "1",
                 null, null, null, null);
         avroAppender.start();
@@ -388,7 +299,7 @@ public class FlumeAppenderTest {
                 Agent.createAgent("localhost", testPort),
                 Agent.createAgent("localhost", altPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "1",
                 null, null, null, null);
         avroAppender.start();
@@ -436,7 +347,7 @@ public class FlumeAppenderTest {
                 Agent.createAgent("localhost", testPort),
                 Agent.createAgent("localhost", altPort) };
         final FlumeAppender avroAppender = FlumeAppender.createAppender(agents,
-                null, null, "false", "Avro", null, "1000", "1000", "1", "1000",
+                null, "false", "Avro", null, "1000", "1000", "1", "1000",
                 "avro", "false", null, null, null, null, null, "true", "1",
                 null, null, null, null);
         avroAppender.start();
@@ -450,7 +361,7 @@ public class FlumeAppenderTest {
 
         Event event = channel.take();
         Assert.assertNotNull(event);
-        Assert.assertTrue("Channel contained event, but not expected message. Received : " + getBody(event),
+        Assert.assertTrue("Channel contained event, but not expected message",
                 getBody(event).endsWith("Test message"));
         transaction.commit();
         transaction.close();
@@ -491,10 +402,11 @@ public class FlumeAppenderTest {
         }
     }
 
+    private Appender getAppender(final Logger logger, final String name) {
+        return logger.getAppenders().get(name);
+    }
+
     private String getBody(final Event event) throws IOException {
-        if (event == null) {
-            return "";
-        }
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final InputStream is = new GZIPInputStream(new ByteArrayInputStream(
                 event.getBody()));

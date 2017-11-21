@@ -18,28 +18,24 @@ package org.apache.logging.log4j.flume.appender;
 
 import java.io.Serializable;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginAliases;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.layout.Rfc5424Layout;
-import org.apache.logging.log4j.core.net.Facility;
-import org.apache.logging.log4j.core.util.Booleans;
-import org.apache.logging.log4j.core.util.Integers;
+import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.core.helpers.Integers;
+import org.apache.logging.log4j.core.layout.RFC5424Layout;
 
 /**
  * An Appender that uses the Avro protocol to route events to Flume.
  */
-@Plugin(name = "Flume", category = "Core", elementType = Appender.ELEMENT_TYPE, printObject = true)
+@Plugin(name = "Flume", category = "Core", elementType = "appender", printObject = true)
 public final class FlumeAppender extends AbstractAppender implements FlumeEventFactory {
 
     private static final String[] EXCLUDED_PACKAGES = {"org.apache.flume", "org.apache.avro"};
@@ -108,12 +104,9 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
     }
 
     @Override
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        setStopping();
-        boolean stopped = super.stop(timeout, timeUnit, false);
-        stopped &= manager.stop(timeout, timeUnit);
-        setStopped();
-        return stopped;
+    public void stop() {
+        super.stop();
+        manager.release();
     }
 
     /**
@@ -143,11 +136,11 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
      * <b>Note: </b><i>The embedded attribute is deprecated in favor of specifying the type attribute.</i>
      * @param type Avro (default), Embedded, or Persistent.
      * @param dataDir The directory where the Flume FileChannel should write its data.
-     * @param connectionTimeoutMillis The amount of time in milliseconds to wait before a connection times out. Minimum is
+     * @param connectionTimeout The amount of time in milliseconds to wait before a connection times out. Minimum is
      *                          1000.
-     * @param requestTimeoutMillis The amount of time in milliseconds to wait before a request times out. Minimum is 1000.
+     * @param requestTimeout The amount of time in milliseconds to wait before a request times out. Minimum is 1000.
      * @param agentRetries The number of times to retry an agent before failing to the next agent.
-     * @param maxDelayMillis The maximum number of milliseconds to wait for a complete batch.
+     * @param maxDelay The maximum number of seconds to wait for a complete batch.
      * @param name The name of the Appender.
      * @param ignore If {@code "true"} (default) exceptions encountered when appending events are logged; otherwise
      *               they are propagated to the caller.
@@ -166,19 +159,15 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
      * @return A Flume Avro Appender.
      */
     @PluginFactory
-    public static FlumeAppender createAppender(@PluginElement("Agents") final Agent[] agents,
+    public static FlumeAppender createAppender(@PluginElement("Agents") Agent[] agents,
                                                @PluginElement("Properties") final Property[] properties,
-                                               @PluginAttribute("hosts") final String hosts,
                                                @PluginAttribute("embedded") final String embedded,
                                                @PluginAttribute("type") final String type,
                                                @PluginAttribute("dataDir") final String dataDir,
-                                               @PluginAliases("connectTimeout")
-                                               @PluginAttribute("connectTimeoutMillis") final String connectionTimeoutMillis,
-                                               @PluginAliases("requestTimeout")
-                                               @PluginAttribute("requestTimeoutMillis") final String requestTimeoutMillis,
+                                               @PluginAttribute("connectTimeout") final String connectionTimeout,
+                                               @PluginAttribute("requestTimeout") final String requestTimeout,
                                                @PluginAttribute("agentRetries") final String agentRetries,
-                                               @PluginAliases("maxDelay") // deprecated
-                                               @PluginAttribute("maxDelayMillis") final String maxDelayMillis,
+                                               @PluginAttribute("maxDelay") final String maxDelay,
                                                @PluginAttribute("name") final String name,
                                                @PluginAttribute("ignoreExceptions") final String ignore,
                                                @PluginAttribute("mdcExcludes") final String excludes,
@@ -191,10 +180,10 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
                                                @PluginAttribute("lockTimeoutRetries") final String lockTimeoutRetries,
                                                @PluginElement("FlumeEventFactory") final FlumeEventFactory factory,
                                                @PluginElement("Layout") Layout<? extends Serializable> layout,
-                                               @PluginElement("Filter") final Filter filter) {
+                                               @PluginElement("Filters") final Filter filter) {
 
         final boolean embed = embedded != null ? Boolean.parseBoolean(embedded) :
-            (agents == null || agents.length == 0 || hosts == null || hosts.isEmpty()) && properties != null && properties.length > 0;
+            (agents == null || agents.length == 0) && properties != null && properties.length > 0;
         final boolean ignoreExceptions = Booleans.parseBoolean(ignore, true);
         final boolean compress = Booleans.parseBoolean(compressBody, true);
         ManagerType managerType;
@@ -223,17 +212,15 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
         }
 
         final int batchCount = Integers.parseInt(batchSize, 1);
-        final int connectTimeoutMillis = Integers.parseInt(connectionTimeoutMillis, 0);
-        final int reqTimeoutMillis = Integers.parseInt(requestTimeoutMillis, 0);
+        final int connectTimeout = Integers.parseInt(connectionTimeout, 0);
+        final int reqTimeout = Integers.parseInt(requestTimeout, 0);
         final int retries = Integers.parseInt(agentRetries, 0);
         final int lockTimeoutRetryCount = Integers.parseInt(lockTimeoutRetries, DEFAULT_LOCK_TIMEOUT_RETRY_COUNT);
-        final int delayMillis = Integers.parseInt(maxDelayMillis, DEFAULT_MAX_DELAY);
+        final int delay = Integers.parseInt(maxDelay, DEFAULT_MAX_DELAY );
 
         if (layout == null) {
-            final int enterpriseNumber = Rfc5424Layout.DEFAULT_ENTERPRISE_NUMBER;
-            layout = Rfc5424Layout.createLayout(Facility.LOCAL0, null, enterpriseNumber, true, Rfc5424Layout.DEFAULT_MDCID,
-                    mdcPrefix, eventPrefix, false, null, null, null, excludes, includes, required, null, false, null,
-                    null);
+            layout = RFC5424Layout.createLayout(null, null, null, "True", null, mdcPrefix, eventPrefix,
+                    null, null, null, null, excludes, includes, required, null, null, null, null);
         }
 
         if (name == null) {
@@ -248,15 +235,27 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
                 manager = FlumeEmbeddedManager.getManager(name, agents, properties, batchCount, dataDir);
                 break;
             case AVRO:
-                manager = FlumeAvroManager.getManager(name, getAgents(agents, hosts), batchCount, delayMillis, retries, connectTimeoutMillis, reqTimeoutMillis);
+                if (agents == null || agents.length == 0) {
+                    LOGGER.debug("No agents provided, using defaults");
+                    agents = new Agent[] {Agent.createAgent(null, null)};
+                }
+                manager = FlumeAvroManager.getManager(name, agents, batchCount, retries, connectTimeout, reqTimeout);
                 break;
             case PERSISTENT:
-                manager = FlumePersistentManager.getManager(name, getAgents(agents, hosts), properties, batchCount, retries,
-                    connectTimeoutMillis, reqTimeoutMillis, delayMillis, lockTimeoutRetryCount, dataDir);
+                if (agents == null || agents.length == 0) {
+                    LOGGER.debug("No agents provided, using defaults");
+                    agents = new Agent[] {Agent.createAgent(null, null)};
+                }
+                manager = FlumePersistentManager.getManager(name, agents, properties, batchCount, retries,
+                    connectTimeout, reqTimeout, delay, lockTimeoutRetryCount, dataDir);
                 break;
             default:
                 LOGGER.debug("No manager type specified. Defaulting to AVRO");
-                manager = FlumeAvroManager.getManager(name, getAgents(agents, hosts), batchCount, delayMillis, retries, connectTimeoutMillis, reqTimeoutMillis);
+                if (agents == null || agents.length == 0) {
+                    LOGGER.debug("No agents provided, using defaults");
+                    agents = new Agent[] {Agent.createAgent(null, null)};
+                }
+                manager = FlumeAvroManager.getManager(name, agents, batchCount, retries, connectTimeout, reqTimeout);
         }
 
         if (manager == null) {
@@ -265,25 +264,5 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
 
         return new FlumeAppender(name, filter, layout,  ignoreExceptions, includes,
             excludes, required, mdcPrefix, eventPrefix, compress, factory, manager);
-    }
-
-    private static Agent[] getAgents(Agent[] agents, final String hosts) {
-        if (agents == null || agents.length == 0) {
-            if (hosts != null && !hosts.isEmpty()) {
-                LOGGER.debug("Parsing agents from hosts parameter");
-                final String[] hostports = hosts.split(",");
-                agents = new Agent[hostports.length];
-                for(int i = 0; i < hostports.length; ++i) {
-                    final String[] h = hostports[i].split(":");
-                    agents[i] = Agent.createAgent(h[0], h.length > 1 ? h[1] : null);
-                }
-            } else {
-                LOGGER.debug("No agents provided, using defaults");
-                agents = new Agent[] {Agent.createAgent(null, null)};
-            }
-        }
-
-        LOGGER.debug("Using agents {}", agents);
-        return agents;
     }
 }

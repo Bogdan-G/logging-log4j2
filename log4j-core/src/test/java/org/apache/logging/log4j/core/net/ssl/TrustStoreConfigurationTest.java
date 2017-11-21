@@ -16,66 +16,38 @@
  */
 package org.apache.logging.log4j.core.net.ssl;
 
-import java.security.KeyStore;
-
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.security.KeyStore;
+
 public class TrustStoreConfigurationTest {
     @Test(expected = StoreConfigurationException.class)
-    public void loadEmptyConfigurationDeprecated() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(null, TestConstants.NULL_PWD, null, null);
-        final KeyStore ks = ksc.getKeyStore();
-        Assert.assertTrue(ks == null);
-    }
-    @Test(expected = StoreConfigurationException.class)
     public void loadEmptyConfiguration() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(null, new MemoryPasswordProvider(TestConstants.NULL_PWD), null, null);
-        final KeyStore ks = ksc.getKeyStore();
+        TrustStoreConfiguration ksc = new TrustStoreConfiguration(null, null);
+        KeyStore ks = ksc.getTrustStore();
         Assert.assertTrue(ks == null);
-    }
-
-    @Test
-    public void loadConfigurationDeprecated() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, TestConstants.TRUSTSTORE_PWD(), null, null);
-        final KeyStore ks = ksc.getKeyStore();
-        Assert.assertNotNull(ks);
     }
 
     @Test
     public void loadConfiguration() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, new MemoryPasswordProvider(TestConstants.TRUSTSTORE_PWD()), null, null);
-        final KeyStore ks = ksc.getKeyStore();
+        TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, TestConstants.TRUSTSTORE_PWD);
+        KeyStore ks = ksc.getTrustStore();
         Assert.assertNotNull(ks);
     }
 
     @Test
-    public void returnTheSameKeyStoreAfterMultipleLoadsDeprecated() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, TestConstants.TRUSTSTORE_PWD(), null, null);
-        final KeyStore ks = ksc.getKeyStore();
-        final KeyStore ks2 = ksc.getKeyStore();
-        Assert.assertTrue(ks == ks2);
-    }
-
-    @Test
     public void returnTheSameKeyStoreAfterMultipleLoads() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, new MemoryPasswordProvider(TestConstants.TRUSTSTORE_PWD()), null, null);
-        final KeyStore ks = ksc.getKeyStore();
-        final KeyStore ks2 = ksc.getKeyStore();
+        TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, TestConstants.TRUSTSTORE_PWD);
+        KeyStore ks = ksc.getTrustStore();
+        KeyStore ks2 = ksc.getTrustStore();
         Assert.assertTrue(ks == ks2);
-    }
-
-    @Test(expected = StoreConfigurationException.class)
-    public void wrongPasswordDeprecated() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, "wrongPassword!".toCharArray(), null, null);
-        ksc.getKeyStore();
-        Assert.assertTrue(false);
     }
 
     @Test(expected = StoreConfigurationException.class)
     public void wrongPassword() throws StoreConfigurationException {
-        final TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, new MemoryPasswordProvider("wrongPassword!".toCharArray()), null, null);
-        ksc.getKeyStore();
+        TrustStoreConfiguration ksc = new TrustStoreConfiguration(TestConstants.TRUSTSTORE_FILE, "wrongPassword!");
+        KeyStore ks = ksc.getTrustStore();
         Assert.assertTrue(false);
     }
 }

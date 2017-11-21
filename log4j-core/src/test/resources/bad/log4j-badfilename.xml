@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" name="XMLConfigTest">
+<Configuration status="warn" name="XMLConfigTest" packages="org.apache.logging.log4j.test">
 
 
   <Appenders>
@@ -29,9 +29,9 @@
       </PatternLayout>
     </File>
     <List name="List">
-      <Filters>
+      <filters>
         <ThresholdFilter level="error"/>
-      </Filters>
+      </filters>
     </List>
   </Appenders>
 

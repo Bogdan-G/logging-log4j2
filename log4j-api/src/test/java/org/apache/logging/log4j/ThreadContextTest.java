@@ -16,11 +16,9 @@
  */
 package org.apache.logging.log4j;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.junit.Test;
+
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -41,87 +39,120 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void testInheritanceSwitchedOffByDefault() throws Exception {
-        ThreadContext.clearMap();
+    public void testInheritance() throws Exception {
+        ThreadContext.clear();
         ThreadContext.put("Greeting", "Hello");
         StringBuilder sb = new StringBuilder();
         TestThread thread = new TestThread(sb);
         thread.start();
         thread.join();
         String str = sb.toString();
-        assertTrue("Unexpected ThreadContext value. Expected null. Actual "
-                + str, "null".equals(str));
+        assertTrue("Unexpected ThreadContext value. Expected Hello. Actual "
+                + str, "Hello".equals(str));
         sb = new StringBuilder();
         thread = new TestThread(sb);
         thread.start();
         thread.join();
         str = sb.toString();
-        assertTrue("Unexpected ThreadContext value. Expected null. Actual "
-                + str, "null".equals(str));
+        assertTrue("Unexpected ThreadContext value. Expected Hello. Actual "
+                + str, "Hello".equals(str));
     }
 
     @Test
     public void perfTest() throws Exception {
-        ThreadContextUtilityClass.perfTest();
+        ThreadContext.clear();
+        final Timer complete = new Timer("ThreadContextTest");
+        complete.start();
+        ThreadContext.put("Var1", "value 1");
+        ThreadContext.put("Var2", "value 2");
+        ThreadContext.put("Var3", "value 3");
+        ThreadContext.put("Var4", "value 4");
+        ThreadContext.put("Var5", "value 5");
+        ThreadContext.put("Var6", "value 6");
+        ThreadContext.put("Var7", "value 7");
+        ThreadContext.put("Var8", "value 8");
+        ThreadContext.put("Var9", "value 9");
+        ThreadContext.put("Var10", "value 10");
+        final int loopCount = 1000000;
+        final Timer timer = new Timer("ThreadContextCopy", loopCount);
+        timer.start();
+        for (int i = 0; i < loopCount; ++i) {
+            final Map<String, String> map = ThreadContext.getImmutableContext();
+            assertNotNull(map);
+        }
+        timer.stop();
+        complete.stop();
+        System.out.println(timer.toString());
+        System.out.println(complete.toString());
     }
 
     @Test
     public void testGetContextReturnsEmptyMapIfEmpty() {
-        ThreadContextUtilityClass.testGetContextReturnsEmptyMapIfEmpty();
+        ThreadContext.clear();
+        assertTrue(ThreadContext.getContext().isEmpty());
     }
 
     @Test
     public void testGetContextReturnsMutableCopy() {
-        ThreadContextUtilityClass.testGetContextReturnsMutableCopy();
+        ThreadContext.clear();
+        final Map<String, String> map1 = ThreadContext.getContext();
+        assertTrue(map1.isEmpty());
+        map1.put("K", "val"); // no error
+        assertEquals("val", map1.get("K"));
+
+        // adding to copy does not affect thread context map
+        assertTrue(ThreadContext.getContext().isEmpty());
+
+        ThreadContext.put("key", "val2");
+        final Map<String, String> map2 = ThreadContext.getContext();
+        assertEquals(1, map2.size());
+        assertEquals("val2", map2.get("key"));
+        map2.put("K", "val"); // no error
+        assertEquals("val", map2.get("K"));
+
+        // first copy is not affected
+        assertNotSame(map1, map2);
+        assertEquals(1, map1.size());
     }
 
     @Test
     public void testGetImmutableContextReturnsEmptyMapIfEmpty() {
-        ThreadContextUtilityClass.testGetImmutableContextReturnsEmptyMapIfEmpty();
+        ThreadContext.clear();
+        assertTrue(ThreadContext.getImmutableContext().isEmpty());
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void testGetImmutableContextReturnsImmutableMapIfNonEmpty() {
-        ThreadContextUtilityClass.testGetImmutableContextReturnsImmutableMapIfNonEmpty();
+        ThreadContext.clear();
+        ThreadContext.put("key", "val");
+        final Map<String, String> immutable = ThreadContext.getImmutableContext();
+        immutable.put("otherkey", "otherval");
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void testGetImmutableContextReturnsImmutableMapIfEmpty() {
-        ThreadContextUtilityClass.testGetImmutableContextReturnsImmutableMapIfEmpty();
+        ThreadContext.clear();
+        final Map<String, String> immutable = ThreadContext.getImmutableContext();
+        immutable.put("otherkey", "otherval");
     }
 
     @Test
     public void testGetImmutableStackReturnsEmptyStackIfEmpty() {
-        ThreadContextUtilityClass.testGetImmutableStackReturnsEmptyStackIfEmpty();
+        ThreadContext.clearStack();
+        assertTrue(ThreadContext.getImmutableStack().asList().isEmpty());
     }
 
     @Test
     public void testPut() {
-        ThreadContextUtilityClass.testPut();
-    }
-
-    @Test
-    public void testPutAll() {
-        ThreadContext.clearMap();
-        //
-        assertTrue(ThreadContext.isEmpty());
-        assertFalse(ThreadContext.containsKey("key"));
-        final int mapSize = 10;
-        final Map<String, String> newMap = new HashMap<>(mapSize);
-        for (int i = 1; i <= mapSize; i++) {
-            newMap.put("key" + i, "value" + i);
-        }
-        ThreadContext.putAll(newMap);
-        assertFalse(ThreadContext.isEmpty());
-        for (int i = 1; i <= mapSize; i++) {
-            assertTrue(ThreadContext.containsKey("key" + i));
-            assertEquals("value" + i, ThreadContext.get("key" + i));
-        }
+        ThreadContext.clear();
+        assertNull(ThreadContext.get("testKey"));
+        ThreadContext.put("testKey", "testValue");
+        assertEquals("testValue", ThreadContext.get("testKey"));
     }
 
     @Test
     public void testRemove() {
-        ThreadContext.clearMap();
+        ThreadContext.clear();
         assertNull(ThreadContext.get("testKey"));
         ThreadContext.put("testKey", "testValue");
         assertEquals("testValue", ThreadContext.get("testKey"));
@@ -132,23 +163,8 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void testRemoveAll() {
-        ThreadContext.clearMap();
-        ThreadContext.put("testKey1", "testValue1");
-        ThreadContext.put("testKey2", "testValue2");
-        assertEquals("testValue1", ThreadContext.get("testKey1"));
-        assertEquals("testValue2", ThreadContext.get("testKey2"));
-        assertFalse(ThreadContext.isEmpty());
-
-        ThreadContext.removeAll(Arrays.asList("testKey1", "testKey2"));
-        assertNull(ThreadContext.get("testKey1"));
-        assertNull(ThreadContext.get("testKey2"));
-        assertTrue(ThreadContext.isEmpty());
-    }
-
-    @Test
     public void testContainsKey() {
-        ThreadContext.clearMap();
+        ThreadContext.clear();
         assertFalse(ThreadContext.containsKey("testKey"));
         ThreadContext.put("testKey", "testValue");
         assertTrue(ThreadContext.containsKey("testKey"));
@@ -173,7 +189,7 @@ public class ThreadContextTest {
             } else {
                 sb.append(greeting);
             }
-            ThreadContext.clearMap();
+            ThreadContext.clear();
         }
     }
 }

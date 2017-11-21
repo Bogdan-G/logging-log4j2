@@ -17,43 +17,41 @@
 package org.apache.logging.log4j.core.pattern;
 
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
+import org.apache.logging.log4j.core.helpers.Constants;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
-import org.apache.logging.log4j.util.Strings;
 
 /**
- * Outputs the Throwable portion of the LoggingEvent as a full stack trace
+ * Outputs the Throwable portion of the LoggingEvent as a full stacktrace
  * unless this converter's option is 'short', where it just outputs the first line of the trace, or if
  * the number of lines to print is explicitly specified.
  * <p>
  * The extended stack trace will also include the location of where the class was loaded from and the
  * version of the jar if available.
  */
-@Plugin(name = "ExtendedThrowablePatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "xEx", "xThrowable", "xException" })
+@Plugin(name = "ExtendedThrowablePatternConverter", category = "Converter")
+@ConverterKeys({"xEx", "xThrowable", "xException" })
 public final class ExtendedThrowablePatternConverter extends ThrowablePatternConverter {
 
     /**
      * Private constructor.
-     * 
-     * @param config
+     *
      * @param options options, may be null.
      */
-    private ExtendedThrowablePatternConverter(final Configuration config, final String[] options) {
-        super("ExtendedThrowable", "throwable", options, config);
+    private ExtendedThrowablePatternConverter(final String[] options) {
+        super("ExtendedThrowable", "throwable", options);
     }
 
     /**
      * Gets an instance of the class.
      *
-     * @param config The current Configuration.
      * @param options pattern options, may be null.  If first element is "short",
      *                only the first line of the throwable will be formatted.
      * @return instance of class.
      */
-    public static ExtendedThrowablePatternConverter newInstance(final Configuration config, final String[] options) {
-        return new ExtendedThrowablePatternConverter(config, options);
+    public static ExtendedThrowablePatternConverter newInstance(final String[] options) {
+        return new ExtendedThrowablePatternConverter(options);
     }
 
     /**
@@ -61,22 +59,24 @@ public final class ExtendedThrowablePatternConverter extends ThrowablePatternCon
      */
     @Override
     public void format(final LogEvent event, final StringBuilder toAppendTo) {
-        final ThrowableProxy proxy = event.getThrownProxy();
+        ThrowableProxy proxy = null;
+        if (event instanceof Log4jLogEvent) {
+            proxy = ((Log4jLogEvent) event).getThrownProxy();
+        }
         final Throwable throwable = event.getThrown();
-        if ((throwable != null || proxy != null) && options.anyLines()) {
+        if (throwable != null && options.anyLines()) {
             if (proxy == null) {
                 super.format(event, toAppendTo);
                 return;
             }
-            final String suffix = getSuffix(event);
-            final String extStackTrace = proxy.getExtendedStackTraceAsString(options.getIgnorePackages(), options.getTextRenderer(), suffix);
+            final String trace = proxy.getExtendedStackTrace(options.getPackages());
             final int len = toAppendTo.length();
             if (len > 0 && !Character.isWhitespace(toAppendTo.charAt(len - 1))) {
-                toAppendTo.append(' ');
+                toAppendTo.append(" ");
             }
-            if (!options.allLines() || !Strings.LINE_SEPARATOR.equals(options.getSeparator())) {
+            if (!options.allLines() || !Constants.LINE_SEP.equals(options.getSeparator())) {
                 final StringBuilder sb = new StringBuilder();
-                final String[] array = extStackTrace.split(Strings.LINE_SEPARATOR);
+                final String[] array = trace.split(Constants.LINE_SEP);
                 final int limit = options.minLines(array.length) - 1;
                 for (int i = 0; i <= limit; ++i) {
                     sb.append(array[i]);
@@ -85,10 +85,10 @@ public final class ExtendedThrowablePatternConverter extends ThrowablePatternCon
                     }
                 }
                 toAppendTo.append(sb.toString());
+
             } else {
-                toAppendTo.append(extStackTrace);
+                toAppendTo.append(trace);
             }
         }
     }
-
 }

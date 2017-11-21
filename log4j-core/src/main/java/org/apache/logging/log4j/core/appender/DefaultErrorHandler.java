@@ -16,8 +16,6 @@
  */
 package org.apache.logging.log4j.core.appender;
 
-import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.ErrorHandler;
@@ -33,11 +31,11 @@ public class DefaultErrorHandler implements ErrorHandler {
 
     private static final int MAX_EXCEPTIONS = 3;
 
-    private static final long EXCEPTION_INTERVAL = TimeUnit.MINUTES.toNanos(5);
+    private static final int EXCEPTION_INTERVAL = 300000;
 
     private int exceptionCount = 0;
 
-    private long lastException = System.nanoTime() - EXCEPTION_INTERVAL - 1;
+    private long lastException;
 
     private final Appender appender;
 
@@ -52,8 +50,8 @@ public class DefaultErrorHandler implements ErrorHandler {
      */
     @Override
     public void error(final String msg) {
-        final long current = System.nanoTime();
-        if (current - lastException > EXCEPTION_INTERVAL || exceptionCount++ < MAX_EXCEPTIONS) {
+        final long current = System.currentTimeMillis();
+        if (lastException + EXCEPTION_INTERVAL < current || exceptionCount++ < MAX_EXCEPTIONS) {
             LOGGER.error(msg);
         }
         lastException = current;
@@ -66,8 +64,8 @@ public class DefaultErrorHandler implements ErrorHandler {
      */
     @Override
     public void error(final String msg, final Throwable t) {
-        final long current = System.nanoTime();
-        if (current - lastException > EXCEPTION_INTERVAL || exceptionCount++ < MAX_EXCEPTIONS) {
+        final long current = System.currentTimeMillis();
+        if (lastException + EXCEPTION_INTERVAL < current || exceptionCount++ < MAX_EXCEPTIONS) {
             LOGGER.error(msg, t);
         }
         lastException = current;
@@ -84,17 +82,13 @@ public class DefaultErrorHandler implements ErrorHandler {
      */
     @Override
     public void error(final String msg, final LogEvent event, final Throwable t) {
-        final long current = System.nanoTime();
-        if (current - lastException > EXCEPTION_INTERVAL || exceptionCount++ < MAX_EXCEPTIONS) {
+        final long current = System.currentTimeMillis();
+        if (lastException + EXCEPTION_INTERVAL < current || exceptionCount++ < MAX_EXCEPTIONS) {
             LOGGER.error(msg, t);
         }
         lastException = current;
         if (!appender.ignoreExceptions() && t != null && !(t instanceof AppenderLoggingException)) {
             throw new AppenderLoggingException(msg, t);
         }
-    }
-
-    public Appender getAppender() {
-        return appender;
     }
 }

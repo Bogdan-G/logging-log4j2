@@ -25,20 +25,20 @@ import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
- * Tests {@link MarkerPatternConverter}.
+ *
  */
 public class MarkerPatternConverterTest {
+
 
     @Test
     public void testLookup() {
         final Message msg = new StructuredDataMessage("Test", "This is a test", "Audit");
         final Marker eventMarker = MarkerManager.getMarker("EVENT");
-        final Marker auditMarker = MarkerManager.getMarker("AUDIT").setParents(eventMarker);
-        final LogEvent event = Log4jLogEvent.newBuilder().setLoggerName("MyLogger").setMarker(auditMarker)
-                .setLevel(Level.DEBUG).setMessage(msg).build();
+        final Marker auditMarker = MarkerManager.getMarker("AUDIT", eventMarker);
+        final LogEvent event = new Log4jLogEvent("MyLogger", auditMarker, null, Level.DEBUG, msg, null);
         final StringBuilder sb = new StringBuilder();
         final MarkerPatternConverter converter = MarkerPatternConverter.newInstance(null);
         converter.format(event, sb);

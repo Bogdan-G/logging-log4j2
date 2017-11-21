@@ -16,58 +16,37 @@
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
-import java.lang.reflect.Method;
+import java.lang.management.ManagementFactory;
 
-import org.apache.logging.log4j.core.Core;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
- * Triggers a rollover on every restart, but only if the file size is greater than zero.
+ * Trigger a rollover on every restart. The target file's timestamp is compared with the JVM start time
+ * and if it is older isTriggeringEvent will return true. After isTriggeringEvent has been called it will
+ * always return false.
  */
-@Plugin(name = "OnStartupTriggeringPolicy", category = Core.CATEGORY_NAME, printObject = true)
-public class OnStartupTriggeringPolicy extends AbstractTriggeringPolicy {
 
-    private static final long JVM_START_TIME = initStartTime();
+@Plugin(name = "OnStartupTriggeringPolicy", category = "Core", printObject = true)
+public class OnStartupTriggeringPolicy implements TriggeringPolicy {
+    private static long JVM_START_TIME = ManagementFactory.getRuntimeMXBean().getStartTime();
 
-    private final long minSize;
+    private static final Logger LOGGER = StatusLogger.getLogger();
 
-    private OnStartupTriggeringPolicy(final long minSize) {
-        this.minSize = minSize;
-    }
+    private boolean evaluated = false;
 
-    /**
-     * Returns the result of {@code ManagementFactory.getRuntimeMXBean().getStartTime()},
-     * or the current system time if JMX is not available.
-     */
-    private static long initStartTime() {
-        // LOG4J2-379:
-        // We'd like to call ManagementFactory.getRuntimeMXBean().getStartTime(),
-        // but Google App Engine throws a java.lang.NoClassDefFoundError
-        // "java.lang.management.ManagementFactory is a restricted class".
-        // The reflection is necessary because without it, Google App Engine
-        // will refuse to initialize this class.
+    private RollingFileManager manager;
+
+    /* static {
         try {
-            final Class<?> factoryClass = Loader.loadSystemClass("java.lang.management.ManagementFactory");
-            final Method getRuntimeMXBean = factoryClass.getMethod("getRuntimeMXBean");
-            final Object runtimeMXBean = getRuntimeMXBean.invoke(null);
-
-            final Class<?> runtimeMXBeanClass = Loader.loadSystemClass("java.lang.management.RuntimeMXBean");
-            final Method getStartTime = runtimeMXBeanClass.getMethod("getStartTime");
-            final Long result = (Long) getStartTime.invoke(runtimeMXBean);
-
-            return result;
-        } catch (final Throwable t) {
-            StatusLogger.getLogger().error("Unable to call ManagementFactory.getRuntimeMXBean().getStartTime(), "
-                    + "using system time for OnStartupTriggeringPolicy", t);
-            // We have little option but to declare "now" as the beginning of time.
-            return System.currentTimeMillis();
+            JVM_START_TIME = ManagementFactory.getRuntimeMXBean().getStartTime();
+        } catch (Exception ex) {
+            LOGGER.error("Unable to calculate JVM start time - {}", ex.getMessage());
         }
-    }
+    } */
 
     /**
      * Provide the RollingFileManager to the policy.
@@ -75,13 +54,9 @@ public class OnStartupTriggeringPolicy extends AbstractTriggeringPolicy {
      */
     @Override
     public void initialize(final RollingFileManager manager) {
-        if (manager.getFileTime() < JVM_START_TIME && manager.getFileSize() >= minSize) {
-            if (minSize == 0) {
-                manager.setRenameEmptyFiles(true);
-            }
-            manager.skipFooter(true);
-            manager.rollover();
-            manager.skipFooter(false);
+        this.manager = manager;
+        if (JVM_START_TIME == 0) {
+            evaluated = true;
         }
     }
 
@@ -92,7 +67,11 @@ public class OnStartupTriggeringPolicy extends AbstractTriggeringPolicy {
      */
     @Override
     public boolean isTriggeringEvent(final LogEvent event) {
-        return false;
+        if (evaluated) {
+            return false;
+        }
+        evaluated = true;
+        return manager.getFileTime() < JVM_START_TIME;
     }
 
     @Override
@@ -101,8 +80,7 @@ public class OnStartupTriggeringPolicy extends AbstractTriggeringPolicy {
     }
 
     @PluginFactory
-    public static OnStartupTriggeringPolicy createPolicy(
-            @PluginAttribute(value = "minSize", defaultLong = 1) final long minSize) {
-        return new OnStartupTriggeringPolicy(minSize);
+    public static OnStartupTriggeringPolicy createPolicy() {
+        return new OnStartupTriggeringPolicy();
     }
 }

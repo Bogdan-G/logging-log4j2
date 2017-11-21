@@ -24,170 +24,108 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 
 import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
-import org.apache.logging.log4j.core.appender.ConfigurationFactoryData;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.util.FileUtils;
-import org.apache.logging.log4j.core.util.NullOutputStream;
 
 /**
- * Extends RollingFileManager but instead of using a buffered output stream, this class uses a {@code ByteBuffer} and a
- * {@code RandomAccessFile} to do the I/O.
+ * Extends RollingFileManager but instead of using a buffered output stream,
+ * this class uses a {@code ByteBuffer} and a {@code RandomAccessFile} to do the
+ * I/O.
  */
 public class RollingRandomAccessFileManager extends RollingFileManager {
-    /**
-     * The default buffer size.
-     */
-    public static final int DEFAULT_BUFFER_SIZE = 256 * 1024;
+    static final int DEFAULT_BUFFER_SIZE = 256 * 1024;
 
     private static final RollingRandomAccessFileManagerFactory FACTORY = new RollingRandomAccessFileManagerFactory();
 
+    private final boolean isImmediateFlush;
     private RandomAccessFile randomAccessFile;
-    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
+    private final ByteBuffer buffer;
+    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<Boolean>();
 
-    @Deprecated
-    public RollingRandomAccessFileManager(final LoggerContext loggerContext, final RandomAccessFile raf,
-            final String fileName, final String pattern, final OutputStream os, final boolean append,
-            final boolean immediateFlush, final int bufferSize, final long size, final long time,
-            final TriggeringPolicy policy, final RolloverStrategy strategy, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final boolean writeHeader) {
-        this(loggerContext, raf, fileName, pattern, os, append, immediateFlush, bufferSize, size, time, policy, strategy, advertiseURI,
-               layout, null, null, null, writeHeader);
-    }
-
-    /**
-     * @since 2.8.3
-     */
-    public RollingRandomAccessFileManager(final LoggerContext loggerContext, final RandomAccessFile raf,
-            final String fileName, final String pattern, final OutputStream os, final boolean append,
-            final boolean immediateFlush, final int bufferSize, final long size, final long time,
-            final TriggeringPolicy policy, final RolloverStrategy strategy, final String advertiseURI,
-            final Layout<? extends Serializable> layout,
-            final String filePermissions, final String fileOwner, final String fileGroup,
-            final boolean writeHeader) {
-        super(loggerContext, fileName, pattern, os, append, false, size, time, policy, strategy, advertiseURI, layout,
-                filePermissions, fileOwner, fileGroup,
-                writeHeader, ByteBuffer.wrap(new byte[bufferSize]));
+    public RollingRandomAccessFileManager(final RandomAccessFile raf, final String fileName,
+            final String pattern, final OutputStream os, final boolean append,
+            final boolean immediateFlush, final long size, final long time,
+            final TriggeringPolicy policy, final RolloverStrategy strategy,
+            final String advertiseURI, final Layout<? extends Serializable> layout) {
+        super(fileName, pattern, os, append, size, time, policy, strategy, advertiseURI, layout);
+        this.isImmediateFlush = immediateFlush;
         this.randomAccessFile = raf;
         isEndOfBatch.set(Boolean.FALSE);
-        writeHeader();
+
+        // TODO make buffer size configurable?
+        buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
     }
 
-    /**
-     * Writes the layout's header to the file if it exists.
-     */
-    private void writeHeader() {
-        if (layout == null) {
-            return;
-        }
-        final byte[] header = layout.getHeader();
-        if (header == null) {
-            return;
-        }
-        try {
-            if (randomAccessFile.length() == 0) {
-                // write to the file, not to the buffer: the buffer may not be empty
-                randomAccessFile.write(header, 0, header.length);
-            }
-        } catch (final IOException e) {
-            logError("Unable to write header", e);
-        }
-    }
-
-    public static RollingRandomAccessFileManager getRollingRandomAccessFileManager(final String fileName,
-            final String filePattern, final boolean isAppend, final boolean immediateFlush, final int bufferSize,
-            final TriggeringPolicy policy, final RolloverStrategy strategy, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final String filePermissions, final String fileOwner, final String fileGroup,
-            final Configuration configuration) {
-        if (strategy instanceof DirectWriteRolloverStrategy && fileName != null) {
-            LOGGER.error("The fileName attribute must not be specified with the DirectWriteRolloverStrategy");
-            return null;
-        }
-        final String name = fileName == null ? filePattern : fileName;
-        return narrow(RollingRandomAccessFileManager.class, getManager(name, new FactoryData(fileName, filePattern, isAppend,
-                immediateFlush, bufferSize, policy, strategy, advertiseURI, layout,
-                filePermissions, fileOwner, fileGroup, configuration), FACTORY));
+    public static RollingRandomAccessFileManager getRollingRandomAccessFileManager(final String fileName, final String filePattern,
+            final boolean isAppend, final boolean immediateFlush, final TriggeringPolicy policy,
+            final RolloverStrategy strategy, final String advertiseURI, final Layout<? extends Serializable> layout) {
+        return (RollingRandomAccessFileManager) getManager(fileName, new FactoryData(filePattern, isAppend, immediateFlush,
+            policy, strategy, advertiseURI, layout), FACTORY);
     }
 
     public Boolean isEndOfBatch() {
         return isEndOfBatch.get();
     }
 
-    public void setEndOfBatch(final boolean endOfBatch) {
-        this.isEndOfBatch.set(Boolean.valueOf(endOfBatch));
-    }
-
-    // override to make visible for unit tests
-    @Override
-    protected synchronized void write(final byte[] bytes, final int offset, final int length,
-            final boolean immediateFlush) {
-        super.write(bytes, offset, length, immediateFlush);
+    public void setEndOfBatch(final boolean isEndOfBatch) {
+        this.isEndOfBatch.set(Boolean.valueOf(isEndOfBatch));
     }
 
     @Override
-    protected synchronized void writeToDestination(final byte[] bytes, final int offset, final int length) {
-        try {
-            if (randomAccessFile == null) {
-                String fileName = getFileName();
-                File file = new File(fileName);
-                FileUtils.makeParentDirs(file);
-                createFileAfterRollover(fileName);
+    protected synchronized void write(final byte[] bytes, int offset, int length) {
+        super.write(bytes, offset, length); // writes to dummy output stream
+
+        int chunk = 0;
+        do {
+            if (length > buffer.remaining()) {
+                flush();
             }
-            randomAccessFile.write(bytes, offset, length);
-            size += length;
-        } catch (final IOException ex) {
-            final String msg = "Error writing to RandomAccessFile " + getName();
-            throw new AppenderLoggingException(msg, ex);
+            chunk = Math.min(length, buffer.remaining());
+            buffer.put(bytes, offset, chunk);
+            offset += chunk;
+            length -= chunk;
+        } while (length > 0);
+
+        if (isImmediateFlush || isEndOfBatch.get() == Boolean.TRUE) {
+            flush();
         }
     }
 
     @Override
     protected void createFileAfterRollover() throws IOException {
-        createFileAfterRollover(getFileName());
-    }
-
-    private void createFileAfterRollover(String fileName) throws IOException {
-        this.randomAccessFile = new RandomAccessFile(fileName, "rw");
+        this.randomAccessFile = new RandomAccessFile(getFileName(), "rw");
         if (isAppend()) {
             randomAccessFile.seek(randomAccessFile.length());
         }
-        writeHeader();
     }
 
     @Override
     public synchronized void flush() {
-        flushBuffer(byteBuffer);
+        buffer.flip();
+        try {
+            randomAccessFile.write(buffer.array(), 0, buffer.limit());
+        } catch (final IOException ex) {
+            final String msg = "Error writing to RandomAccessFile " + getName();
+            throw new AppenderLoggingException(msg, ex);
+        }
+        buffer.clear();
     }
 
     @Override
-    public synchronized boolean closeOutputStream() {
+    public synchronized void close() {
         flush();
         try {
             randomAccessFile.close();
-            return true;
-        } catch (final IOException e) {
-            logError("Unable to close RandomAccessFile", e);
-            return false;
+        } catch (final IOException ex) {
+            LOGGER.error("Unable to close RandomAccessFile " + getName() + ". "
+                    + ex);
         }
-    }
-
-    /**
-     * Returns the buffer capacity.
-     *
-     * @return the buffer size
-     */
-    @Override
-    public int getBufferSize() {
-        return byteBuffer.capacity();
     }
 
     /**
      * Factory to create a RollingRandomAccessFileManager.
      */
-    private static class RollingRandomAccessFileManagerFactory implements
-            ManagerFactory<RollingRandomAccessFileManager, FactoryData> {
+    private static class RollingRandomAccessFileManagerFactory implements ManagerFactory<RollingRandomAccessFileManager, FactoryData> {
 
         /**
          * Create the RollingRandomAccessFileManager.
@@ -198,124 +136,86 @@ public class RollingRandomAccessFileManager extends RollingFileManager {
          */
         @Override
         public RollingRandomAccessFileManager createManager(final String name, final FactoryData data) {
-            File file = null;
-            long size = 0;
-            long time = System.currentTimeMillis();
+            final File file = new File(name);
+            final File parent = file.getParentFile();
+            if (null != parent && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            if (!data.append) {
+                file.delete();
+            }
+            final long size = data.append ? file.length() : 0;
+            final long time = file.exists() ? file.lastModified() : System.currentTimeMillis();
+
             RandomAccessFile raf = null;
-            if (data.fileName != null) {
-                file = new File(name);
-
-                if (!data.append) {
-                    file.delete();
+            try {
+                raf = new RandomAccessFile(name, "rw");
+                if (data.append) {
+                    final long length = raf.length();
+                    LOGGER.trace("RandomAccessFile {} seek to {}", name, length);
+                    raf.seek(length);
+                } else {
+                    LOGGER.trace("RandomAccessFile {} set length to 0", name);
+                    raf.setLength(0);
                 }
-                size = data.append ? file.length() : 0;
-                if (file.exists()) {
-                    time = file.lastModified();
-                }
-                try {
-                    FileUtils.makeParentDirs(file);
-                    raf = new RandomAccessFile(name, "rw");
-                    if (data.append) {
-                        final long length = raf.length();
-                        LOGGER.trace("RandomAccessFile {} seek to {}", name, length);
-                        raf.seek(length);
-                    } else {
-                        LOGGER.trace("RandomAccessFile {} set length to 0", name);
-                        raf.setLength(0);
+                return new RollingRandomAccessFileManager(raf, name, data.pattern, new DummyOutputStream(), data.append,
+                        data.immediateFlush, size, time, data.policy, data.strategy, data.advertiseURI, data.layout);
+            } catch (final IOException ex) {
+                LOGGER.error("Cannot access RandomAccessFile {}) " + ex);
+                if (raf != null) {
+                    try {
+                        raf.close();
+                    } catch (IOException e) {
+                        LOGGER.error("Cannot close RandomAccessFile {}", name, e);
                     }
-                } catch (final IOException ex) {
-                    LOGGER.error("Cannot access RandomAccessFile " + ex, ex);
-                    if (raf != null) {
-                        try {
-                            raf.close();
-                        } catch (final IOException e) {
-                            LOGGER.error("Cannot close RandomAccessFile {}", name, e);
-                        }
-                    }
-                    return null;
                 }
             }
-            final boolean writeHeader = !data.append || file == null || !file.exists();
+            return null;
+        }
+    }
 
-            final RollingRandomAccessFileManager rrm = new RollingRandomAccessFileManager(data.getLoggerContext(), raf, name, data.pattern,
-                    NullOutputStream.getInstance(), data.append, data.immediateFlush, data.bufferSize, size, time, data.policy,
-                    data.strategy, data.advertiseURI, data.layout, data.filePermissions, data.fileOwner, data.fileGroup, writeHeader);
-            if (rrm.isAttributeViewEnabled()) {
-                rrm.defineAttributeView(file.toPath());
-            }
-            return rrm;
+    /** {@code OutputStream} subclass that does not write anything. */
+    static class DummyOutputStream extends OutputStream {
+        @Override
+        public void write(final int b) throws IOException {
+        }
+
+        @Override
+        public void write(final byte[] b, final int off, final int len) throws IOException {
         }
     }
 
     /**
      * Factory data.
      */
-    private static class FactoryData extends ConfigurationFactoryData {
-        private final String fileName;
+    private static class FactoryData {
         private final String pattern;
         private final boolean append;
         private final boolean immediateFlush;
-        private final int bufferSize;
         private final TriggeringPolicy policy;
         private final RolloverStrategy strategy;
         private final String advertiseURI;
         private final Layout<? extends Serializable> layout;
-        private final String filePermissions;
-        private final String fileOwner;
-        private final String fileGroup;
 
         /**
          * Create the data for the factory.
          *
-         * @param fileName The file name.
          * @param pattern The pattern.
          * @param append The append flag.
          * @param immediateFlush
-         * @param bufferSize
-         * @param policy
-         * @param strategy
-         * @param advertiseURI
-         * @param layout
-         * @param filePermissions File permissions
-         * @param fileOwner File owner
-         * @param fileGroup File group
-         * @param configuration
          */
-        public FactoryData(final String fileName, final String pattern, final boolean append, final boolean immediateFlush,
-                final int bufferSize, final TriggeringPolicy policy, final RolloverStrategy strategy,
-                final String advertiseURI, final Layout<? extends Serializable> layout,
-                final String filePermissions, final String fileOwner, final String fileGroup,
-                final Configuration configuration) {
-            super(configuration);
-            this.fileName = fileName;
+        public FactoryData(final String pattern, final boolean append, final boolean immediateFlush,
+                           final TriggeringPolicy policy, final RolloverStrategy strategy, final String advertiseURI,
+                           final Layout<? extends Serializable> layout) {
             this.pattern = pattern;
             this.append = append;
             this.immediateFlush = immediateFlush;
-            this.bufferSize = bufferSize;
             this.policy = policy;
             this.strategy = strategy;
             this.advertiseURI = advertiseURI;
             this.layout = layout;
-            this.filePermissions = filePermissions;
-            this.fileOwner = fileOwner;
-            this.fileGroup = fileGroup;
-        }
-
-        public TriggeringPolicy getTriggeringPolicy()
-        {
-            return this.policy;
-        }
-
-        public RolloverStrategy getRolloverStrategy()
-        {
-            return this.strategy;
         }
     }
 
-    @Override
-    public void updateData(final Object data) {
-        final FactoryData factoryData = (FactoryData) data;
-        setRolloverStrategy(factoryData.getRolloverStrategy());
-        setTriggeringPolicy(factoryData.getTriggeringPolicy());
-    }
 }

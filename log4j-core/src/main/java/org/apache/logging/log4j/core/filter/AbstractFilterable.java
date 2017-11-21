@@ -17,48 +17,20 @@
 package org.apache.logging.log4j.core.filter;
 
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.logging.log4j.core.AbstractLifeCycle;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.LifeCycle2;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.config.plugins.PluginElement;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Enhances a Class by allowing it to contain Filters.
  */
-public abstract class AbstractFilterable extends AbstractLifeCycle implements Filterable {
+public abstract class AbstractFilterable implements Filterable {
 
-    /**
-     * Subclasses can extend this abstract Builder.
-     *
-     * @param <B> The type to build.
-     */
-    public abstract static class Builder<B extends Builder<B>> {
+    protected static final Logger LOGGER = StatusLogger.getLogger();
 
-        @PluginElement("Filter")
-        private Filter filter;
-
-        public Filter getFilter() {
-            return filter;
-        }
-
-        @SuppressWarnings("unchecked")
-        public B asBuilder() {
-            return (B) this;
-        }
-
-        public B withFilter(final Filter filter) {
-            this.filter = filter;
-            return asBuilder();
-        }
-
-    }
-
-    /**
-     * May be null.
-     */
     private volatile Filter filter;
 
     protected AbstractFilterable(final Filter filter) {
@@ -70,7 +42,7 @@ public abstract class AbstractFilterable extends AbstractLifeCycle implements Fi
 
     /**
      * Returns the Filter.
-     * @return the Filter or null.
+     * @return the Filter.
      */
     @Override
     public Filter getFilter() {
@@ -78,17 +50,14 @@ public abstract class AbstractFilterable extends AbstractLifeCycle implements Fi
     }
 
     /**
-     * Adds a filter.
+     * Add a filter.
      * @param filter The Filter to add.
      */
     @Override
     public synchronized void addFilter(final Filter filter) {
-        if (filter == null) {
-            return;
-        }
         if (this.filter == null) {
             this.filter = filter;
-        } else if (this.filter instanceof CompositeFilter) {
+        } else if (filter instanceof CompositeFilter) {
             this.filter = ((CompositeFilter) this.filter).addFilter(filter);
         } else {
             final Filter[] filters = new Filter[] {this.filter, filter};
@@ -97,18 +66,15 @@ public abstract class AbstractFilterable extends AbstractLifeCycle implements Fi
     }
 
     /**
-     * Removes a Filter.
+     * Remove a Filter.
      * @param filter The Filter to remove.
      */
     @Override
     public synchronized void removeFilter(final Filter filter) {
-        if (this.filter == null || filter == null) {
-            return;
-        }
-        if (this.filter == filter || this.filter.equals(filter)) {
+        if (this.filter == filter) {
             this.filter = null;
-        } else if (this.filter instanceof CompositeFilter) {
-            CompositeFilter composite = (CompositeFilter) this.filter;
+        } else if (filter instanceof CompositeFilter) {
+            CompositeFilter composite = (CompositeFilter) filter;
             composite = composite.removeFilter(filter);
             if (composite.size() > 1) {
                 this.filter = composite;
@@ -133,43 +99,19 @@ public abstract class AbstractFilterable extends AbstractLifeCycle implements Fi
     /**
      * Make the Filter available for use.
      */
-    @Override
-    public void start() {
-        this.setStarting();
-        if (filter != null) {
-            filter.start();
-        }
-        this.setStarted();
+    public void startFilter() {
+       if (filter != null && filter instanceof LifeCycle) {
+           ((LifeCycle) filter).start();
+       }
     }
 
     /**
      * Cleanup the Filter.
      */
-    @Override
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        return stop(timeout, timeUnit, true);
-    }
-
-    /**
-     * Cleanup the Filter.
-     */
-    protected boolean stop(final long timeout, final TimeUnit timeUnit, final boolean changeLifeCycleState) {
-        if (changeLifeCycleState) {
-            this.setStopping();
-        }
-        boolean stopped = true;
-        if (filter != null) {
-            if (filter instanceof LifeCycle2) {
-                stopped = ((LifeCycle2) filter).stop(timeout, timeUnit);
-            } else {
-                filter.stop();
-                stopped = true;
-            }
-        }
-        if (changeLifeCycleState) {
-            this.setStopped();
-        }
-        return stopped;
+    public void stopFilter() {
+       if (filter != null && filter instanceof LifeCycle) {
+           ((LifeCycle) filter).stop();
+       }
     }
 
     /**

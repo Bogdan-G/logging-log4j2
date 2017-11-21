@@ -16,7 +16,7 @@
  */
 package org.apache.logging.log4j.core.net.ssl;
 
-public enum TlsSyslogMessageFormat {
+public enum TLSSyslogMessageFormat {
     LEGACY_BSD,
     SYSLOG
 }

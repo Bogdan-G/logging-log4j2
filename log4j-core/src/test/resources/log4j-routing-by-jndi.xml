@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" name="RoutingByJndiTest">
+<Configuration status="debug" name="RoutingByJndiTest" packages="org.apache.logging.log4j.test">
 
   <ThresholdFilter level="debug"/>
 
@@ -32,8 +32,9 @@
     </List>
     <Routing name="Routing">
       <Routes pattern="$${jndi:logging/context-name}">
+        <!-- Default route -->
         <Route>
-          <File name="DefaultApplicationLogFile" fileName="target/routingbyjndi/routingbyjnditest-${jndi:logging/context-name:-unknown}.log" append="false">
+          <File name="DefaultApplicationLogFile" fileName="target/routingbyjndi/routingbyjnditest-default.log" append="false">
             <PatternLayout>
               <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
             </PatternLayout>

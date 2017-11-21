@@ -18,20 +18,23 @@ package org.apache.logging.log4j.core.appender.db.jpa.converter;
 
 import java.sql.SQLException;
 
-import org.apache.logging.log4j.categories.Appenders;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
-@Category(Appenders.Jpa.class)
 public class ThrowableAttributeConverterTest {
     private ThrowableAttributeConverter converter;
 
     @Before
     public void setUp() {
         this.converter = new ThrowableAttributeConverter();
+    }
+
+    @After
+    public void tearDown() {
+
     }
 
     @Test
@@ -82,10 +85,10 @@ public class ThrowableAttributeConverterTest {
     }
 
     private static String getStackTrace(final Throwable throwable) {
-        String returnValue = throwable.toString() + '\n';
+        String returnValue = throwable.toString() + "\n";
 
         for (final StackTraceElement element : throwable.getStackTrace()) {
-            returnValue += "\tat " + element.toString() + '\n';
+            returnValue += "\tat " + element.toString() + "\n";
         }
 
         if (throwable.getCause() != null) {

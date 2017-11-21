@@ -17,8 +17,6 @@
 
 package org.apache.logging.dumbster.smtp;
 
-import org.apache.logging.log4j.util.Strings;
-
 /**
  * Contains an SMTP client request. Handles state transitions using the following state transition table.
  * <PRE>
@@ -124,7 +122,7 @@ public class SmtpRequest {
                 }
             } else if (SmtpActionType.UNRECOG == action) {
                 if (SmtpState.DATA_HDR == state || SmtpState.DATA_BODY == state) {
-                    response = new SmtpResponse(-1, Strings.EMPTY, this.state);
+                    response = new SmtpResponse(-1, "", this.state);
                 } else {
                     response = new SmtpResponse(500, "Command not recognized", this.state);
                 }
@@ -136,9 +134,9 @@ public class SmtpRequest {
                 }
             } else if (SmtpActionType.BLANK_LINE == action) {
                 if (SmtpState.DATA_HDR == state) {
-                    response = new SmtpResponse(-1, Strings.EMPTY, SmtpState.DATA_BODY);
+                    response = new SmtpResponse(-1, "", SmtpState.DATA_BODY);
                 } else if (SmtpState.DATA_BODY == state) {
-                    response = new SmtpResponse(-1, Strings.EMPTY, this.state);
+                    response = new SmtpResponse(-1, "", this.state);
                 } else {
                     response = new SmtpResponse(503, "Bad sequence of commands: " + action, this.state);
                 }

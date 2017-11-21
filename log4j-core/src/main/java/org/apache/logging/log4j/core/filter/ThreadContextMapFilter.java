@@ -24,32 +24,22 @@ import java.util.Map;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.core.ContextDataInjector;
-import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginAliases;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.impl.ContextDataInjectorFactory;
-import org.apache.logging.log4j.core.util.KeyValuePair;
+import org.apache.logging.log4j.core.helpers.KeyValuePair;
 import org.apache.logging.log4j.message.Message;
-import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
-import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 /**
  * Filter based on a value in the Thread Context Map (MDC).
  */
-@Plugin(name = "ThreadContextMapFilter", category = Node.CATEGORY, elementType = Filter.ELEMENT_TYPE, printObject = true)
-@PluginAliases("ContextMapFilter")
-@PerformanceSensitive("allocation")
+@Plugin(name = "ThreadContextMapFilter", category = "Core", elementType = "filter", printObject = true)
 public class ThreadContextMapFilter extends MapFilter {
 
-    private final ContextDataInjector injector = ContextDataInjectorFactory.createInjector();
     private final String key;
     private final String value;
 
@@ -98,113 +88,39 @@ public class ThreadContextMapFilter extends MapFilter {
     private Result filter() {
         boolean match = false;
         if (useMap) {
-            ReadOnlyStringMap currentContextData = null;
-            final IndexedReadOnlyStringMap map = getStringMap();
-            for (int i = 0; i < map.size(); i++) {
-                if (currentContextData == null) {
-                    currentContextData = currentContextData();
+            for (final Map.Entry<String, List<String>> entry : getMap().entrySet()) {
+                final String toMatch = ThreadContext.get(entry.getKey());
+                if (toMatch != null) {
+                    match = entry.getValue().contains(toMatch);
+                } else {
+                    match = false;
                 }
-                final String toMatch = currentContextData.getValue(map.getKeyAt(i));
-                match = toMatch != null && ((List<String>) map.getValueAt(i)).contains(toMatch);
                 if ((!isAnd() && match) || (isAnd() && !match)) {
                     break;
                 }
             }
         } else {
-            match = value.equals(currentContextData().getValue(key));
+            match = value.equals(ThreadContext.get(key));
         }
         return match ? onMatch : onMismatch;
     }
 
-    private ReadOnlyStringMap currentContextData() {
-        return injector.rawContextData();
-    }
-
     @Override
     public Result filter(final LogEvent event) {
-        return super.filter(event.getContextData()) ? onMatch : onMismatch;
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8) {
-        return filter();
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8, final Object p9) {
-        return filter();
+        return super.filter(event.getContextMap()) ? onMatch : onMismatch;
     }
 
     @PluginFactory
     public static ThreadContextMapFilter createFilter(
             @PluginElement("Pairs") final KeyValuePair[] pairs,
             @PluginAttribute("operator") final String oper,
-            @PluginAttribute("onMatch") final Result match,
-            @PluginAttribute("onMismatch") final Result mismatch) {
+            @PluginAttribute("onMatch") final String match,
+            @PluginAttribute("onMismatch") final String mismatch) {
         if (pairs == null || pairs.length == 0) {
             LOGGER.error("key and value pairs must be specified for the ThreadContextMapFilter");
             return null;
         }
-        final Map<String, List<String>> map = new HashMap<>();
+        final Map<String, List<String>> map = new HashMap<String, List<String>>();
         for (final KeyValuePair pair : pairs) {
             final String key = pair.getKey();
             if (key == null) {
@@ -220,16 +136,18 @@ public class ThreadContextMapFilter extends MapFilter {
             if (list != null) {
                 list.add(value);
             } else {
-                list = new ArrayList<>();
+                list = new ArrayList<String>();
                 list.add(value);
                 map.put(pair.getKey(), list);
             }
         }
-        if (map.isEmpty()) {
+        if (map.size() == 0) {
             LOGGER.error("ThreadContextMapFilter is not configured with any valid key value pairs");
             return null;
         }
         final boolean isAnd = oper == null || !oper.equalsIgnoreCase("or");
-        return new ThreadContextMapFilter(map, isAnd, match, mismatch);
+        final Result onMatch = Result.toResult(match);
+        final Result onMismatch = Result.toResult(mismatch);
+        return new ThreadContextMapFilter(map, isAnd, onMatch, onMismatch);
     }
 }

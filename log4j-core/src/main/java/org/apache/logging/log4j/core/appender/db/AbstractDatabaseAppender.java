@@ -16,7 +16,6 @@
  */
 package org.apache.logging.log4j.core.appender.db;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -32,12 +31,11 @@ import org.apache.logging.log4j.core.appender.AppenderLoggingException;
  * An abstract Appender for writing events to a database of some type, be it relational or NoSQL. All database appenders
  * should inherit from this base appender. Three implementations are currently provided:
  * {@link org.apache.logging.log4j.core.appender.db.jdbc JDBC}, {@link org.apache.logging.log4j.core.appender.db.jpa
- * JPA}, and {@link org.apache.logging.log4j.core.appender.nosql NoSQL}.
+ * JPA}, and {@link org.apache.logging.log4j.core.appender.db.nosql NoSQL}.
  *
  * @param <T> Specifies which type of {@link AbstractDatabaseManager} this Appender requires.
  */
 public abstract class AbstractDatabaseAppender<T extends AbstractDatabaseManager> extends AbstractAppender {
-
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Lock readLock = lock.readLock();
     private final Lock writeLock = lock.writeLock();
@@ -86,19 +84,16 @@ public abstract class AbstractDatabaseAppender<T extends AbstractDatabaseManager
         }
         super.start();
         if (this.getManager() != null) {
-            this.getManager().startup();
+            this.getManager().connect();
         }
     }
 
     @Override
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        setStopping();
-        boolean stopped = super.stop(timeout, timeUnit, false);
+    public final void stop() {
+        super.stop();
         if (this.getManager() != null) {
-            stopped &= this.getManager().stop(timeout, timeUnit);
+            this.getManager().release();
         }
-        setStopped();
-        return stopped;
     }
 
     @Override
@@ -130,11 +125,11 @@ public abstract class AbstractDatabaseAppender<T extends AbstractDatabaseManager
         this.writeLock.lock();
         try {
             final T old = this.getManager();
-            if (!manager.isRunning()) {
-                manager.startup();
+            if (!manager.isConnected()) {
+                manager.connect();
             }
             this.manager = manager;
-            old.close();
+            old.release();
         } finally {
             this.writeLock.unlock();
         }

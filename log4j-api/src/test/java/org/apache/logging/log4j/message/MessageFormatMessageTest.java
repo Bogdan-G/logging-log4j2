@@ -14,23 +14,17 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-
 package org.apache.logging.log4j.message;
 
-import org.apache.logging.log4j.junit.Mutable;
-import org.apache.logging.log4j.util.Constants;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-import java.util.Locale;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  *
  */
 public class MessageFormatMessageTest {
-
-    private static final String SPACE = Constants.JAVA_MAJOR_VERSION < 9 ? " " : "\u00a0";
 
     private static final int LOOP_CNT = 500;
     String[] array = new String[LOOP_CNT];
@@ -50,29 +44,11 @@ public class MessageFormatMessageTest {
     }
 
     @Test
-    public void testOneStringArg() {
+    public void testOneArg() {
         final String testMsg = "Test message {0}";
         final MessageFormatMessage msg = new MessageFormatMessage(testMsg, "Apache");
         final String result = msg.getFormattedMessage();
         final String expected = "Test message Apache";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void testOneIntArgLocaleUs() {
-        final String testMsg = "Test message {0,number,currency}";
-        final MessageFormatMessage msg = new MessageFormatMessage(Locale.US, testMsg, 1234567890);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message $1,234,567,890.00";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void testOneIntArgLocaleFrance() {
-        final String testMsg = "Test message {0,number,currency}";
-        final MessageFormatMessage msg = new MessageFormatMessage(Locale.FRANCE, testMsg, 1234567890);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message 1 234 567 890,00" + SPACE + "€";
         assertEquals(expected, result);
     }
 
@@ -85,30 +61,5 @@ public class MessageFormatMessageTest {
         assertEquals(expected, result);
         final Throwable t = msg.getThrowable();
         assertNotNull("No Throwable", t);
-    }
-
-    @Test
-    public void testUnsafeWithMutableParams() { // LOG4J2-763
-        final String testMsg = "Test message {0}";
-        final Mutable param = new Mutable().set("abc");
-        final MessageFormatMessage msg = new MessageFormatMessage(testMsg, param);
-
-        // modify parameter before calling msg.getFormattedMessage
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Expected most recent param value", "Test message XYZ", actual);
-    }
-
-    @Test
-    public void testSafeAfterGetFormattedMessageIsCalled() { // LOG4J2-763
-        final String testMsg = "Test message {0}";
-        final Mutable param = new Mutable().set("abc");
-        final MessageFormatMessage msg = new MessageFormatMessage(testMsg, param);
-
-        // modify parameter after calling msg.getFormattedMessage
-        msg.getFormattedMessage();
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "Test message abc", actual);
     }
 }

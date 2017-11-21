@@ -16,10 +16,10 @@
  */
 package org.apache.logging.log4j;
 
-import java.net.URI;
-
 import org.apache.logging.log4j.spi.LoggerContext;
 import org.apache.logging.log4j.spi.LoggerContextFactory;
+
+import java.net.URI;
 
 /**
  *
@@ -29,14 +29,13 @@ public class TestLoggerContextFactory implements LoggerContextFactory {
     private static LoggerContext context = new TestLoggerContext();
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final Object externalContext,
-                                    final boolean currentContext) {
+    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext) {
         return context;
     }
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final Object externalContext,
-                                    final boolean currentContext, final URI configLocation, final String name) {
+    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext,
+                                    final URI configLocation) {
         return context;
     }
 

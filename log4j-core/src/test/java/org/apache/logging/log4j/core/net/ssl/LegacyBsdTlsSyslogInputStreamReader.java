@@ -21,32 +21,28 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.logging.log4j.util.Strings;
+public class LegacyBSDTLSSyslogInputStreamReader extends TLSSyslogInputStreamReaderBase {
+    private ByteArrayOutputStream buffer;
 
-public class LegacyBsdTlsSyslogInputStreamReader extends TlsSyslogInputStreamReaderBase {
-    private final ByteArrayOutputStream buffer;
-
-    public LegacyBsdTlsSyslogInputStreamReader(final InputStream inputStream) {
-        super(inputStream, TlsSyslogMessageFormat.LEGACY_BSD);
+    public LegacyBSDTLSSyslogInputStreamReader(InputStream inputStream) {
+        super(inputStream, TLSSyslogMessageFormat.LEGACY_BSD);
         buffer = new ByteArrayOutputStream();
     }
 
     @Override
     public String read() throws IOException {
-        String message = Strings.EMPTY;
+        String message = "";
         try {
             while (true) {
-                final int b = inputStream.read();
-                if (b == -1) {
+                int b = inputStream.read();
+                if (b == -1)
                     throw new EOFException("The stream has been closed or the end of stream has been reached");
-                }
                 buffer.write(b);
-                if (b == '\n') {
+                if (b == '\n')
                     break;
-                }
             }
         }
-        catch (final EOFException e) {
+        catch (EOFException e) {
             if (buffer.size() > 0) {
                 message = buffer.toString();
                 buffer.reset();

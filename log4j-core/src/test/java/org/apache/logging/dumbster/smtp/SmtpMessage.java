@@ -16,11 +16,11 @@
  */
 package org.apache.logging.dumbster.smtp;
 
-import java.util.ArrayList;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -40,7 +40,7 @@ public class SmtpMessage {
      * Constructor. Initializes headers Map and body buffer.
      */
     public SmtpMessage() {
-        headers = new HashMap<>(10);
+        headers = new HashMap<String, List<String>>(10);
         body = new StringBuffer();
     }
 
@@ -85,8 +85,9 @@ public class SmtpMessage {
         final List<String> values = headers.get(name);
         if (values == null) {
             return new String[0];
+        } else {
+            return values.toArray(new String[values.size()]);
         }
-        return values.toArray(new String[values.size()]);
     }
 
     /**
@@ -99,9 +100,10 @@ public class SmtpMessage {
         final List<String> values = headers.get(name);
         if (values == null) {
             return null;
+        } else {
+            final Iterator<String> iterator = values.iterator();
+            return iterator.hasNext() ? iterator.next() : null;
         }
-        final Iterator<String> iterator = values.iterator();
-        return iterator.hasNext() ? iterator.next() : null;
     }
 
     /**
@@ -122,7 +124,7 @@ public class SmtpMessage {
     private void addHeader(final String name, final String value) {
         List<String> valueList = headers.get(name);
         if (valueList == null) {
-            valueList = new ArrayList<>(1);
+            valueList = new ArrayList<String>(1);
             headers.put(name, valueList);
         }
         valueList.add(value);

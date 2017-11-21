@@ -17,7 +17,7 @@
 package org.apache.logging.log4j.core.config;
 
 /**
- *  Implemented by Configurations that can be reconfigured at runtime.
+ *  Interface to be implemented by Configurations that can be reconfigured at runtime.
  */
 public interface Reconfigurable {
 

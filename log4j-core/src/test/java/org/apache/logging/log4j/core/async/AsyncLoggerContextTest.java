@@ -16,16 +16,14 @@
  */
 package org.apache.logging.log4j.core.async;
 
+import static org.junit.Assert.assertTrue;
+
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.AsyncLoggers;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
-@Category(AsyncLoggers.class)
 public class AsyncLoggerContextTest {
 
     @Test
@@ -34,6 +32,6 @@ public class AsyncLoggerContextTest {
                 new LoggerContext("a"), "a", null);
         assertTrue(logger instanceof AsyncLogger);
 
-        CoreLoggerContexts.stopLoggerContext(); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
     }
 }

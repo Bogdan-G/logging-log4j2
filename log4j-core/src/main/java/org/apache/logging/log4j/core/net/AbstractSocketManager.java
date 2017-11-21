@@ -16,14 +16,14 @@
  */
 package org.apache.logging.log4j.core.net;
 
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.appender.OutputStreamManager;
+
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.appender.OutputStreamManager;
 
 /**
  * Abstract base class for managing sockets.
@@ -31,15 +31,13 @@ import org.apache.logging.log4j.core.appender.OutputStreamManager;
 public abstract class AbstractSocketManager extends OutputStreamManager {
 
     /**
-     * The Internet address of the host.
+     * The internet address of the host.
      */
-    protected final InetAddress inetAddress;
-    
+    protected final InetAddress address;
     /**
      * The name of the host.
      */
     protected final String host;
-    
     /**
      * The port on the host.
      */
@@ -49,34 +47,31 @@ public abstract class AbstractSocketManager extends OutputStreamManager {
      * The Constructor.
      * @param name The unique name of this connection.
      * @param os The OutputStream to manage.
-     * @param inetAddress The Internet address.
+     * @param addr The internet address.
      * @param host The target host name.
      * @param port The target port number.
-     * @param bufferSize The buffer size.
      */
-    public AbstractSocketManager(final String name, final OutputStream os, final InetAddress inetAddress,
-            final String host, final int port, final Layout<? extends Serializable> layout, final boolean writeHeader, 
-            final int bufferSize) {
-        super(os, name, layout, writeHeader, bufferSize);
-        this.inetAddress = inetAddress;
+    public AbstractSocketManager(final String name, final OutputStream os, final InetAddress addr, final String host,
+                                 final int port, final Layout<? extends Serializable> layout) {
+        super(os, name, layout);
+        this.address = addr;
         this.host = host;
         this.port = port;
     }
 
     /**
-     * Gets this AbstractSocketManager's content format. Specified by:
-     * <ul>
-     * <li>Key: "port" Value: provided "port" param</li>
-     * <li>Key: "address" Value: provided "address" param</li>
-     * </ul>
-     * 
+     * AbstractSocketManager's content format is specified by:<p/>
+     * Key: "port" Value: provided "port" param<p/>
+     * Key: "address" Value: provided "address" param
      * @return Map of content format keys supporting AbstractSocketManager
      */
     @Override
-    public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>(super.getContentFormat());
+    public Map<String, String> getContentFormat()
+    {
+        final Map<String, String> result = new HashMap<String, String>(super.getContentFormat());
         result.put("port", Integer.toString(port));
-        result.put("address", inetAddress.getHostAddress());
+        result.put("address", address.getHostAddress());
+
         return result;
     }
 }

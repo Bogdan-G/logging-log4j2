@@ -17,87 +17,263 @@
 package org.apache.logging.log4j.core.layout;
 
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.Node;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
-import org.apache.logging.log4j.core.jackson.XmlConstants;
-import org.apache.logging.log4j.core.util.KeyValuePair;
+import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
+import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.helpers.Charsets;
+import org.apache.logging.log4j.core.helpers.Strings;
+import org.apache.logging.log4j.core.helpers.Throwables;
+import org.apache.logging.log4j.core.helpers.Transform;
+import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.message.MultiformatMessage;
+
 
 /**
  * Appends a series of {@code event} elements as defined in the <a href="log4j.dtd">log4j.dtd</a>.
  *
- * <h3>Complete well-formed XML vs. fragment XML</h3>
+ * <h4>Complete well-formed XML vs. fragment XML</h4>
  * <p>
  * If you configure {@code complete="true"}, the appender outputs a well-formed XML document where the default namespace
- * is the log4j namespace {@value XmlConstants#XML_NAMESPACE}. By default, with {@code complete="false"}, you should
- * include the output as an <em>external entity</em> in a separate file to form a well-formed XML document.
+ * is the log4j namespace {@value #XML_NAMESPACE}. By default, with {@code complete="false"}, you should include the
+ * output as an <em>external entity</em> in a separate file to form a well-formed XML document, in which case the
+ * appender uses {@code namespacePrefix} with a default of {@value #DEFAULT_NS_PREFIX}.
  * </p>
+ * <p>
+ * A well-formed XML document follows this pattern:
+ * </p>
+ *
+ * <pre>
+ * &lt;?xml version="1.0" encoding=&quotUTF-8&quot?&gt;
+ * &lt;Events xmlns="http://logging.apache.org/log4j/2.0/events"&gt;
+ * &nbsp;&nbsp;&lt;Event logger="com.foo.Bar" timestamp="1373436580419" level="INFO" thread="main"&gt;
+ * &nbsp;&nbsp;&nbsp;&nbsp;&lt;Message>&lt;![CDATA[This is a log message 1]]&gt;&lt;/Message&gt;
+ * &nbsp;&nbsp;&lt;/Event&gt;
+ * &nbsp;&nbsp;&lt;Event logger="com.foo.Baz" timestamp="1373436580420" level="INFO" thread="main"&gt;
+ * &nbsp;&nbsp;&nbsp;&nbsp;&lt;Message>&lt;![CDATA[This is a log message 2]]&gt;&lt;/Message&gt;
+ * &nbsp;&nbsp;&lt;/Event&gt;
+ * &lt;/Events&gt;
+ * </pre>
  * <p>
  * If {@code complete="false"}, the appender does not write the XML processing instruction and the root element.
  * </p>
- * <h3>Encoding</h3>
+ * <p>
+ * This approach enforces the independence of the XMLLayout and the appender where you embed it.
+ * </p>
+ * <h4>Encoding</h4>
  * <p>
  * Appenders using this layout should have their {@code charset} set to {@code UTF-8} or {@code UTF-16}, otherwise
- * events containing non-ASCII characters could result in corrupted log files.
+ * events containing non ASCII characters could result in corrupted log files.
  * </p>
- * <h3>Pretty vs. compact XML</h3>
+ * <h4>Pretty vs. compact XML</h4>
  * <p>
- * By default, the XML layout is not compact (compact = not "pretty") with {@code compact="false"}, which means the
+ * By default, the XML layout is not compact (a.k.a. not "pretty") with {@code compact="false"}, which means the
  * appender uses end-of-line characters and indents lines to format the XML. If {@code compact="true"}, then no
  * end-of-line or indentation is used. Message content may contain, of course, end-of-lines.
  * </p>
- * <h3>Additional Fields</h3>
- * <p>
- * This property allows addition of custom fields into generated JSON.
- * {@code <XmlLayout><KeyValuePair key="foo" value="bar"/></XmlLayout>} inserts {@code <foo>bar</foo>} directly
- * into XML output. Supports Lookup expressions.
- * </p>
  */
-@Plugin(name = "XmlLayout", category = Node.CATEGORY, elementType = Layout.ELEMENT_TYPE, printObject = true)
-public final class XmlLayout extends AbstractJacksonLayout {
+@Plugin(name = "XMLLayout", category = "Core", elementType = "layout", printObject = true)
+public class XMLLayout extends AbstractStringLayout {
 
+    private static final String XML_NAMESPACE = "http://logging.apache.org/log4j/2.0/events";
     private static final String ROOT_TAG = "Events";
+    private static final int DEFAULT_SIZE = 256;
 
-    public static class Builder<B extends Builder<B>> extends AbstractJacksonLayout.Builder<B>
-        implements org.apache.logging.log4j.core.util.Builder<XmlLayout> {
+    // We yield to \r\n for the default.
+    private static final String DEFAULT_EOL = "\r\n";
+    private static final String COMPACT_EOL = "";
+    private static final String DEFAULT_INDENT = "  ";
+    private static final String COMPACT_INDENT = "";
+    private static final String DEFAULT_NS_PREFIX = "log4j";
 
-        public Builder() {
-            super();
-            setCharset(StandardCharsets.UTF_8);
-        }
+    private static final String[] FORMATS = new String[] {"xml"};
 
-        @Override
-        public XmlLayout build() {
-            return new XmlLayout(getConfiguration(), isLocationInfo(), isProperties(), isComplete(),
-                    isCompact(), getCharset(), isIncludeStacktrace(), isStacktraceAsString(),
-                    isIncludeNullDelimiter(), getAdditionalFields());
-        }
+    private final boolean locationInfo;
+    private final boolean properties;
+    private final boolean complete;
+    private final String namespacePrefix;
+    private final String eol;
+    private final String indent1;
+    private final String indent2;
+    private final String indent3;
+
+    protected XMLLayout(final boolean locationInfo, final boolean properties, final boolean complete,
+                        boolean compact, final String nsPrefix, final Charset charset) {
+        super(charset);
+        this.locationInfo = locationInfo;
+        this.properties = properties;
+        this.complete = complete;
+        this.eol = compact ? COMPACT_EOL : DEFAULT_EOL;
+        this.indent1 = compact ? COMPACT_INDENT : DEFAULT_INDENT;
+        this.indent2 = this.indent1 + this.indent1;
+        this.indent3 = this.indent2 + this.indent1;
+        this.namespacePrefix = (Strings.isEmpty(nsPrefix) ? DEFAULT_NS_PREFIX : nsPrefix) + ":";
     }
 
     /**
-     * @deprecated Use {@link #newBuilder()} instead
+     * Formats a {@link org.apache.logging.log4j.core.LogEvent} in conformance with the log4j.dtd.
+     *
+     * @param event The LogEvent.
+     * @return The XML representation of the LogEvent.
      */
-    @Deprecated
-    protected XmlLayout(final boolean locationInfo, final boolean properties, final boolean complete,
-                        final boolean compact, final Charset charset, final boolean includeStacktrace) {
-        this(null, locationInfo, properties, complete, compact, charset, includeStacktrace, false, false, null);
-    }
+    @Override
+    public String toSerializable(final LogEvent event) {
+        final StringBuilder buf = new StringBuilder(DEFAULT_SIZE);
 
-    private XmlLayout(final Configuration config, final boolean locationInfo, final boolean properties,
-                      final boolean complete, final boolean compact, final Charset charset,
-                      final boolean includeStacktrace, final boolean stacktraceAsString,
-                      final boolean includeNullDelimiter,
-                      final KeyValuePair[] additionalFields) {
-        super(config, new JacksonFactory.XML(includeStacktrace, stacktraceAsString).newWriter(
-            locationInfo, properties, compact),
-            charset, compact, complete, false, null, null, includeNullDelimiter,
-            additionalFields);
+        buf.append(this.indent1);
+        buf.append('<');
+        if (!complete) {
+            buf.append(this.namespacePrefix);
+        }
+        buf.append("Event logger=\"");
+        String name = event.getLoggerName();
+        if (name.isEmpty()) {
+            name = "root";
+        }
+        buf.append(Transform.escapeHtmlTags(name));
+        buf.append("\" timestamp=\"");
+        buf.append(event.getMillis());
+        buf.append("\" level=\"");
+        buf.append(Transform.escapeHtmlTags(String.valueOf(event.getLevel())));
+        buf.append("\" thread=\"");
+        buf.append(Transform.escapeHtmlTags(event.getThreadName()));
+        buf.append("\">");
+        buf.append(this.eol);
+
+        final Message msg = event.getMessage();
+        if (msg != null) {
+            boolean xmlSupported = false;
+            if (msg instanceof MultiformatMessage) {
+                final String[] formats = ((MultiformatMessage) msg).getFormats();
+                for (final String format : formats) {
+                    if (format.equalsIgnoreCase("XML")) {
+                        xmlSupported = true;
+                        break;
+                    }
+                }
+            }
+            buf.append(this.indent2);
+            buf.append('<');
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Message>");
+            if (xmlSupported) {
+                buf.append(((MultiformatMessage) msg).getFormattedMessage(FORMATS));
+            } else {
+                buf.append("<![CDATA[");
+                // Append the rendered message. Also make sure to escape any
+                // existing CDATA sections.
+                Transform.appendEscapingCDATA(buf, event.getMessage().getFormattedMessage());
+                buf.append("]]>");
+            }
+            buf.append("</");
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Message>");
+            buf.append(this.eol);
+        }
+
+        if (event.getContextStack().getDepth() > 0) {
+            buf.append(this.indent2);
+            buf.append('<');
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("NDC><![CDATA[");
+            Transform.appendEscapingCDATA(buf, event.getContextStack().toString());
+            buf.append("]]></");
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("NDC>");
+            buf.append(this.eol);
+        }
+
+        final Throwable throwable = event.getThrown();
+        if (throwable != null) {
+            final List<String> s = Throwables.toStringList(throwable);
+            buf.append(this.indent2);
+            buf.append('<');
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Throwable><![CDATA[");
+            for (final String str : s) {
+                Transform.appendEscapingCDATA(buf, str);
+                buf.append(this.eol);
+            }
+            buf.append("]]></");
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Throwable>");
+            buf.append(this.eol);
+        }
+
+        if (locationInfo) {
+            final StackTraceElement element = event.getSource();
+            buf.append(this.indent2);
+            buf.append('<');
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("LocationInfo class=\"");
+            buf.append(Transform.escapeHtmlTags(element.getClassName()));
+            buf.append("\" method=\"");
+            buf.append(Transform.escapeHtmlTags(element.getMethodName()));
+            buf.append("\" file=\"");
+            buf.append(Transform.escapeHtmlTags(element.getFileName()));
+            buf.append("\" line=\"");
+            buf.append(element.getLineNumber());
+            buf.append("\"/>");
+            buf.append(this.eol);
+        }
+
+        if (properties && event.getContextMap().size() > 0) {
+            buf.append(this.indent2);
+            buf.append('<');
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Properties>");
+            buf.append(this.eol);
+            for (final Map.Entry<String, String> entry : event.getContextMap().entrySet()) {
+                buf.append(this.indent3);
+                buf.append('<');
+                if (!complete) {
+                    buf.append(this.namespacePrefix);
+                }
+                buf.append("Data name=\"");
+                buf.append(Transform.escapeHtmlTags(entry.getKey()));
+                buf.append("\" value=\"");
+                buf.append(Transform.escapeHtmlTags(String.valueOf(entry.getValue())));
+                buf.append("\"/>");
+                buf.append(this.eol);
+            }
+            buf.append(this.indent2);
+            buf.append("</");
+            if (!complete) {
+                buf.append(this.namespacePrefix);
+            }
+            buf.append("Properties>");
+            buf.append(this.eol);
+        }
+
+        buf.append(this.indent1);
+        buf.append("</");
+        if (!complete) {
+            buf.append(this.namespacePrefix);
+        }
+        buf.append("Event>");
+        buf.append(this.eol);
+
+        return buf.toString();
     }
 
     /**
@@ -122,10 +298,11 @@ public final class XmlLayout extends AbstractJacksonLayout {
         // Make the log4j namespace the default namespace, no need to use more space with a namespace prefix.
         buf.append('<');
         buf.append(ROOT_TAG);
-        buf.append(" xmlns=\"" + XmlConstants.XML_NAMESPACE + "\">");
+        buf.append(" xmlns=\"" + XML_NAMESPACE + "\">");
         buf.append(this.eol);
         return buf.toString().getBytes(this.getCharset());
     }
+
 
     /**
      * Returns appropriate XML footer.
@@ -137,31 +314,28 @@ public final class XmlLayout extends AbstractJacksonLayout {
         if (!complete) {
             return null;
         }
-        return getBytes("</" + ROOT_TAG + '>' + this.eol);
+        return ("</" + ROOT_TAG + ">" + this.eol).getBytes(getCharset());
     }
 
     /**
-     * Gets this XmlLayout's content format. Specified by:
-     * <ul>
-     * <li>Key: "dtd" Value: "log4j-events.dtd"</li>
-     * <li>Key: "version" Value: "2.0"</li>
-     * </ul>
-     * 
-     * @return Map of content format keys supporting XmlLayout
+     * XMLLayout's content format is specified by:<p/>
+     * Key: "dtd" Value: "log4j-events.dtd"<p/>
+     * Key: "version" Value: "2.0"
+     * @return Map of content format keys supporting XMLLayout
      */
     @Override
     public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>();
-        // result.put("dtd", "log4j-events.dtd");
+        final Map<String, String> result = new HashMap<String, String>();
+        //result.put("dtd", "log4j-events.dtd");
         result.put("xsd", "log4j-events.xsd");
         result.put("version", "2.0");
         return result;
     }
 
+    @Override
     /**
      * @return The content type.
      */
-    @Override
     public String getContentType() {
         return "text/xml; charset=" + this.getCharset();
     }
@@ -170,39 +344,26 @@ public final class XmlLayout extends AbstractJacksonLayout {
      * Creates an XML Layout.
      *
      * @param locationInfo If "true", includes the location information in the generated XML.
-     * @param properties If "true", includes the thread context map in the generated XML.
-     * @param complete If "true", includes the XML header and footer, defaults to "false".
-     * @param compact If "true", does not use end-of-lines and indentation, defaults to "false".
-     * @param charset The character set to use, if {@code null}, uses "UTF-8".
-     * @param includeStacktrace
-     *            If "true", includes the stacktrace of any Throwable in the generated XML, defaults to "true".
+     * @param properties If "true", includes the thread context in the generated XML.
+     * @param completeStr If "true", includes the XML header and footer, defaults to "false".
+     * @param compactStr If "true", does not use end-of-lines and indentation, defaults to "false".
+     * @param namespacePrefix The namespace prefix, defaults to {@value #DEFAULT_NS_PREFIX}
+     * @param charsetName The character set to use, if {@code null}, uses "UTF-8".
      * @return An XML Layout.
-     *
-     * @deprecated Use {@link #newBuilder()} instead
      */
-    @Deprecated
-    public static XmlLayout createLayout(
-            final boolean locationInfo,
-            final boolean properties,
-            final boolean complete,
-            final boolean compact,
-            final Charset charset,
-            final boolean includeStacktrace) {
-        return new XmlLayout(null, locationInfo, properties, complete, compact, charset, includeStacktrace, false,
-                false, null);
-    }
-
-    @PluginBuilderFactory
-    public static <B extends Builder<B>> B newBuilder() {
-        return new Builder<B>().asBuilder();
-    }
-
-    /**
-     * Creates an XML Layout using the default settings.
-     *
-     * @return an XML Layout.
-     */
-    public static XmlLayout createDefaultLayout() {
-        return new XmlLayout(null, false, false, false, false, StandardCharsets.UTF_8, true, false, false, null);
+    @PluginFactory
+    public static XMLLayout createLayout(
+            @PluginAttribute("locationInfo") final String locationInfo,
+            @PluginAttribute("properties") final String properties,
+            @PluginAttribute("complete") final String completeStr,
+            @PluginAttribute("compact") final String compactStr,
+            @PluginAttribute("namespacePrefix") final String namespacePrefix,
+            @PluginAttribute("charset") final String charsetName) {
+        final Charset charset = Charsets.getSupportedCharset(charsetName, Charsets.UTF_8);
+        final boolean info = Boolean.parseBoolean(locationInfo);
+        final boolean props = Boolean.parseBoolean(properties);
+        final boolean complete = Boolean.parseBoolean(completeStr);
+        final boolean compact = Boolean.parseBoolean(compactStr);
+        return new XMLLayout(info, props, complete, compact, namespacePrefix, charset);
     }
 }

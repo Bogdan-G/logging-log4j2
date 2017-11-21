@@ -16,7 +16,6 @@
  */
 
 /**
- * Simple logging implementation. This is a rather minimal Log4j Provider that is used by default if no other Log4j
- * Providers are able to be loaded at runtime.
+ * Simple logging implementation.
  */
 package org.apache.logging.log4j.simple;

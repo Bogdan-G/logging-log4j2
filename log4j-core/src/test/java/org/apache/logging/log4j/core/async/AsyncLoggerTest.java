@@ -16,25 +16,22 @@
  */
 package org.apache.logging.log4j.core.async;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.categories.AsyncLoggers;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.util.Constants;
-import org.apache.logging.log4j.core.util.DummyNanoClock;
-import org.apache.logging.log4j.util.Strings;
+import org.apache.logging.log4j.core.helpers.Constants;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
-@Category(AsyncLoggers.class)
 public class AsyncLoggerTest {
 
     @BeforeClass
@@ -47,38 +44,28 @@ public class AsyncLoggerTest {
 
     @AfterClass
     public static void afterClass() {
-        System.setProperty(Constants.LOG4J_CONTEXT_SELECTOR, Strings.EMPTY);
+        System.setProperty(Constants.LOG4J_CONTEXT_SELECTOR, "");
     }
 
     @Test
     public void testAsyncLogWritesToLog() throws Exception {
-        final File file = new File("target", "AsyncLoggerTest.log");
+        final File f = new File("target", "AsyncLoggerTest.log");
         // System.out.println(f.getAbsolutePath());
-        file.delete();
-        
-        final AsyncLogger log = (AsyncLogger) LogManager.getLogger("com.foo.Bar");
-        assertTrue(log.getNanoClock() instanceof DummyNanoClock);
-        
+        f.delete();
+        final Logger log = LogManager.getLogger("com.foo.Bar");
         final String msg = "Async logger msg";
-        log.info(msg, new InternalError("this is not a real error"));
-        CoreLoggerContexts.stopLoggerContext(false, file); // stop async thread
+        log.info(msg);
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
 
-        final BufferedReader reader = new BufferedReader(new FileReader(file));
+        final BufferedReader reader = new BufferedReader(new FileReader(f));
         final String line1 = reader.readLine();
         reader.close();
-        file.delete();
+        f.delete();
         assertNotNull("line1", line1);
         assertTrue("line1 correct", line1.contains(msg));
 
         final String location = "testAsyncLogWritesToLog";
         assertTrue("no location", !line1.contains(location));
     }
-
-    // NOTE: only define one @Test method per test class with Async Loggers to prevent spurious failures
-    // @Test
-    // public void testNanoClockInitiallyDummy() {
-    // final AsyncLogger log = (AsyncLogger) LogManager.getLogger("com.foo.Bar");
-    // assertTrue(log.getNanoClock() instanceof DummyNanoClock);
-    // }
 
 }

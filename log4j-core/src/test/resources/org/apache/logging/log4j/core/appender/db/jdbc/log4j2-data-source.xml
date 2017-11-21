@@ -15,7 +15,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-<Configuration status="OFF">
+<Configuration status="debug">
 
   <Appenders>
     <Console name="STDOUT">
@@ -33,11 +33,11 @@
   </Appenders>
 
   <Loggers>
-    <Logger name="org.apache.logging.log4j.core.appender.db" level="debug" additivity="false">
+    <Logger name="org.apache.logging.log4j.core.appender.db" level="debug">
       <AppenderRef ref="databaseAppender" />
     </Logger>
 
-    <Root level="fatal">
+    <Root level="error">
       <AppenderRef ref="STDOUT"/>
     </Root>
   </Loggers>

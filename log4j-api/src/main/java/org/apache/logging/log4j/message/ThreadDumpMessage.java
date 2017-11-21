@@ -19,68 +19,62 @@ package org.apache.logging.log4j.message;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
-
-import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.StringBuilderFormattable;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Captures information about all running Threads.
  */
-@AsynchronouslyFormattable
-public class ThreadDumpMessage implements Message, StringBuilderFormattable {
+public class ThreadDumpMessage implements Message {
+
     private static final long serialVersionUID = -1103400781608841088L;
-    private static ThreadInfoFactory FACTORY;
+
+    private static final ThreadInfoFactory FACTORY;
 
     private volatile Map<ThreadInformation, StackTraceElement[]> threads;
+
     private final String title;
+
     private String formattedMessage;
+
+    static {
+        final Method[] methods = ThreadInfo.class.getMethods();
+        boolean basic = true;
+        for (final Method method : methods) {
+            if (method.getName().equals("getLockInfo")) {
+                basic = false;
+                break;
+            }
+        }
+        FACTORY = basic ? new BasicThreadInfoFactory() : new ExtendedThreadInfoFactory();
+    }
 
     /**
      * Generate a ThreadDumpMessage with a title.
      * @param title The title.
      */
     public ThreadDumpMessage(final String title) {
-        this.title = title == null ? Strings.EMPTY : title;
-        threads = getFactory().createThreadInfo();
+        this.title = title == null ? "" : title;
+        threads = FACTORY.createThreadInfo();
     }
 
     private ThreadDumpMessage(final String formattedMsg, final String title) {
         this.formattedMessage = formattedMsg;
-        this.title = title == null ? Strings.EMPTY : title;
-    }
-
-    private static ThreadInfoFactory getFactory() {
-        if (FACTORY == null) {
-            FACTORY = initFactory(ThreadDumpMessage.class.getClassLoader());
-        }
-        return FACTORY;
-    }
-
-    private static ThreadInfoFactory initFactory(final ClassLoader classLoader) {
-        final ServiceLoader<ThreadInfoFactory> serviceLoader = ServiceLoader.load(ThreadInfoFactory.class, classLoader);
-        ThreadInfoFactory result = null;
-        try {
-            final Iterator<ThreadInfoFactory> iterator = serviceLoader.iterator();
-            while (result == null && iterator.hasNext()) {
-                result = iterator.next();
-            }
-        } catch (ServiceConfigurationError | LinkageError | Exception unavailable) { // if java management classes not available
-            StatusLogger.getLogger().info("ThreadDumpMessage uses BasicThreadInfoFactory: " +
-                            "could not load extended ThreadInfoFactory: {}", unavailable.toString());
-            result = null;
-        }
-        return result == null ? new BasicThreadInfoFactory() : result;
+        this.title = title == null ? "" : title;
     }
 
     @Override
     public String toString() {
-        return getFormattedMessage();
+        final StringBuilder sb = new StringBuilder("ThreadDumpMessage[");
+        if (this.title.length() > 0) {
+            sb.append("Title=\"").append(this.title).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     /**
@@ -92,23 +86,17 @@ public class ThreadDumpMessage implements Message, StringBuilderFormattable {
         if (formattedMessage != null) {
             return formattedMessage;
         }
-        final StringBuilder sb = new StringBuilder(255);
-        formatTo(sb);
-        return sb.toString();
-    }
-
-    @Override
-    public void formatTo(final StringBuilder sb) {
-        sb.append(title);
+        final StringBuilder sb = new StringBuilder(title);
         if (title.length() > 0) {
-            sb.append('\n');
+            sb.append("\n");
         }
         for (final Map.Entry<ThreadInformation, StackTraceElement[]> entry : threads.entrySet()) {
             final ThreadInformation info = entry.getKey();
             info.printThreadInfo(sb);
             info.printStack(sb, entry.getValue());
-            sb.append('\n');
+            sb.append("\n");
         }
+        return sb.toString();
     }
 
     /**
@@ -117,7 +105,7 @@ public class ThreadDumpMessage implements Message, StringBuilderFormattable {
      */
     @Override
     public String getFormat() {
-        return title == null ? Strings.EMPTY : title;
+        return title == null ? "" : title;
     }
 
     /**
@@ -152,7 +140,7 @@ public class ThreadDumpMessage implements Message, StringBuilderFormattable {
         private final String formattedMsg;
         private final String title;
 
-        ThreadDumpMessageProxy(final ThreadDumpMessage msg) {
+        public ThreadDumpMessageProxy(final ThreadDumpMessage msg) {
             this.formattedMsg = msg.getFormattedMessage();
             this.title = msg.title;
         }
@@ -168,12 +156,8 @@ public class ThreadDumpMessage implements Message, StringBuilderFormattable {
 
     /**
      * Factory to create Thread information.
-     * <p>
-     * Implementations of this class are loaded via the standard java Service Provider interface.
-     * </p>
-     * @see /log4j-core/src/main/resources/META-INF/services/org.apache.logging.log4j.message.ThreadDumpMessage$ThreadInfoFactory
      */
-    public static interface ThreadInfoFactory {
+    private interface ThreadInfoFactory {
         Map<ThreadInformation, StackTraceElement[]> createThreadInfo();
     }
 
@@ -185,9 +169,27 @@ public class ThreadDumpMessage implements Message, StringBuilderFormattable {
         public Map<ThreadInformation, StackTraceElement[]> createThreadInfo() {
             final Map<Thread, StackTraceElement[]> map = Thread.getAllStackTraces();
             final Map<ThreadInformation, StackTraceElement[]> threads =
-                new HashMap<>(map.size());
+                new HashMap<ThreadInformation, StackTraceElement[]>(map.size());
             for (final Map.Entry<Thread, StackTraceElement[]> entry : map.entrySet()) {
                 threads.put(new BasicThreadInformation(entry.getKey()), entry.getValue());
+            }
+            return threads;
+        }
+    }
+
+    /**
+     * Factory to create extended thread information.
+     */
+    private static class ExtendedThreadInfoFactory implements ThreadInfoFactory {
+        @Override
+        public Map<ThreadInformation, StackTraceElement[]> createThreadInfo() {
+            final ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+            final ThreadInfo[] array = bean.dumpAllThreads(true, true);
+
+            final Map<ThreadInformation, StackTraceElement[]>  threads =
+                new HashMap<ThreadInformation, StackTraceElement[]>(array.length);
+            for (final ThreadInfo info : array) {
+                threads.put(new ExtendedThreadInformation(info), info.getStackTrace());
             }
             return threads;
         }

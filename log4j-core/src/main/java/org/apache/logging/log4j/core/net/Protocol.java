@@ -17,18 +17,16 @@
 package org.apache.logging.log4j.core.net;
 
 /**
- * Enumerates the supported protocols.
+ * Enumeration of the supported protocols.
  */
 public enum Protocol {
     /** TCP Protocol. */
     TCP,
-    /** SSL Protocol. */
-    SSL,
     /** UDP Protocol. */
     UDP;
 
     /**
-     * Determines if the String matches this enum.
+     * Determine if the String matches this enum.
      * @param name The enumeration name to check.
      * @return true if this enumeration has the specified name.
      */

@@ -53,19 +53,15 @@ public abstract class LogEventPatternConverter extends AbstractPatternConverter 
     }
 
     /**
-     * Normally pattern converters are not meant to handle Exceptions although few pattern converters might.
-     * <p>
-     * By examining the return values for this method, the containing layout will determine whether it handles
-     * throwables or not.
-     * </p>
+     * Normally pattern converters are not meant to handle Exceptions although
+     * few pattern converters might.
+     * <p/>
+     * By examining the return values for this method, the containing layout will
+     * determine whether it handles throwables or not.
      *
      * @return true if this PatternConverter handles throwables
      */
     public boolean handlesThrowable() {
         return false;
-    }
-
-    public boolean isVariable() {
-        return true;
     }
 }

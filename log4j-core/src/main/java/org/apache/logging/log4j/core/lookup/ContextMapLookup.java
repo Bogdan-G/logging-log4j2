@@ -19,42 +19,31 @@ package org.apache.logging.log4j.core.lookup;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.ContextDataInjector;
-import org.apache.logging.log4j.core.impl.ContextDataInjectorFactory;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 /**
- * Looks up keys from the context. By default this is the {@link ThreadContext}, but users may
- * {@linkplain ContextDataInjectorFactory configure} a custom {@link ContextDataInjector} which obtains context data
- * from some other source.
+ * Looks up keys from system properties.
  */
-@Plugin(name = "ctx", category = StrLookup.CATEGORY)
+@Plugin(name = "ctx", category = "Lookup")
 public class ContextMapLookup implements StrLookup {
 
-    private final ContextDataInjector injector = ContextDataInjectorFactory.createInjector();
-
     /**
-     * Looks up the value from the ThreadContext Map.
+     * Lookup the value from the ThreadContext Map.
      * @param key  the key to be looked up, may be null
      * @return The value associated with the key.
      */
     @Override
     public String lookup(final String key) {
-        return currentContextData().getValue(key);
-    }
-
-    private ReadOnlyStringMap currentContextData() {
-        return injector.rawContextData();
+        return ThreadContext.get(key);
     }
 
     /**
-     * Looks up the value from the ThreadContext Map.
+     * Lookup the value from the ThreadContext Map.
      * @param event The current LogEvent.
      * @param key  the key to be looked up, may be null
      * @return The value associated with the key.
      */
     @Override
     public String lookup(final LogEvent event, final String key) {
-        return event.getContextData().getValue(key);
+        return event.getContextMap().get(key);
     }
 }

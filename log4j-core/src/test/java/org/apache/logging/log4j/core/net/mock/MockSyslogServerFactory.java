@@ -16,24 +16,23 @@
  */
 package org.apache.logging.log4j.core.net.mock;
 
+import org.apache.logging.log4j.core.net.ssl.TLSSyslogMessageFormat;
+
+import javax.net.ssl.SSLServerSocket;
 import java.io.IOException;
 import java.net.SocketException;
 
-import javax.net.ssl.SSLServerSocket;
-
-import org.apache.logging.log4j.core.net.ssl.TlsSyslogMessageFormat;
-
 public class MockSyslogServerFactory {
 
-    public static MockSyslogServer createUDPSyslogServer(final int numberOfMessagesToReceive, final int port) throws SocketException {
-        return new MockUdpSyslogServer(numberOfMessagesToReceive, port);
+    public static MockSyslogServer createUDPSyslogServer(int numberOfMessagesToReceive, int port) throws SocketException {
+        return new MockUDPSyslogServer(numberOfMessagesToReceive, port);
     }
 
-    public static MockSyslogServer createTCPSyslogServer(final int numberOfMessagesToReceive, final int port) throws IOException {
-        return new MockTcpSyslogServer(numberOfMessagesToReceive, port);
+    public static MockSyslogServer createTCPSyslogServer(int numberOfMessagesToReceive, int port) throws IOException {
+        return new MockTCPSyslogServer(numberOfMessagesToReceive, port);
     }
 
-    public static MockSyslogServer createTLSSyslogServer(final int numberOfMessagesToReceive, final TlsSyslogMessageFormat format, final SSLServerSocket serverSocket) {
-        return new MockTlsSyslogServer(numberOfMessagesToReceive, format, serverSocket);
+    public static MockSyslogServer createTLSSyslogServer(int numberOfMessagesToReceive, TLSSyslogMessageFormat format, SSLServerSocket serverSocket) {
+        return new MockTLSSyslogServer(numberOfMessagesToReceive, format, serverSocket);
    }
 }

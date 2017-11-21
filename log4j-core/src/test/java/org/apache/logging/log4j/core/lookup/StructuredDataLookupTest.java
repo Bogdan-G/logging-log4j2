@@ -23,7 +23,8 @@ import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  *
@@ -36,7 +37,7 @@ public class StructuredDataLookupTest {
     @Test
     public void testLookup() {
         final Message msg = new StructuredDataMessage("Test", "This is a test", "Audit");
-        final LogEvent event = Log4jLogEvent.newBuilder().setLevel(Level.DEBUG).setMessage(msg).build();
+        final LogEvent event = new Log4jLogEvent(null, null, null, Level.DEBUG, msg, null);
         final StrLookup lookup = new StructuredDataLookup();
         String value = lookup.lookup(event, TESTKEY);
         assertEquals(TESTVAL, value);

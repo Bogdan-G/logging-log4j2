@@ -17,12 +17,9 @@
 package org.apache.logging.log4j.core.pattern;
 
 
-import org.apache.logging.log4j.util.PerformanceSensitive;
-
 /**
  * Abstract base class for other pattern converters which can return only parts of their name.
  */
-@PerformanceSensitive("allocation")
 public abstract class NamePatternConverter extends LogEventPatternConverter {
     /**
      * Abbreviator.
@@ -49,11 +46,10 @@ public abstract class NamePatternConverter extends LogEventPatternConverter {
     /**
      * Abbreviate name in string buffer.
      *
-     * @param original string containing name.
-     * @param destination the StringBuilder to write to
+     * @param buf       string buffer containing name.
      * @return The abbreviated name.
      */
-    protected final void abbreviate(final String original, final StringBuilder destination) {
-        abbreviator.abbreviate(original, destination);
+    protected final String abbreviate(final String buf) {
+        return abbreviator.abbreviate(buf);
     }
 }

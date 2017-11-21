@@ -24,12 +24,11 @@ import ch.qos.logback.core.spi.LifeCycle;
 import com.lmax.disruptor.collections.Histogram;
 
 public class RunLogback implements IPerfTestRunner {
-    final Logger LOGGER = (Logger) LoggerFactory.getLogger(getClass());
 
     @Override
     public void runThroughputTest(final int lines, final Histogram histogram) {
         final long s1 = System.nanoTime();
-        final Logger logger = LOGGER;
+        final Logger logger = (Logger) LoggerFactory.getLogger(getClass());
         for (int j = 0; j < lines; j++) {
             logger.info(THROUGHPUT_MSG);
         }
@@ -41,7 +40,7 @@ public class RunLogback implements IPerfTestRunner {
     @Override
     public void runLatencyTest(final int samples, final Histogram histogram,
             final long nanoTimeCost, final int threadCount) {
-        final Logger logger = LOGGER;
+        final Logger logger = (Logger) LoggerFactory.getLogger(getClass());
         for (int i = 0; i < samples; i++) {
             final long s1 = System.nanoTime();
             logger.info(LATENCY_MSG);
@@ -66,6 +65,7 @@ public class RunLogback implements IPerfTestRunner {
 
     @Override
     public void log(final String msg) {
-        LOGGER.info(msg);
+        final Logger logger = (Logger) LoggerFactory.getLogger(getClass());
+        logger.info(msg);
     }
 }

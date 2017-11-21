@@ -16,35 +16,51 @@
  */
 package org.apache.logging.log4j.core.config;
 
+import java.io.Serializable;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.appender.ConsoleAppender;
+import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.apache.logging.log4j.util.PropertiesUtil;
+
 /**
  * The default configuration writes all output to the Console using the default logging level. You configure default
  * logging level by setting the system property "org.apache.logging.log4j.level" to a level name. If you do not
  * specify the property, Log4j uses the ERROR Level. Log Events will be printed using the basic formatting provided
  * by each Message.
  */
-public class DefaultConfiguration extends AbstractConfiguration {
+public class DefaultConfiguration extends BaseConfiguration {
 
     /**
      * The name of the default configuration.
      */
     public static final String DEFAULT_NAME = "Default";
-    
     /**
      * The System Property used to specify the logging level.
      */
     public static final String DEFAULT_LEVEL = "org.apache.logging.log4j.level";
-    
-    /**
-     * The default Pattern used for the default Layout.
-     */
-    public static final String DEFAULT_PATTERN = "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n";
 
     /**
      * Constructor to create the default configuration.
      */
     public DefaultConfiguration() {
-        super(null, ConfigurationSource.NULL_SOURCE);
-        setToDefault();
+
+        setName(DEFAULT_NAME);
+        final Layout<? extends Serializable> layout =
+                PatternLayout.createLayout("%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n", null, null, null, null);
+        final Appender appender =
+                ConsoleAppender.createAppender(layout, null, "SYSTEM_OUT", "Console", "false", "true");
+        appender.start();
+        addAppender(appender);
+        final LoggerConfig root = getRootLogger();
+        root.addAppender(appender, null, null);
+
+        final String levelName = PropertiesUtil.getProperties().getStringProperty(DEFAULT_LEVEL);
+        final Level level = levelName != null && Level.valueOf(levelName) != null ?
+            Level.valueOf(levelName) : Level.ERROR;
+        root.setLevel(level);
     }
 
     @Override

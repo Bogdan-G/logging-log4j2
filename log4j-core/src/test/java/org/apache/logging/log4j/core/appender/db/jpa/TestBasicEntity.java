@@ -17,7 +17,6 @@
 package org.apache.logging.log4j.core.appender.db.jpa;
 
 import java.util.Map;
-
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;

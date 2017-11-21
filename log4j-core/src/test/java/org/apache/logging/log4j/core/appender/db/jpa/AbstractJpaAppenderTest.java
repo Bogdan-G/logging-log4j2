@@ -22,22 +22,19 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.Appenders;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.PropertiesUtil;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
-@Category(Appenders.Jpa.class)
 public abstract class AbstractJpaAppenderTest {
     private final String databaseType;
     private Connection connection;
@@ -53,8 +50,7 @@ public abstract class AbstractJpaAppenderTest {
 
         System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
                 "org/apache/logging/log4j/core/appender/db/jpa/" + configFileName);
-        PropertiesUtil.getProperties().reload();
-        final LoggerContext context = LoggerContext.getContext(false);
+        final LoggerContext context = (LoggerContext) LogManager.getContext(false);
         if (context.getConfiguration() instanceof DefaultConfiguration) {
             context.reconfigure();
         }
@@ -62,21 +58,30 @@ public abstract class AbstractJpaAppenderTest {
     }
 
     public void tearDown() throws SQLException {
-        final LoggerContext context = LoggerContext.getContext(false);
+        final LoggerContext context = (LoggerContext) LogManager.getContext(false);
         try {
-            String appenderName = "databaseAppender";
-            final Appender appender = context.getConfiguration().getAppender(appenderName);
-            assertNotNull("The appender '" + appenderName + "' should not be null.", appender);
-            assertTrue("The appender should be a JpaAppender.", appender instanceof JpaAppender);
-            ((JpaAppender) appender).getManager().close();
+            final Map<String, Appender> list = context.getConfiguration().getAppenders();
+            final Appender appender = list.get("databaseAppender");
+            assertNotNull("The appender should not be null.", appender);
+            assertTrue("The appender should be a JPAAppender.", appender instanceof JPAAppender);
+            ((JPAAppender) appender).getManager().release();
         } finally {
             System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
-            PropertiesUtil.getProperties().reload();
             context.reconfigure();
             StatusLogger.getLogger().reset();
 
-            try (Statement statement = this.connection.createStatement();) {
+            Statement statement = null;
+            try {
+                statement = this.connection.createStatement();
                 statement.execute("SHUTDOWN");
+            } finally {
+                try {
+                    if (statement != null) {
+                        statement.close();
+                    }
+                } catch (final SQLException ignore) {
+                    /* */
+                }
             }
 
             this.connection.close();
@@ -170,7 +175,7 @@ public abstract class AbstractJpaAppenderTest {
 
             assertTrue("There should be at least one row.", resultSet.next());
 
-            long date = resultSet.getLong("timemillis");
+            long date = resultSet.getLong("millis");
             assertTrue("The date should be later than pre-logging (1).", date >= millis);
             assertTrue("The date should be earlier than now (1).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (1).", "DEBUG", resultSet.getString("level"));
@@ -181,7 +186,7 @@ public abstract class AbstractJpaAppenderTest {
 
             assertTrue("There should be at least two rows.", resultSet.next());
 
-            date = resultSet.getLong("timemillis");
+            date = resultSet.getLong("millis");
             assertTrue("The date should be later than pre-logging (2).", date >= millis);
             assertTrue("The date should be earlier than now (2).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (2).", "WARN", resultSet.getString("level"));
@@ -192,7 +197,7 @@ public abstract class AbstractJpaAppenderTest {
 
             assertTrue("There should be three rows.", resultSet.next());
 
-            date = resultSet.getLong("timemillis");
+            date = resultSet.getLong("millis");
             assertTrue("The date should be later than pre-logging (3).", date >= millis);
             assertTrue("The date should be earlier than now (3).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (3).", "FATAL", resultSet.getString("level"));
@@ -202,6 +207,46 @@ public abstract class AbstractJpaAppenderTest {
             assertNull("The exception column is not correct (3).", resultSet.getString("thrown"));
 
             assertFalse("There should not be four rows.", resultSet.next());
+        } finally {
+            this.tearDown();
+        }
+    }
+
+    @Test
+    public void testPerformanceOfAppenderWith10000EventsUsingBasicEntity() throws SQLException {
+        try {
+            this.setUp("log4j2-" + this.databaseType + "-jpa-basic.xml");
+
+            final Error exception = new Error("Goodbye, cruel world!");
+
+            final Logger logger = LogManager.getLogger(this.getClass().getName() +
+                    ".testPerformanceOfAppenderWith10000EventsUsingBasicEntity");
+            logger.info("This is a warm-up message.");
+
+            System.out.println("Starting a performance test for JPA Appender for " + this.databaseType + ".");
+
+            long start = System.nanoTime();
+
+            for(int i = 0; i < 10000; i++) {
+                if (i % 25 == 0) {
+                    logger.warn("This is an exception message.", exception);
+                } else {
+                    logger.info("This is an info message.");
+                }
+            }
+
+            long elapsed = System.nanoTime() - start;
+            long elapsedMilli = elapsed / 1000000;
+
+            final Statement statement = this.connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY);
+            final ResultSet resultSet = statement.executeQuery("SELECT * FROM jpaBasicLogEntry ORDER BY id");
+
+            resultSet.last();
+            assertEquals("The number of records is not correct.", 10001, resultSet.getRow());
+
+            System.out.println("Wrote 10,000 log events in " + elapsed + " nanoseconds (" + elapsedMilli +
+                    " milliseconds) for " + this.databaseType + ".");
         } finally {
             this.tearDown();
         }

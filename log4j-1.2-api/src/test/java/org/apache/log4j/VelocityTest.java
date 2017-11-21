@@ -16,46 +16,28 @@
  */
 package org.apache.log4j;
 
-import java.io.StringWriter;
-
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.StringWriter;
+
 /**
- * Note that this test must clean up after itself or it may cause other tests to fail.
+ *
  */
 public class VelocityTest {
 
-private static LoggerContext context;
-    
-    @BeforeClass
-    public static void setupClass() {
-        context = LoggerContext.getContext(false);
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        Configurator.shutdown(context);
-        StatusLogger.getLogger().reset();
-    }    
-    
     @Test
     public void testVelocity() {
         Velocity.init();
-        final VelocityContext vContext = new VelocityContext();
-        vContext.put("name", new String("Velocity"));
+        VelocityContext context = new VelocityContext();
+        context.put( "name", new String("Velocity") );
 
-        final Template template = Velocity.getTemplate("target/test-classes/hello.vm");
+        Template template = Velocity.getTemplate("target/test-classes/hello.vm");
 
-        final StringWriter sw = new StringWriter();
+        StringWriter sw = new StringWriter();
 
-        template.merge(vContext, sw);
+        template.merge(context, sw);
     }
 }

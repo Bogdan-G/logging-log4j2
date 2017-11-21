@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" name="RegexReplacementTest">
+<Configuration status="error" name="RegexReplacementTest" packages="org.apache.logging.log4j.test">
   <Appenders>
     <List name="List">
        <PatternLayout>

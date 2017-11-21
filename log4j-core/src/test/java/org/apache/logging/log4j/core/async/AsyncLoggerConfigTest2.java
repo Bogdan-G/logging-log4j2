@@ -16,48 +16,51 @@
  */
 package org.apache.logging.log4j.core.async;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.AsyncLoggers;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
-@Category(AsyncLoggers.class)
 public class AsyncLoggerConfigTest2 {
+
+    @BeforeClass
+    public static void beforeClass() {
+    }
 
     @Test
     public void testConsecutiveReconfigure() throws Exception {
         System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
                 "AsyncLoggerConfigTest2.xml");
-        final File file = new File("target", "AsyncLoggerConfigTest2.log");
-        assertTrue("Deleted old file before test", !file.exists() || file.delete());
+        final File f = new File("target", "AsyncLoggerConfigTest2.log");
+        assertTrue("Deleted old file before test", !f.exists() || f.delete());
         
         final Logger log = LogManager.getLogger("com.foo.Bar");
         final String msg = "Message before reconfig";
         log.info(msg);
 
-        final LoggerContext ctx = LoggerContext.getContext(false);
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         ctx.reconfigure();
         ctx.reconfigure();
         
         final String msg2 = "Message after reconfig";
         log.info(msg2);
-        CoreLoggerContexts.stopLoggerContext(file); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
 
-        final BufferedReader reader = new BufferedReader(new FileReader(file));
+        final BufferedReader reader = new BufferedReader(new FileReader(f));
         final String line1 = reader.readLine();
         final String line2 = reader.readLine();
         reader.close();
-        file.delete();
+        f.delete();
         assertNotNull("line1", line1);
         assertNotNull("line2", line2);
         assertTrue("line1 " + line1, line1.contains(msg));

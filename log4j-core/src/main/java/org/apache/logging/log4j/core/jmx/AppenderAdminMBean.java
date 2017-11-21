@@ -46,7 +46,7 @@ public interface AppenderAdminMBean {
      * </pre>
      * @see Server#escape(String)
      */
-    String PATTERN = Server.DOMAIN + ":type=%s,component=Appenders,name=%s";
+    String PATTERN = "org.apache.logging.log4j2:type=LoggerContext,ctx=%s,sub=Appender,name=%s";
 
     /**
      * Returns the name of the instrumented {@code Appender}.
@@ -71,7 +71,7 @@ public interface AppenderAdminMBean {
      * @return {@code true} if any exceptions thrown by the Appender will be
      *         logged or {@code false} if such exceptions are re-thrown.
      */
-    boolean isIgnoreExceptions();
+    boolean isExceptionSuppressed();
 
     /**
      * Returns the result of calling {@code toString} on the error handler of
@@ -81,13 +81,4 @@ public interface AppenderAdminMBean {
      *         appender, or {@code "null"}
      */
     String getErrorHandler();
-
-    /**
-     * Returns a string description of all filters configured for the
-     * instrumented {@code Appender}.
-     *
-     * @return a string description of all configured filters for this
-     *         appender
-     */
-    String getFilter();
 }

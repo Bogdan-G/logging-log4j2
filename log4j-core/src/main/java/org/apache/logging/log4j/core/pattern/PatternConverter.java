@@ -20,14 +20,6 @@ package org.apache.logging.log4j.core.pattern;
  * Interface that all PatternConverters must implement.
  */
 public interface PatternConverter {
-
-    /**
-     * Main plugin category for PatternConverter plugins.
-     *
-     * @since 2.1
-     */
-    String CATEGORY = "Converter";
-
     /**
      * Formats an object into a string buffer.
      *
@@ -45,6 +37,7 @@ public interface PatternConverter {
     /**
      * This method returns the CSS style class that should be applied to
      * the LoggingEvent passed as parameter, which can be null.
+     * <p/>
      *
      * @param e null values are accepted
      * @return the name of the conversion pattern

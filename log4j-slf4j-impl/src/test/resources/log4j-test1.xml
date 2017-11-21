@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration status="error" name="LoggerTest">
+<configuration packages="org.apache.logging.log4j.test" status="debug" name="LoggerTest">
   <properties>
     <property name="filename">target/test.log</property>
   </properties>
@@ -30,7 +30,7 @@
 
     <Logger name="org.apache.logging.log4j.test2" level="debug" additivity="false">
       <AppenderRef ref="File"/>
-    </Logger>
+    </Logger>>
 
     <Root level="trace">
       <AppenderRef ref="List"/>

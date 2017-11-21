@@ -21,19 +21,16 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
-import java.util.Locale;
-
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Defines the minimum set of levels recognized by the system, that is
  * <code>OFF</code>, <code>FATAL</code>, <code>ERROR</code>,
- * <code>WARN</code>, <code>INFO</code>, <code>DEBUG</code>
- * and <code>ALL</code>.
- * <p>
- * The <code>Level</code> class may be subclassed to define a larger
+ * <code>WARN</code>, <code>INFO</code, <code>DEBUG</code>
+ * and
+ * <code>ALL</code>.
+ * <p/>
+ * <p>The <code>Level</code> class may be subclassed to define a larger
  * level set.
- * </p>
  */
 public class Level extends Priority implements Serializable {
 
@@ -175,27 +172,40 @@ public class Level extends Priority implements Serializable {
         if (sArg == null) {
             return defaultLevel;
         }
-        final String s = sArg.toUpperCase(Locale.ROOT);
-        switch (s) {
-        case "ALL":
+
+        final String s = sArg.toUpperCase();
+
+        if (s.equals("ALL")) {
             return Level.ALL;
-        case "DEBUG":
-            return Level.DEBUG;
-        case "INFO":
-            return Level.INFO;
-        case "WARN":
-            return Level.WARN;
-        case "ERROR":
-            return Level.ERROR;
-        case "FATAL":
-            return Level.FATAL;
-        case "OFF":
-            return Level.OFF;
-        case "TRACE":
-            return Level.TRACE;
-        default:
-            return defaultLevel;
         }
+        if (s.equals("DEBUG")) {
+            return Level.DEBUG;
+        }
+        if (s.equals("INFO")) {
+            return Level.INFO;
+        }
+        if (s.equals("WARN")) {
+            return Level.WARN;
+        }
+        if (s.equals("ERROR")) {
+            return Level.ERROR;
+        }
+        if (s.equals("FATAL")) {
+            return Level.FATAL;
+        }
+        if (s.equals("OFF")) {
+            return Level.OFF;
+        }
+        if (s.equals("TRACE")) {
+            return Level.TRACE;
+        }
+        //
+        //   For Turkish i problem, see bug 40937
+        //
+        if (s.equals("\u0130NFO")) {
+            return Level.INFO;
+        }
+        return defaultLevel;
     }
 
     /**
@@ -211,7 +221,7 @@ public class Level extends Priority implements Serializable {
         syslogEquivalent = s.readInt();
         levelStr = s.readUTF();
         if (levelStr == null) {
-            levelStr = Strings.EMPTY;
+            levelStr = "";
         }
     }
 

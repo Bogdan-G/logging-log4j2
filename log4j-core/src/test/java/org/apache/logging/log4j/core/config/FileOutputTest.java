@@ -16,17 +16,15 @@
  */
 package org.apache.logging.log4j.core.config;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.status.StatusLogger;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.io.File;
 
-import org.apache.logging.log4j.junit.CleanFiles;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-
-import static org.apache.logging.log4j.hamcrest.FileMatchers.exists;
-import static org.apache.logging.log4j.hamcrest.FileMatchers.hasLength;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 
 /**
@@ -34,17 +32,41 @@ import static org.junit.Assert.*;
  */
 public class FileOutputTest {
 
-    private static final String CONFIG = "classpath:log4j-filetest.xml";
+    private static final String CONFIG = "log4j-filetest.xml";
     private static final String STATUS_LOG = "target/status.log";
 
-    @Rule
-    public RuleChain rules = RuleChain.outerRule(new CleanFiles(STATUS_LOG)).around(new LoggerContextRule(CONFIG));
+    @BeforeClass
+    public static void setupClass() {
+        final File file = new File(STATUS_LOG);
+        file.delete();
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
+        final Configuration config = ctx.getConfiguration();
+        if (config instanceof XMLConfiguration) {
+            final String name = ((XMLConfiguration) config).getName();
+            if (name == null || !name.equals("XMLConfigTest")) {
+                ctx.reconfigure();
+            }
+        } else {
+            ctx.reconfigure();
+        }
+    }
+
+    @AfterClass
+    public static void cleanupClass() {
+        System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
+        final File file = new File(STATUS_LOG);
+        file.delete();
+    }
 
     @Test
     public void testConfig() {
         final File file = new File(STATUS_LOG);
-        assertThat("Status output file does not exist", file, exists());
-        assertThat("File is empty", file, hasLength(greaterThan(0L)));
+        assertTrue("Status output file does not exist", file.exists());
+        assertTrue("File is empty", file.length() > 0);
     }
 
 }

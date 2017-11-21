@@ -16,40 +16,52 @@
  */
 package org.apache.logging.log4j.status;
 
-import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.util.PropertiesUtil;
 
 /**
  * StatusListener that writes to the Console.
  */
-@SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class StatusConsoleListener implements StatusListener {
 
+    private static final String STATUS_LEVEL = "org.apache.logging.log4j.StatusLevel";
+
     private Level level = Level.FATAL;
-    private String[] filters;
+
+    private String[] filters = null;
+
     private final PrintStream stream;
+
+    /**
+     * Creates the StatusConsoleListener using either the level configured by the
+     * "org.apache.logging.log4j.StatusLevel" system property if it is set or to a
+     * default value of FATAL.
+     */
+    public StatusConsoleListener() {
+        final String str = PropertiesUtil.getProperties().getStringProperty(STATUS_LEVEL);
+        if (str != null) {
+            level = Level.toLevel(str, Level.FATAL);
+        }
+        stream = System.out;
+    }
 
     /**
      * Creates the StatusConsoleListener using the supplied Level.
      * @param level The Level of status messages that should appear on the console.
      */
     public StatusConsoleListener(final Level level) {
-        this(level, System.out);
+        this.level = level;
+        stream = System.out;
     }
 
     /**
-     * Creates the StatusConsoleListener using the supplied Level. Make sure not to use a logger stream of some sort
-     * to avoid creating an infinite loop of indirection!
+     * Creates the StatusConsoleListener using the supplied Level.
      * @param level The Level of status messages that should appear on the console.
      * @param stream The PrintStream to write to.
-     * @throws IllegalArgumentException if the PrintStream argument is {@code null}.
      */
     public StatusConsoleListener(final Level level, final PrintStream stream) {
-        if (stream == null) {
-            throw new IllegalArgumentException("You must provide a stream to use for this listener.");
-        }
         this.level = level;
         this.stream = stream;
     }
@@ -103,11 +115,4 @@ public class StatusConsoleListener implements StatusListener {
         return false;
     }
 
-    @Override
-    public void close() throws IOException {
-        // only want to close non-system streams
-        if (this.stream != System.out && this.stream != System.err) {
-            this.stream.close();
-        }
-    }
 }

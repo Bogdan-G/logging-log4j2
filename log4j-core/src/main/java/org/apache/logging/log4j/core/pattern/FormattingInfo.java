@@ -17,12 +17,9 @@
 
 package org.apache.logging.log4j.core.pattern;
 
-import org.apache.logging.log4j.util.PerformanceSensitive;
-
 /**
  * Modifies the output of a pattern converter for a specified minimum and maximum width and alignment.
  */
-@PerformanceSensitive("allocation")
 public final class FormattingInfo {
     /**
      * Array of spaces.
@@ -32,7 +29,7 @@ public final class FormattingInfo {
     /**
      * Default instance.
      */
-    private static final FormattingInfo DEFAULT = new FormattingInfo(false, 0, Integer.MAX_VALUE, true);
+    private static final FormattingInfo DEFAULT = new FormattingInfo(false, 0, Integer.MAX_VALUE);
 
     /**
      * Minimum length.
@@ -50,32 +47,24 @@ public final class FormattingInfo {
     private final boolean leftAlign;
 
     /**
-     * Left vs. right-hand side truncation.
-     */
-    private final boolean leftTruncate;
-
-    /**
      * Creates new instance.
-     *
+     * 
      * @param leftAlign
      *            left align if true.
      * @param minLength
      *            minimum length.
      * @param maxLength
      *            maximum length.
-     * @param leftTruncate
-     *            truncates to the left if true
      */
-    public FormattingInfo(final boolean leftAlign, final int minLength, final int maxLength, final boolean leftTruncate) {
+    public FormattingInfo(final boolean leftAlign, final int minLength, final int maxLength) {
         this.leftAlign = leftAlign;
         this.minLength = minLength;
         this.maxLength = maxLength;
-        this.leftTruncate = leftTruncate;
     }
 
     /**
      * Gets default instance.
-     *
+     * 
      * @return default instance.
      */
     public static FormattingInfo getDefault() {
@@ -84,7 +73,7 @@ public final class FormattingInfo {
 
     /**
      * Determine if left aligned.
-     *
+     * 
      * @return true if left aligned.
      */
     public boolean isLeftAligned() {
@@ -92,17 +81,8 @@ public final class FormattingInfo {
     }
 
     /**
-     * Determine if left truncated.
-     *
-     * @return true if left truncated.
-     */
-    public boolean isLeftTruncate() {
-		return leftTruncate;
-	}
-
-    /**
      * Get minimum length.
-     *
+     * 
      * @return minimum length.
      */
     public int getMinLength() {
@@ -111,7 +91,7 @@ public final class FormattingInfo {
 
     /**
      * Get maximum length.
-     *
+     * 
      * @return maximum length.
      */
     public int getMaxLength() {
@@ -120,7 +100,7 @@ public final class FormattingInfo {
 
     /**
      * Adjust the content of the buffer based on the specified lengths and alignment.
-     *
+     * 
      * @param fieldStart
      *            start of field in buffer.
      * @param buffer
@@ -130,11 +110,7 @@ public final class FormattingInfo {
         final int rawLength = buffer.length() - fieldStart;
 
         if (rawLength > maxLength) {
-			if (leftTruncate) {
-				buffer.delete(fieldStart, buffer.length() - maxLength);
-			} else {
-				buffer.delete(fieldStart + maxLength, fieldStart + buffer.length());
-			}
+            buffer.delete(fieldStart, buffer.length() - maxLength);
         } else if (rawLength < minLength) {
             if (leftAlign) {
                 final int fieldEnd = buffer.length();
@@ -157,12 +133,12 @@ public final class FormattingInfo {
 
     /**
      * Returns a String suitable for debugging.
-     *
+     * 
      * @return a String suitable for debugging.
      */
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append(super.toString());
         sb.append("[leftAlign=");
         sb.append(leftAlign);
@@ -170,9 +146,7 @@ public final class FormattingInfo {
         sb.append(maxLength);
         sb.append(", minLength=");
         sb.append(minLength);
-        sb.append(", leftTruncate=");
-        sb.append(leftTruncate);
-        sb.append(']');
+        sb.append("]");
         return sb.toString();
     }
 

@@ -16,11 +16,11 @@
  */
 package org.apache.logging.log4j.core.appender.rewrite;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -32,16 +32,15 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.util.Booleans;
+import org.apache.logging.log4j.core.helpers.Booleans;
 
 /**
  * This Appender allows the logging event to be manipulated before it is processed by other Appenders.
  */
-@Plugin(name = "Rewrite", category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
+@Plugin(name = "Rewrite", category = "Core", elementType = "appender", printObject = true)
 public final class RewriteAppender extends AbstractAppender {
-
     private final Configuration config;
-    private final ConcurrentMap<String, AppenderControl> appenders = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, AppenderControl> appenders = new ConcurrentHashMap<String, AppenderControl>();
     private final RewritePolicy rewritePolicy;
     private final AppenderRef[] appenderRefs;
 
@@ -56,9 +55,10 @@ public final class RewriteAppender extends AbstractAppender {
 
     @Override
     public void start() {
+        final Map<String, Appender> map = config.getAppenders();
         for (final AppenderRef ref : appenderRefs) {
             final String name = ref.getRef();
-            final Appender appender = config.getAppender(name);
+            final Appender appender = map.get(name);
             if (appender != null) {
                 final Filter filter = appender instanceof AbstractAppender ?
                     ((AbstractAppender) appender).getFilter() : null;
@@ -70,8 +70,13 @@ public final class RewriteAppender extends AbstractAppender {
         super.start();
     }
 
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
     /**
-     * Modifies the event and pass to the subordinate Appenders.
+     * Modify the event and pass to the subordinate Appenders.
      * @param event The LogEvent.
      */
     @Override
@@ -85,7 +90,7 @@ public final class RewriteAppender extends AbstractAppender {
     }
 
     /**
-     * Creates a RewriteAppender.
+     * Create a RewriteAppender.
      * @param name The name of the Appender.
      * @param ignore If {@code "true"} (default) exceptions encountered when appending events are logged; otherwise
      *               they are propagated to the caller.

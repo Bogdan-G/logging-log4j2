@@ -16,10 +16,13 @@
  */
 package org.apache.logging.log4j.core.pattern;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.message.StringMapMessage;
-import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
+import org.apache.logging.log4j.message.MapMessage;
 
 /**
  * Able to handle the contents of the LogEvent's MapMessage and either
@@ -27,8 +30,8 @@ import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
  * java.util.Hashtable.toString(), or to output the value of a specific key
  * within the Map.
  */
-@Plugin(name = "MapPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "K", "map", "MAP" })
+@Plugin(name = "MapPatternConverter", category = "Converter")
+@ConverterKeys({"K", "map", "MAP" })
 public final class MapPatternConverter extends LogEventPatternConverter {
     /**
      * Name of property to output.
@@ -41,7 +44,7 @@ public final class MapPatternConverter extends LogEventPatternConverter {
      * @param options options, may be null.
      */
     private MapPatternConverter(final String[] options) {
-        super(options != null && options.length > 0 ? "MAP{" + options[0] + '}' : "MAP", "map");
+        super(options != null && options.length > 0 ? "MAP{" + options[0] + "}" : "MAP", "map");
         key = options != null && options.length > 0 ? options[0] : null;
     }
 
@@ -60,31 +63,34 @@ public final class MapPatternConverter extends LogEventPatternConverter {
      */
     @Override
     public void format(final LogEvent event, final StringBuilder toAppendTo) {
-        StringMapMessage msg;
-        if (event.getMessage() instanceof StringMapMessage) {
-            msg = (StringMapMessage) event.getMessage();
+        MapMessage msg;
+        if (event.getMessage() instanceof MapMessage) {
+            msg = (MapMessage) event.getMessage();
         } else {
             return;
         }
-        final IndexedReadOnlyStringMap sortedMap = msg.getIndexedReadOnlyStringMap();
+        final Map<String, String> map = msg.getData();
         // if there is no additional options, we output every single
         // Key/Value pair for the Map in a similar format to Hashtable.toString()
         if (key == null) {
-            if (sortedMap.isEmpty()) {
+            if (map.size() == 0) {
                 toAppendTo.append("{}");
                 return;
             }
-            toAppendTo.append("{");
-            for (int i = 0; i < sortedMap.size(); i++) {
-                if (i > 0) {
-                    toAppendTo.append(", ");
+            final StringBuilder sb = new StringBuilder("{");
+            final Set<String> keys = new TreeSet<String>(map.keySet());
+            for (final String key : keys) {
+                if (sb.length() > 1) {
+                    sb.append(", ");
                 }
-                toAppendTo.append(sortedMap.getKeyAt(i)).append('=').append((String)sortedMap.getValueAt(i));
+                sb.append(key).append("=").append(map.get(key));
+
             }
-            toAppendTo.append('}');
+            sb.append("}");
+            toAppendTo.append(sb);
         } else {
             // otherwise they just want a single key output
-            final String val = sortedMap.getValue(key);
+            final String val = map.get(key);
 
             if (val != null) {
                 toAppendTo.append(val);

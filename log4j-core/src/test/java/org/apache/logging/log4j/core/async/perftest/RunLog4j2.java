@@ -18,16 +18,16 @@ package org.apache.logging.log4j.core.async.perftest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.core.LifeCycle;
+
 import com.lmax.disruptor.collections.Histogram;
 
 public class RunLog4j2 implements IPerfTestRunner {
-    final Logger LOGGER = LogManager.getLogger(getClass());
 
     @Override
     public void runThroughputTest(final int lines, final Histogram histogram) {
         final long s1 = System.nanoTime();
-        final Logger logger = LOGGER;
+        final Logger logger = LogManager.getLogger(getClass());
         for (int j = 0; j < lines; j++) {
             logger.info(THROUGHPUT_MSG);
         }
@@ -40,7 +40,7 @@ public class RunLog4j2 implements IPerfTestRunner {
     @Override
     public void runLatencyTest(final int samples, final Histogram histogram,
             final long nanoTimeCost, final int threadCount) {
-        final Logger logger = LOGGER;
+        final Logger logger = LogManager.getLogger(getClass());
         for (int i = 0; i < samples; i++) {
             final long s1 = System.nanoTime();
             logger.info(LATENCY_MSG);
@@ -61,12 +61,13 @@ public class RunLog4j2 implements IPerfTestRunner {
 
     @Override
     public void shutdown() {
-        CoreLoggerContexts.stopLoggerContext(); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
     }
 
 
     @Override
     public void log(final String finalMessage) {
-        LOGGER.info(finalMessage);
+        final Logger logger = LogManager.getLogger(getClass());
+        logger.info(finalMessage);
     }
 }

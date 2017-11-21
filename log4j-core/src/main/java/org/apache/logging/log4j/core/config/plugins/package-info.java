@@ -14,8 +14,7 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-
 /**
- * Annotations for Log4j 2 plugins.
+ * Configuration of Log4j 2.0 via Plugins.
  */
 package org.apache.logging.log4j.core.config.plugins;

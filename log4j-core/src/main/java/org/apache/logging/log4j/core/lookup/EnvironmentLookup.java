@@ -22,11 +22,21 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 /**
  * Looks up keys from environment variables.
  */
-@Plugin(name = "env", category = StrLookup.CATEGORY)
-public class EnvironmentLookup extends AbstractLookup {
+@Plugin(name = "env", category = "Lookup")
+public class EnvironmentLookup implements StrLookup {
 
     /**
-     * Looks up the value of the environment variable.
+     * Get the value of the environment variable.
+     * @param key  the key to be looked up, may be null
+     * @return The value of the environment variable.
+     */
+    @Override
+    public String lookup(final String key) {
+        return System.getenv(key);
+    }
+
+    /**
+     * Get the value of the environment variable.
      * @param event The current LogEvent (is ignored by this StrLookup).
      * @param key  the key to be looked up, may be null
      * @return The value of the environment variable.

@@ -17,9 +17,9 @@
 
 package org.apache.log4j;
 
-import java.util.Locale;
-
 import org.junit.Test;
+
+import java.util.Locale;
 
 import static org.junit.Assert.*;
 

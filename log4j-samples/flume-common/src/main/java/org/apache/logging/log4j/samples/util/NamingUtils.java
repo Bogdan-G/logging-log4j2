@@ -16,8 +16,6 @@
  */
 package org.apache.logging.log4j.samples.util;
 
-import org.apache.logging.log4j.util.Strings;
-
 public class NamingUtils {
 
     public static String getPackageName(final String className) {
@@ -29,7 +27,7 @@ public class NamingUtils {
     }
 
     public static String getMethodShortName(final String name) {
-        return name.replaceFirst("(get|set|is|has)", Strings.EMPTY);
+        return name.replaceFirst("(get|set|is|has)", "");
     }
 
     public static String upperFirst(final String name) {
@@ -45,7 +43,11 @@ public class NamingUtils {
     }
 
     public static String getGetterName(final String fieldName, final String type) {
-        return ("boolean".equals(type) ? "is" : "get") + upperFirst(fieldName);
+        if ("boolean".equals(type)) {
+            return "is" + upperFirst(fieldName);
+        } else {
+            return "get" + upperFirst(fieldName);
+        }
     }
 
     public static void main(final String[] args) {
@@ -60,11 +62,11 @@ public class NamingUtils {
     }
 
     public static String getClassName(final String className) {
-        return upperFirst(className.replaceAll("[^a-zA-Z0-9_]+", Strings.EMPTY));
+        return upperFirst(className.replaceAll("[^a-zA-Z0-9_]+", ""));
     }
 
     public static String getFieldName(final String fieldName) {
-        return fieldName.replaceAll("[^a-zA-Z0-9_]+", Strings.EMPTY);
+        return fieldName.replaceAll("[^a-zA-Z0-9_]+", "");
     }
 
     public static String methodCaseName(final String variable) {

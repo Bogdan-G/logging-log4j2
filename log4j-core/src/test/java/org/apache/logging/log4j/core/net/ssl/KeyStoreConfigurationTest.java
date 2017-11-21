@@ -16,68 +16,38 @@
  */
 package org.apache.logging.log4j.core.net.ssl;
 
-import java.security.KeyStore;
-
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.security.KeyStore;
+
 public class KeyStoreConfigurationTest {
     @Test(expected = StoreConfigurationException.class)
-    public void loadEmptyConfigurationDeprecated() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(null, TestConstants.NULL_PWD, null, null);
-        final KeyStore ks = ksc.getKeyStore();
-        Assert.assertTrue(ks == null);
-    }
-    @Test(expected = StoreConfigurationException.class)
     public void loadEmptyConfiguration() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(null, new MemoryPasswordProvider(TestConstants.NULL_PWD), null, null);
-        final KeyStore ks = ksc.getKeyStore();
+        KeyStoreConfiguration ksc = new KeyStoreConfiguration(null, null);
+        KeyStore ks = ksc.getKeyStore();
         Assert.assertTrue(ks == null);
-    }
-
-    @Test
-    public void loadNotEmptyConfigurationDeprecated() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, TestConstants.KEYSTORE_PWD(),
-                TestConstants.KEYSTORE_TYPE, null);
-        final KeyStore ks = ksc.getKeyStore();
-        Assert.assertTrue(ks != null);
     }
 
     @Test
     public void loadNotEmptyConfiguration() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, new MemoryPasswordProvider(TestConstants.KEYSTORE_PWD()),
-                TestConstants.KEYSTORE_TYPE, null);
-        final KeyStore ks = ksc.getKeyStore();
+        KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, TestConstants.KEYSTORE_PWD);
+        KeyStore ks = ksc.getKeyStore();
         Assert.assertTrue(ks != null);
     }
 
     @Test
-    public void returnTheSameKeyStoreAfterMultipleLoadsDeprecated() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, TestConstants.KEYSTORE_PWD(),
-                TestConstants.KEYSTORE_TYPE, null);
-        final KeyStore ks = ksc.getKeyStore();
-        final KeyStore ks2 = ksc.getKeyStore();
-        Assert.assertTrue(ks == ks2);
-    }
-
-    @Test
     public void returnTheSameKeyStoreAfterMultipleLoads() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, new MemoryPasswordProvider(TestConstants.KEYSTORE_PWD()),
-                TestConstants.KEYSTORE_TYPE, null);
-        final KeyStore ks = ksc.getKeyStore();
-        final KeyStore ks2 = ksc.getKeyStore();
+        KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, TestConstants.KEYSTORE_PWD);
+        KeyStore ks = ksc.getKeyStore();
+        KeyStore ks2 = ksc.getKeyStore();
         Assert.assertTrue(ks == ks2);
-    }
-
-    @Test(expected = StoreConfigurationException.class)
-    public void wrongPasswordDeprecated() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, "wrongPassword!", null, null);
-        ksc.getKeyStore();
     }
 
     @Test(expected = StoreConfigurationException.class)
     public void wrongPassword() throws StoreConfigurationException {
-        final KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, new MemoryPasswordProvider("wrongPassword!".toCharArray()), null, null);
-        ksc.getKeyStore();
+        KeyStoreConfiguration ksc = new KeyStoreConfiguration(TestConstants.KEYSTORE_FILE, "wrongPassword!");
+        KeyStore ks = ksc.getKeyStore();
+        Assert.assertTrue(false);
     }
 }

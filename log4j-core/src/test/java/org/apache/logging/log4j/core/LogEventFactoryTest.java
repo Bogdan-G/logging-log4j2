@@ -16,31 +16,29 @@
  */
 package org.apache.logging.log4j.core;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.Property;
-import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
+import org.apache.logging.log4j.core.helpers.Constants;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.impl.LogEventFactory;
-import org.apache.logging.log4j.core.util.Constants;
-import org.apache.logging.log4j.junit.LoggerContextRule;
 import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.test.appender.ListAppender;
+import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
 
 /**
  *
@@ -48,51 +46,48 @@ import org.junit.runners.model.Statement;
 public class LogEventFactoryTest {
 
     private static final String CONFIG = "log4j2-config.xml";
-    private static final LoggerContextRule context = new LoggerContextRule(CONFIG);
+    private static Configuration config;
+    private static ListAppender app;
+    private static LoggerContext ctx;
 
-    private ListAppender app;
-
-    // this would look so cool using lambdas
-    @ClassRule
-    public static RuleChain chain = RuleChain.outerRule(new TestRule() {
-        @Override
-        public Statement apply(final Statement base, final Description description) {
-            return new Statement() {
-                @Override
-                public void evaluate() throws Throwable {
-                    System.setProperty(Constants.LOG4J_LOG_EVENT_FACTORY, TestLogEventFactory.class.getName());
-                    resetLogEventFactory(new TestLogEventFactory());
-                    try {
-                        base.evaluate();
-                    } finally {
-                        System.clearProperty(Constants.LOG4J_LOG_EVENT_FACTORY);
-                        resetLogEventFactory(new DefaultLogEventFactory());
-                    }
-                }
-
-                private void resetLogEventFactory(final LogEventFactory logEventFactory) throws IllegalAccessException {
-                    final Field field = FieldUtils.getField(LoggerConfig.class, "LOG_EVENT_FACTORY", true);
-                    FieldUtils.removeFinalModifier(field, true);
-                    FieldUtils.writeStaticField(field, logEventFactory, false);
-                }
-            };
+    @BeforeClass
+    public static void setupClass() {
+        System.setProperty(Constants.LOG4J_LOG_EVENT_FACTORY, TestLogEventFactory.class.getName());
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        config = ctx.getConfiguration();
+        for (final Map.Entry<String, Appender> entry : config.getAppenders().entrySet()) {
+            if (entry.getKey().equals("List")) {
+                app = (ListAppender) entry.getValue();
+                break;
+            }
         }
-    }).around(context);
+        if (app == null) {
+            fail("No List Appender could be found");
+        }
+    }
+
+    @AfterClass
+    public static void cleanupClass() {
+        System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
+    }
 
     @Before
     public void before() {
-        app = context.getListAppender("List").clear();
+        app.clear();
     }
 
     @Test
     public void testEvent() {
-        final org.apache.logging.log4j.Logger logger = context.getLogger("org.apache.test.LogEventFactory");
+        final org.apache.logging.log4j.Logger logger = LogManager.getLogger("org.apache.test.LogEventFactory");
         logger.error("error message");
         final List<LogEvent> events = app.getEvents();
         assertNotNull("No events", events);
-        assertEquals("Incorrect number of events. Expected 1, actual " + events.size(), 1, events.size());
+        assertTrue("Incorrect number of events. Expected 1, actual " + events.size(), events.size() == 1);
         final LogEvent event = events.get(0);
-        assertEquals("TestLogEventFactory wasn't used", "Test", event.getLoggerName());
+        assertTrue("Test LogEventFactory wasn't used", event.getLoggerName().equals("Test"));
     }
 
     public static class TestLogEventFactory implements LogEventFactory {

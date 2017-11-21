@@ -21,79 +21,51 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-import org.apache.logging.log4j.util.StringBuilderFormattable;
-import org.apache.logging.log4j.util.StringBuilders;
-
 /**
  * Handles messages that contain an Object.
  */
-public class ObjectMessage implements Message, StringBuilderFormattable {
+public class ObjectMessage implements Message {
 
     private static final long serialVersionUID = -5903272448334166185L;
 
     private transient Object obj;
-    private transient String objectString;
 
     /**
-     * Creates the ObjectMessage.
-     *
+     * Create the ObjectMessage.
      * @param obj The Object to format.
      */
-    public ObjectMessage(final Object obj) {
-        this.obj = obj == null ? "null" : obj;
+    public ObjectMessage(Object obj) {
+        if (obj == null) {
+            obj = "null";
+        }
+        this.obj = obj;
     }
 
     /**
      * Returns the formatted object message.
-     *
      * @return the formatted object message.
      */
     @Override
     public String getFormattedMessage() {
-        // LOG4J2-763: cache formatted string in case obj changes later
-        if (objectString == null) {
-            objectString = String.valueOf(obj);
-        }
-        return objectString;
-    }
-
-    @Override
-    public void formatTo(final StringBuilder buffer) {
-        if (objectString != null) { //
-            buffer.append(objectString);
-        } else {
-            StringBuilders.appendValue(buffer, obj);
-        }
+        return obj.toString();
     }
 
     /**
      * Returns the object formatted using its toString method.
-     *
      * @return the String representation of the object.
      */
     @Override
     public String getFormat() {
-        return getFormattedMessage();
-    }
-
-    /**
-     * Returns the object parameter.
-     *
-     * @return The object.
-     * @since 2.7
-     */
-    public Object getParameter() {
-        return obj;
+        return obj.toString();
     }
 
     /**
      * Returns the object as if it were a parameter.
-     *
      * @return The object.
      */
     @Override
     public Object[] getParameters() {
-        return new Object[] {obj};
+        return new Object[]{obj};
     }
 
     @Override
@@ -106,11 +78,8 @@ public class ObjectMessage implements Message, StringBuilderFormattable {
         }
 
         final ObjectMessage that = (ObjectMessage) o;
-        return obj == null ? that.obj == null : equalObjectsOrStrings(obj, that.obj);
-    }
 
-    private boolean equalObjectsOrStrings(final Object left, final Object right) {
-        return left.equals(right) || String.valueOf(left).equals(String.valueOf(right));
+        return !(obj != null ? !obj.equals(that.obj) : that.obj != null);
     }
 
     @Override
@@ -120,7 +89,7 @@ public class ObjectMessage implements Message, StringBuilderFormattable {
 
     @Override
     public String toString() {
-        return getFormattedMessage();
+        return "ObjectMessage[obj=" + obj.toString() + "]";
     }
 
     private void writeObject(final ObjectOutputStream out) throws IOException {
@@ -128,7 +97,7 @@ public class ObjectMessage implements Message, StringBuilderFormattable {
         if (obj instanceof Serializable) {
             out.writeObject(obj);
         } else {
-            out.writeObject(String.valueOf(obj));
+            out.writeObject(obj.toString());
         }
     }
 

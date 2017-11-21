@@ -20,11 +20,8 @@ import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.tagext.Tag;
 
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.message.StringFormatterMessageFactory;
-import org.apache.logging.log4j.spi.AbstractLogger;
-import org.apache.logging.log4j.spi.MessageFactory2Adapter;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockPageContext;
@@ -100,7 +97,7 @@ public class SetLoggerTagTest {
 
         final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagStringFactoryVarPageScope", logger.getName());
-        checkMessageFactory("The message factory is not correct.", factory, logger);
+        assertSame("The message factory is not correct.", factory, logger.getMessageFactory());
     }
 
     @Test
@@ -162,21 +159,7 @@ public class SetLoggerTagTest {
         final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagStringFactoryVarApplicationScope",
                 logger.getName());
-        checkMessageFactory("The message factory is not correct.", factory, logger);
-    }
-
-    private static void checkMessageFactory(final String msg, final MessageFactory messageFactory1,
-            final Logger testLogger1) {
-        if (messageFactory1 == null) {
-            assertEquals(msg, AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS,
-                    testLogger1.getMessageFactory().getClass());
-        } else {
-            MessageFactory actual = testLogger1.getMessageFactory();
-            if (actual instanceof MessageFactory2Adapter) {
-                actual = ((MessageFactory2Adapter) actual).getOriginal();
-            }
-            assertEquals(msg, messageFactory1, actual);
-        }
+        assertSame("The message factory is not correct.", factory, logger.getMessageFactory());
     }
 
     @Test
@@ -217,6 +200,6 @@ public class SetLoggerTagTest {
         final Log4jTaglibLogger logger = TagUtils.getDefaultLogger(this.context);
         assertNotNull("The default logger should not be null anymore.", logger);
         assertEquals("The logger name is not correct.", "testDoEndTagStringFactoryDefault", logger.getName());
-        checkMessageFactory("The message factory is not correct.", factory, logger);
+        assertSame("The message factory is not correct.", factory, logger.getMessageFactory());
     }
 }

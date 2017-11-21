@@ -16,9 +16,6 @@
  */
 package org.apache.logging.log4j.message;
 
-import org.apache.logging.log4j.util.Chars;
-import org.apache.logging.log4j.util.StringBuilders;
-
 /**
  * Generates information about the current Thread. Used internally by ThreadDumpMessage.
  */
@@ -38,7 +35,7 @@ class BasicThreadInformation implements ThreadInformation {
      * The Constructor.
      * @param thread The Thread to capture.
      */
-    BasicThreadInformation(final Thread thread) {
+    public BasicThreadInformation(final Thread thread) {
         this.id = thread.getId();
         this.name = thread.getName();
         this.longName = thread.toString();
@@ -84,16 +81,16 @@ class BasicThreadInformation implements ThreadInformation {
      */
     @Override
     public void printThreadInfo(final StringBuilder sb) {
-        StringBuilders.appendDqValue(sb, name).append(Chars.SPACE);
+        sb.append("\"").append(name).append("\" ");
         if (isDaemon) {
             sb.append("daemon ");
         }
-        sb.append("prio=").append(priority).append(" tid=").append(id).append(' ');
+        sb.append("prio=").append(priority).append(" tid=").append(id).append(" ");
         if (threadGroupName != null) {
-            StringBuilders.appendKeyDqValue(sb, "group", threadGroupName);
+            sb.append("group=\"").append(threadGroupName).append("\"");
         }
-        sb.append('\n');
-        sb.append("\tThread state: ").append(state.name()).append('\n');
+        sb.append("\n");
+        sb.append("\tThread state: ").append(state.name()).append("\n");
     }
 
     /**
@@ -104,7 +101,7 @@ class BasicThreadInformation implements ThreadInformation {
     @Override
     public void printStack(final StringBuilder sb, final StackTraceElement[] trace) {
         for (final StackTraceElement element : trace) {
-            sb.append("\tat ").append(element).append('\n');
+            sb.append("\tat ").append(element).append("\n");
         }
     }
 }

@@ -18,8 +18,6 @@ package org.apache.logging.log4j.core.appender.db.jpa;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -28,9 +26,8 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.util.Booleans;
-import org.apache.logging.log4j.util.LoaderUtil;
-import org.apache.logging.log4j.util.Strings;
+import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.core.helpers.Strings;
 
 /**
  * This Appender writes logging events to a relational database using the Java Persistence API. It requires a
@@ -39,13 +36,12 @@ import org.apache.logging.log4j.util.Strings;
  *
  * @see AbstractLogEventWrapperEntity
  */
-@Plugin(name = "JPA", category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
-public final class JpaAppender extends AbstractDatabaseAppender<JpaDatabaseManager> {
-
+@Plugin(name = "JPA", category = "Core", elementType = "appender", printObject = true)
+public final class JPAAppender extends AbstractDatabaseAppender<JPADatabaseManager> {
     private final String description;
 
-    private JpaAppender(final String name, final Filter filter, final boolean ignoreExceptions,
-            final JpaDatabaseManager manager) {
+    private JPAAppender(final String name, final Filter filter, final boolean ignoreExceptions,
+            final JPADatabaseManager manager) {
         super(name, filter, ignoreExceptions, manager);
         this.description = this.getName() + "{ manager=" + this.getManager() + " }";
     }
@@ -70,7 +66,7 @@ public final class JpaAppender extends AbstractDatabaseAppender<JpaDatabaseManag
      * @return a new JPA appender.
      */
     @PluginFactory
-    public static JpaAppender createAppender(
+    public static JPAAppender createAppender(
             @PluginAttribute("name") final String name,
             @PluginAttribute("ignoreExceptions") final String ignore,
             @PluginElement("Filter") final Filter filter,
@@ -86,8 +82,14 @@ public final class JpaAppender extends AbstractDatabaseAppender<JpaDatabaseManag
         final boolean ignoreExceptions = Booleans.parseBoolean(ignore, true);
 
         try {
+            @SuppressWarnings("unchecked")
             final Class<? extends AbstractLogEventWrapperEntity> entityClass =
-                LoaderUtil.loadClass(entityClassName).asSubclass(AbstractLogEventWrapperEntity.class);
+                    (Class<? extends AbstractLogEventWrapperEntity>) Class.forName(entityClassName);
+
+            if (!AbstractLogEventWrapperEntity.class.isAssignableFrom(entityClass)) {
+                LOGGER.error("Entity class [{}] does not extend AbstractLogEventWrapperEntity.", entityClassName);
+                return null;
+            }
 
             try {
                 entityClass.getConstructor();
@@ -101,25 +103,22 @@ public final class JpaAppender extends AbstractDatabaseAppender<JpaDatabaseManag
                     entityClass.getConstructor(LogEvent.class);
 
             final String managerName = "jpaManager{ description=" + name + ", bufferSize=" + bufferSizeInt
-                    + ", persistenceUnitName=" + persistenceUnitName + ", entityClass=" + entityClass.getName() + '}';
+                    + ", persistenceUnitName=" + persistenceUnitName + ", entityClass=" + entityClass.getName() + "}";
 
-            final JpaDatabaseManager manager = JpaDatabaseManager.getJPADatabaseManager(
+            final JPADatabaseManager manager = JPADatabaseManager.getJPADatabaseManager(
                     managerName, bufferSizeInt, entityClass, entityConstructor, persistenceUnitName
             );
             if (manager == null) {
                 return null;
             }
 
-            return new JpaAppender(name, filter, ignoreExceptions, manager);
+            return new JPAAppender(name, filter, ignoreExceptions, manager);
         } catch (final ClassNotFoundException e) {
             LOGGER.error("Could not load entity class [{}].", entityClassName, e);
             return null;
         } catch (final NoSuchMethodException e) {
             LOGGER.error("Entity class [{}] does not have a constructor with a single argument of type LogEvent.",
                     entityClassName);
-            return null;
-        } catch (final ClassCastException e) {
-            LOGGER.error("Entity class [{}] does not extend AbstractLogEventWrapperEntity.", entityClassName);
             return null;
         }
     }

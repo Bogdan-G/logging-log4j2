@@ -23,8 +23,8 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 /**
  * Format the event's line location information.
  */
-@Plugin(name = "FullLocationPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "l", "location" })
+@Plugin(name = "FullLocationPatternConverter", category = "Converter")
+@ConverterKeys({"l", "location" })
 public final class FullLocationPatternConverter extends LogEventPatternConverter {
     /**
      * Singleton.

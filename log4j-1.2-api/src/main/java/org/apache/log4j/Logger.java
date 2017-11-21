@@ -25,8 +25,10 @@ import org.apache.logging.log4j.core.LoggerContext;
  */
 public class Logger extends Category {
 
+    private static final String FQCN = Logger.class.getName();
+
     protected Logger(final String name) {
-        super(PrivateManager.getContext(), name);
+        super((LoggerContext) PrivateManager.getContext(), name);
     }
 
     Logger(final LoggerContext context, final String name) {
@@ -34,19 +36,19 @@ public class Logger extends Category {
     }
 
     public static Logger getLogger(final String name) {
-        return Category.getInstance(PrivateManager.getContext(), name);
+        return (Logger) Category.getInstance((LoggerContext) PrivateManager.getContext(), name);
     }
 
     public static Logger getLogger(final Class<?> clazz) {
-        return Category.getInstance(PrivateManager.getContext(), clazz);
+        return (Logger) Category.getInstance((LoggerContext) PrivateManager.getContext(), clazz);
     }
 
     public static Logger getRootLogger() {
-        return Category.getRoot(PrivateManager.getContext());
+        return (Logger) Category.getRoot((LoggerContext) PrivateManager.getContext());
     }
 
     public static Logger getLogger(final String name, final LoggerFactory factory) {
-        return Category.getInstance(PrivateManager.getContext(), name, factory);
+        return (Logger) Category.getInstance((LoggerContext) PrivateManager.getContext(), name, factory);
     }
 
     /**
@@ -55,8 +57,8 @@ public class Logger extends Category {
     private static class PrivateManager extends org.apache.logging.log4j.LogManager {
         private static final String FQCN = Logger.class.getName();
 
-        public static LoggerContext getContext() {
-            return (LoggerContext) getContext(FQCN, false);
+        public static org.apache.logging.log4j.spi.LoggerContext getContext() {
+            return getContext(FQCN, false);
         }
 
         public static org.apache.logging.log4j.Logger getLogger(final String name) {

@@ -16,25 +16,17 @@
  */
 package org.apache.logging.log4j.core.config.plugins;
 
-import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.apache.logging.log4j.core.config.plugins.visitors.PluginElementVisitor;
-
 /**
- * Identifies a parameter as a Plugin and corresponds with an XML element (or equivalent) in configuration files.
+ * Identifies a parameter as an element.
  */
-@Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.PARAMETER, ElementType.FIELD})
-@PluginVisitorStrategy(PluginElementVisitor.class)
+@Target(ElementType.PARAMETER)
 public @interface PluginElement {
 
-    /**
-     * Identifies the case-insensitive element name (or attribute name) this corresponds with in a configuration file.
-     */
     String value();
 }

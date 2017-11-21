@@ -16,16 +16,16 @@
  */
 package org.apache.logging.log4j.core.net;
 
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.appender.ManagerFactory;
+import org.apache.logging.log4j.core.helpers.Strings;
+
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.appender.ManagerFactory;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Socket Manager for UDP connections.
@@ -38,15 +38,14 @@ public class DatagramSocketManager extends AbstractSocketManager {
      * The Constructor.
      * @param name The unique name of the connection.
      * @param os The OutputStream.
-     * @param inetAddress
+     * @param address
      * @param host The host to connect to.
      * @param port The port on the host.
      * @param layout The layout
-     * @param bufferSize The buffer size
      */
-    protected DatagramSocketManager(final String name, final OutputStream os, final InetAddress inetAddress, final String host,
-                final int port, final Layout<? extends Serializable> layout, final int bufferSize) {
-        super(name, os, inetAddress, host, port, layout, true, bufferSize);
+    protected DatagramSocketManager(final String name, final OutputStream os, final InetAddress address, final String host,
+                final int port, final Layout<? extends Serializable> layout) {
+        super(name, os, address, host, port, layout);
     }
 
     /**
@@ -54,35 +53,32 @@ public class DatagramSocketManager extends AbstractSocketManager {
      * @param host The host to connect to.
      * @param port The port on the host.
      * @param layout The layout.
-     * @param bufferSize The buffer size.
      * @return A DatagramSocketManager.
      */
-    public static DatagramSocketManager getSocketManager(final String host, final int port,
-            final Layout<? extends Serializable> layout, final int bufferSize) {
+    public static DatagramSocketManager getSocketManager(final String host, final int port, final Layout<? extends Serializable> layout) {
         if (Strings.isEmpty(host)) {
             throw new IllegalArgumentException("A host name is required");
         }
         if (port <= 0) {
             throw new IllegalArgumentException("A port value is required");
         }
-        return (DatagramSocketManager) getManager("UDP:" + host + ':' + port,
-                new FactoryData(host, port, layout, bufferSize), FACTORY);
+        return (DatagramSocketManager) getManager("UDP:" + host + ":" + port, new FactoryData(host, port, layout),
+            FACTORY);
     }
 
     /**
-     * Gets this DatagramSocketManager's content format. Specified by:
-     * <ul>
-     * <li>Key: "protocol" Value: "udp"</li>
-     * <li>Key: "direction" Value: "out"</li>
-     * </ul>
-     * 
+     * DatagramSocketManager's content format is specified by:<p/>
+     * Key: "protocol" Value: "udp"<p/>
+     * Key: "direction" Value: "out"
      * @return Map of content format keys supporting DatagramSocketManager
      */
     @Override
-    public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>(super.getContentFormat());
+    public Map<String, String> getContentFormat()
+    {
+        final Map<String, String> result = new HashMap<String, String>(super.getContentFormat());
         result.put("protocol", "udp");
         result.put("direction", "out");
+
         return result;
     }
 
@@ -93,13 +89,11 @@ public class DatagramSocketManager extends AbstractSocketManager {
         private final String host;
         private final int port;
         private final Layout<? extends Serializable> layout;
-        private final int bufferSize;
-        
-        public FactoryData(final String host, final int port, final Layout<? extends Serializable> layout, final int bufferSize) {
+
+        public FactoryData(final String host, final int port, final Layout<? extends Serializable> layout) {
             this.host = host;
             this.port = port;
             this.layout = layout;
-            this.bufferSize = bufferSize;
         }
     }
 
@@ -110,16 +104,16 @@ public class DatagramSocketManager extends AbstractSocketManager {
 
         @Override
         public DatagramSocketManager createManager(final String name, final FactoryData data) {
-            InetAddress inetAddress;
+            InetAddress address;
+            final OutputStream os = new DatagramOutputStream(data.host, data.port, data.layout.getHeader(),
+                data.layout.getFooter());
             try {
-                inetAddress = InetAddress.getByName(data.host);
+                address = InetAddress.getByName(data.host);
             } catch (final UnknownHostException ex) {
                 LOGGER.error("Could not find address of " + data.host, ex);
                 return null;
             }
-            final OutputStream os = new DatagramOutputStream(data.host, data.port, data.layout.getHeader(),
-                    data.layout.getFooter());
-            return new DatagramSocketManager(name, os, inetAddress, data.host, data.port, data.layout, data.bufferSize);
+            return new DatagramSocketManager(name, os, address, data.host, data.port, data.layout);
         }
     }
 }

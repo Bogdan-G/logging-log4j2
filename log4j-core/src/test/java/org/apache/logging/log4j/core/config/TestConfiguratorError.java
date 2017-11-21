@@ -21,14 +21,14 @@ import org.apache.logging.log4j.simple.SimpleLoggerContextFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
 
 /**
  *
  */
 public class TestConfiguratorError {
 
-    private static final String FACTORY_PROPERTY_NAME = "log4j2.loggerContextFactory";
+    private static final String FACTORY_PROPERTY_NAME =  "log4j2.loggerContextFactory";
 
     @BeforeClass
     public static void beforeClass() {
@@ -37,16 +37,13 @@ public class TestConfiguratorError {
 
     @Test
     public void testErrorNoClassLoader() throws Exception {
-        try (final LoggerContext ctx = Configurator.initialize("Test1", "target/test-classes/log4j2-config.xml")) {
-            assertNull("No LoggerContext should have been returned", ctx);
-        }
+        final LoggerContext ctx = Configurator.initialize("Test1", "target/test-classes/log4j2-config.xml");
+        assertNull("No LoggerContext should have been returned", ctx);
     }
 
     @Test
     public void testErrorNullClassLoader() throws Exception {
-        try (final LoggerContext ctx = Configurator.initialize("Test1", null,
-                "target/test-classes/log4j2-config.xml")) {
-            assertNull("No LoggerContext should have been returned", ctx);
-        }
+        final LoggerContext ctx = Configurator.initialize("Test1", null, "target/test-classes/log4j2-config.xml");
+        assertNull("No LoggerContext should have been returned", ctx);
     }
 }

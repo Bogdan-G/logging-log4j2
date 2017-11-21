@@ -20,18 +20,17 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.10.1-SNAPSHOT</version>
+    <version>2.0-beta9</version>
     <relativePath>../</relativePath>
   </parent>
   <artifactId>log4j-to-slf4j</artifactId>
   <packaging>jar</packaging>
   <name>Apache Log4j to SLF4J Adapter</name>
-  <description>The Apache Log4j binding between Log4j 2 API and SLF4J.</description>
+  <description>Binding between LOG4J 2 API and SLF4J</description>
   <properties>
     <log4jParentDir>${basedir}/..</log4jParentDir>
     <docLabel>SLF4J Documentation</docLabel>
     <projectDir>/log4j-to-slf4j</projectDir>
-    <module.name>org.apache.logging.slf4j</module.name>
   </properties>
   <dependencies>
     <dependency>
@@ -63,11 +62,6 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -86,15 +80,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <Export-Package>org.apache.logging.slf4j</Export-Package>
-          </instructions>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
   <reporting>
@@ -112,13 +97,12 @@
         </reportSets>
         <configuration>
           <issueLinkTemplate>%URL%/show_bug.cgi?id=%ISSUE%</issueLinkTemplate>
-          <useJql>true</useJql>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${checkstyle.plugin.version}</version>
+        <version>2.7</version>
         <configuration>
           <!--<propertiesLocation>${vfs.parent.dir}/checkstyle.properties</propertiesLocation> -->
           <configLocation>${log4jParentDir}/checkstyle.xml</configLocation>
@@ -133,13 +117,30 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>${javadoc.plugin.version}</version>
         <configuration>
-          <bottom><![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
+          <bottom> <![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
             Apache Logging, Apache Log4j, Log4j, Apache, the Apache feather logo, the Apache Logging project logo,
             and the Apache Log4j logo are trademarks of The Apache Software Foundation.</p>]]></bottom>
           <!-- module link generation is completely broken in the javadoc plugin for a multi-module non-aggregating
                project -->
           <detectOfflineLinks>false</detectOfflineLinks>
           <linksource>true</linksource>
+          <tags>
+            <tag>
+              <name>issue</name>
+              <placement>a</placement>
+              <head>JIRA issue:</head>
+            </tag>
+            <tag>
+              <name>doubt</name>
+              <placement>a</placement>
+              <head>Troublesome:</head>
+            </tag>
+            <tag>
+              <name>compare</name>
+              <placement>a</placement>
+              <head>Compare with:</head>
+            </tag>
+          </tags>
         </configuration>
         <reportSets>
           <reportSet>
@@ -153,7 +154,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs.plugin.version}</version>
+        <version>2.5.2</version>
         <configuration>
           <fork>true</fork>
           <jvmArgs>-Duser.language=en</jvmArgs>
@@ -165,7 +166,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>${jxr.plugin.version}</version>
+        <version>2.3</version>
         <reportSets>
           <reportSet>
             <id>non-aggregate</id>
@@ -186,8 +187,19 @@
         <artifactId>maven-pmd-plugin</artifactId>
         <version>${pmd.plugin.version}</version>
         <configuration>
-          <targetJdk>${maven.compiler.target}</targetJdk>
+          <targetJdk>${maven.compile.target}</targetJdk>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>${cobertura.plugin.version}</version>
+        <reportSets>
+          <reportSet>
+            <!-- Disabled as it makes the site build very slow and causes the performance unit test to fail -->
+            <reports />
+          </reportSet>
+        </reportSets>
       </plugin>
     </plugins>
   </reporting>

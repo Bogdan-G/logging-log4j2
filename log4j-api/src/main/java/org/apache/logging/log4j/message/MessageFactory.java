@@ -21,6 +21,7 @@ package org.apache.logging.log4j.message;
  *
  * @see ParameterizedMessageFactory
  * @see StringFormatterMessageFactory
+ * @version $Id$
  */
 public interface MessageFactory {
 

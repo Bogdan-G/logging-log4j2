@@ -16,33 +16,28 @@
  */
 package org.apache.logging.log4j.core.net.mock;
 
+import org.apache.logging.log4j.core.net.ssl.LegacyBSDTLSSyslogInputStreamReader;
+import org.apache.logging.log4j.core.net.ssl.TLSSyslogInputStreamReader;
+import org.apache.logging.log4j.core.net.ssl.TLSSyslogInputStreamReaderBase;
+import org.apache.logging.log4j.core.net.ssl.TLSSyslogMessageFormat;
+
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
-
-import org.apache.logging.log4j.core.net.ssl.LegacyBsdTlsSyslogInputStreamReader;
-import org.apache.logging.log4j.core.net.ssl.TlsSyslogInputStreamReader;
-import org.apache.logging.log4j.core.net.ssl.TlsSyslogInputStreamReaderBase;
-import org.apache.logging.log4j.core.net.ssl.TlsSyslogMessageFormat;
-import org.apache.logging.log4j.util.Strings;
-
-public class MockTlsSyslogServer extends MockSyslogServer {
-    private final SSLServerSocket serverSocket;
+public class MockTLSSyslogServer extends MockSyslogServer {
+    private SSLServerSocket serverSocket;
     private SSLSocket clientSocket;
-    private final List<String> messageList = new ArrayList<>();
-    private TlsSyslogInputStreamReaderBase syslogReader;
+    private List<String> messageList = new ArrayList<String>();
+    private TLSSyslogInputStreamReaderBase syslogReader;
 
-    private volatile boolean shutdown = false;
-    private Thread thread;
+    private TLSSyslogMessageFormat messageFormat = TLSSyslogMessageFormat.SYSLOG;
+    private int loopLen;
 
-    private TlsSyslogMessageFormat messageFormat = TlsSyslogMessageFormat.SYSLOG;
-    private final int loopLen;
-
-    public MockTlsSyslogServer(final int loopLen, final TlsSyslogMessageFormat format, final SSLServerSocket serverSocket) {
+    public MockTLSSyslogServer(int loopLen, TLSSyslogMessageFormat format, SSLServerSocket serverSocket) {
         super(loopLen, serverSocket.getLocalPort());
         this.messageFormat = format;
         this.loopLen = loopLen;
@@ -51,52 +46,43 @@ public class MockTlsSyslogServer extends MockSyslogServer {
 
     @Override
     public void shutdown() {
-        this.shutdown = true;
         try {
             try {
                 this.serverSocket.close();
             }
-            catch (final Exception e) {
-                e.printStackTrace();
+            catch (Exception e) {
+
             }
             this.interrupt();
-        } catch (final Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        }
-        try {
-            thread.join(100);
-        } catch (InterruptedException ie) {
-            System.out.println("Shutdown of TLS server thread failed.");
         }
     }
 
     @Override
     public void run() {
-        System.out.println("TLS Server Started");
-        this.thread = Thread.currentThread();
         try {
             waitForConnection();
             processFrames();
-        } catch (final Exception se) {
+        } catch (Exception se) {
             se.printStackTrace();
         } finally {
             closeSockets();
         }
-        System.out.println("TLS Server stopped");
     }
 
     private void waitForConnection() throws IOException {
         clientSocket =  (SSLSocket) serverSocket.accept();
-        final InputStream clientSocketInputStream = clientSocket.getInputStream();
+        InputStream clientSocketInputStream = clientSocket.getInputStream();
         syslogReader = createTLSSyslogReader(clientSocketInputStream);
     }
 
-    private TlsSyslogInputStreamReaderBase createTLSSyslogReader(final InputStream inputStream) {
+    private TLSSyslogInputStreamReaderBase createTLSSyslogReader(InputStream inputStream) {
         switch (messageFormat) {
             case SYSLOG:
-                return new TlsSyslogInputStreamReader(inputStream);
+                return new TLSSyslogInputStreamReader(inputStream);
             case LEGACY_BSD:
-                return new LegacyBsdTlsSyslogInputStreamReader(inputStream);
+                return new LegacyBSDTLSSyslogInputStreamReader(inputStream);
             default:
                 return null;
         }
@@ -107,15 +93,12 @@ public class MockTlsSyslogServer extends MockSyslogServer {
             try {
                 clientSocket.close();
             }
-            catch(final Exception e) {
-                e.printStackTrace();
-            }
+            catch(Exception e) {}
         }
         if (serverSocket != null) {
             try {
                 serverSocket.close();
-            } catch (final Exception e) {
-                e.printStackTrace();
+            } catch (Exception e) {
             }
         }
     }
@@ -123,28 +106,27 @@ public class MockTlsSyslogServer extends MockSyslogServer {
     private synchronized void processFrames() throws IOException {
         try {
             int count = 0;
-            while (!shutdown) {
-                String message = Strings.EMPTY;
+            while (true) {
+                String message = "";
                 message = syslogReader.read();
                 messageList.add(message);
                 count++;
-                if (isEndOfMessages(count)) {
+                if (isEndOfMessages(count))
                     break;
-                }
             }
             this.notify();
         }
-        catch(final Exception e) {
+        catch(Exception e) {
             this.notify();
             throw new IOException(e);
         }
+        return;
     }
 
-    private boolean isEndOfMessages(final int count) {
+    private boolean isEndOfMessages(int count) {
         return count == loopLen;
     }
 
-    @Override
     public List<String> getMessageList() {
         return messageList;
     }

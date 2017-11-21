@@ -20,21 +20,21 @@ import java.util.UUID;
 
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.util.UuidUtil;
+import org.apache.logging.log4j.core.helpers.UUIDUtil;
 
 /**
  * Formats the event sequence number.
  */
-@Plugin(name = "UuidPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "u", "uuid" })
-public final class UuidPatternConverter extends LogEventPatternConverter {
+@Plugin(name = "UUIDPatternConverter", category = "Converter")
+@ConverterKeys({"u", "uuid" })
+public final class UUIDPatternConverter extends LogEventPatternConverter {
 
     private final boolean isRandom;
 
     /**
      * Private constructor.
      */
-    private UuidPatternConverter(final boolean isRandom) {
+    private UUIDPatternConverter(final boolean isRandom) {
         super("u", "uuid");
         this.isRandom = isRandom;
     }
@@ -45,15 +45,15 @@ public final class UuidPatternConverter extends LogEventPatternConverter {
      * @param options options, currently ignored, may be null.
      * @return instance of SequencePatternConverter.
      */
-    public static UuidPatternConverter newInstance(final String[] options) {
+    public static UUIDPatternConverter newInstance(final String[] options) {
         if (options.length == 0) {
-            return new UuidPatternConverter(false);
+            return new UUIDPatternConverter(false);
         }
 
         if (options.length > 1 || (!options[0].equalsIgnoreCase("RANDOM") && !options[0].equalsIgnoreCase("Time"))) {
             LOGGER.error("UUID Pattern Converter only accepts a single option with the value \"RANDOM\" or \"TIME\"");
         }
-        return new UuidPatternConverter(options[0].equalsIgnoreCase("RANDOM"));
+        return new UUIDPatternConverter(options[0].equalsIgnoreCase("RANDOM"));
     }
 
     /**
@@ -61,7 +61,7 @@ public final class UuidPatternConverter extends LogEventPatternConverter {
      */
     @Override
     public void format(final LogEvent event, final StringBuilder toAppendTo) {
-        final UUID uuid = isRandom ? UUID.randomUUID() : UuidUtil.getTimeBasedUuid();
+        final UUID uuid = isRandom ? UUID.randomUUID() : UUIDUtil.getTimeBasedUUID();
         toAppendTo.append(uuid.toString());
     }
 }

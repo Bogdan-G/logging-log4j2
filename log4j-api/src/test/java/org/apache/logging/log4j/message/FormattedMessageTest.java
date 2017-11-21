@@ -16,16 +16,6 @@
  */
 package org.apache.logging.log4j.message;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.Locale;
-
-import org.apache.logging.log4j.junit.Mutable;
-import org.apache.logging.log4j.util.Constants;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -34,8 +24,6 @@ import static org.junit.Assert.assertEquals;
  *
  */
 public class FormattedMessageTest {
-
-    private static final String SPACE = Constants.JAVA_MAJOR_VERSION < 9 ? " " : "\u00a0";
 
     private static final int LOOP_CNT = 500;
     String[] array = new String[LOOP_CNT];
@@ -54,47 +42,11 @@ public class FormattedMessageTest {
     }
 
     @Test
-    public void tesStringOneStringArg() {
+    public void tesStringOneArg() {
         final String testMsg = "Test message %1s";
         final FormattedMessage msg = new FormattedMessage(testMsg, "Apache");
         final String result = msg.getFormattedMessage();
         final String expected = "Test message Apache";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void tesStringOneArgLocaleFrance_StringFormattedMessage() {
-        final String testMsg = "Test message e = %+10.4f";
-        final FormattedMessage msg = new FormattedMessage(Locale.FRANCE, testMsg, Math.E);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message e =    +2,7183";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void tesStringOneArgLocaleFrance_MessageFormatMessage() {
-        final String testMsg = "Test message {0,number,currency}";
-        final FormattedMessage msg = new FormattedMessage(Locale.FRANCE, testMsg, 12);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message 12,00" + SPACE +"€";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void tesStringOneArgLocaleUs_MessageFormatMessage() {
-        final String testMsg = "Test message {0,number,currency}";
-        final FormattedMessage msg = new FormattedMessage(Locale.US, testMsg, 12);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message $12.00";
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void tesStringOneArgLocaleUs() {
-        final String testMsg = "Test message e = %+10.4f";
-        final FormattedMessage msg = new FormattedMessage(Locale.US, testMsg, Math.E);
-        final String result = msg.getFormattedMessage();
-        final String expected = "Test message e =    +2.7183";
         assertEquals(expected, result);
     }
 
@@ -123,53 +75,12 @@ public class FormattedMessageTest {
     @Test
     public void testParamNoArgs() {
         final String testMsg = "Test message {}";
-        FormattedMessage msg = new FormattedMessage(testMsg, (Object[]) null);
+        FormattedMessage msg = new FormattedMessage(testMsg, null);
         String result = msg.getFormattedMessage();
         assertEquals(testMsg, result);
         final Object[] array = null;
         msg = new FormattedMessage(testMsg, array, null);
         result = msg.getFormattedMessage();
         assertEquals(testMsg, result);
-    }
-
-    @Test
-    public void testUnsafeWithMutableParams() { // LOG4J2-763
-        final String testMsg = "Test message %s";
-        final Mutable param = new Mutable().set("abc");
-        final FormattedMessage msg = new FormattedMessage(testMsg, param);
-
-        // modify parameter before calling msg.getFormattedMessage
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Expected most recent param value", "Test message XYZ", actual);
-    }
-
-    @Test
-    public void testSafeAfterGetFormattedMessageIsCalled() { // LOG4J2-763
-        final String testMsg = "Test message %s";
-        final Mutable param = new Mutable().set("abc");
-        final FormattedMessage msg = new FormattedMessage(testMsg, param);
-
-        // modify parameter after calling msg.getFormattedMessage
-        msg.getFormattedMessage(); // freeze the formatted message
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "Test message abc", actual);
-    }
-
-    @Test
-    public void testSerialization() throws IOException, ClassNotFoundException {
-        final FormattedMessage expected = new FormattedMessage("Msg", "a", "b", "c");
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (final ObjectOutputStream out = new ObjectOutputStream(baos)) {
-            out.writeObject(expected);
-        }
-        final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        final ObjectInputStream in = new ObjectInputStream(bais);
-        final FormattedMessage actual = (FormattedMessage) in.readObject();
-        Assert.assertEquals(expected, actual);
-        Assert.assertEquals(expected.getFormat(), actual.getFormat());
-        Assert.assertEquals(expected.getFormattedMessage(), actual.getFormattedMessage());
-        Assert.assertArrayEquals(expected.getParameters(), actual.getParameters());
     }
 }

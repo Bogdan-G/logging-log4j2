@@ -17,18 +17,17 @@
 
 package org.apache.log4j.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.apache.commons.io.FileUtils;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 
 /**
@@ -53,9 +52,9 @@ public class SerializationTestHelper {
     public static Object serializeClone(final Object obj)
         throws IOException, ClassNotFoundException {
         final ByteArrayOutputStream memOut = new ByteArrayOutputStream();
-        try (final ObjectOutputStream objOut = new ObjectOutputStream(memOut)) {
-            objOut.writeObject(obj);
-        }
+        final ObjectOutputStream objOut = new ObjectOutputStream(memOut);
+        objOut.writeObject(obj);
+        objOut.close();
 
         final ByteArrayInputStream src = new ByteArrayInputStream(memOut.toByteArray());
         final ObjectInputStream objIs = new ObjectInputStream(src);
@@ -71,8 +70,12 @@ public class SerializationTestHelper {
      * @throws Exception thrown on IO or deserialization exception.
      */
     public static Object deserializeStream(final String witness) throws Exception {
-        try (final ObjectInputStream objIs = new ObjectInputStream(new FileInputStream(witness))) {
+        final FileInputStream fileIs = new FileInputStream(witness);
+        final ObjectInputStream objIs = new ObjectInputStream(fileIs);
+        try {
             return objIs.readObject();
+        } finally {
+            objIs.close();
         }
     }
 
@@ -90,9 +93,9 @@ public class SerializationTestHelper {
         final String witness, final Object obj, final int[] skip,
         final int endCompare) throws Exception {
         final ByteArrayOutputStream memOut = new ByteArrayOutputStream();
-        try (final ObjectOutputStream objOut = new ObjectOutputStream(memOut)) {
-            objOut.writeObject(obj);
-        }
+        final ObjectOutputStream objOut = new ObjectOutputStream(memOut);
+        objOut.writeObject(obj);
+        objOut.close();
 
         assertStreamEquals(witness, memOut.toByteArray(), skip, endCompare);
     }
@@ -113,8 +116,10 @@ public class SerializationTestHelper {
 
         if (witnessFile.exists()) {
             int skipIndex = 0;
-            final byte[] expected = FileUtils.readFileToByteArray(witnessFile);
-            final int bytesRead = expected.length;
+            final byte[] expected = new byte[actual.length];
+            final FileInputStream is = new FileInputStream(witnessFile);
+            final int bytesRead = is.read(expected);
+            is.close();
 
             if (bytesRead < endCompare) {
                 assertEquals(bytesRead, actual.length);
@@ -140,7 +145,9 @@ public class SerializationTestHelper {
             //
             //  if the file doesn't exist then
             //      assume that we are setting up and need to write it
-            FileUtils.writeByteArrayToFile(witnessFile, actual);
+            final FileOutputStream os = new FileOutputStream(witnessFile);
+            os.write(actual);
+            os.close();
             fail("Writing witness file " + witness);
         }
     }

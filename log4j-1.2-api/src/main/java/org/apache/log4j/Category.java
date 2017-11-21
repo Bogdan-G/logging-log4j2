@@ -27,12 +27,10 @@ import org.apache.log4j.helpers.NullEnumeration;
 import org.apache.log4j.spi.LoggerFactory;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.util.NameUtil;
+import org.apache.logging.log4j.core.helpers.NameUtil;
 import org.apache.logging.log4j.message.LocalizedMessage;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.ObjectMessage;
-import org.apache.logging.log4j.spi.AbstractLoggerAdapter;
-import org.apache.logging.log4j.util.Strings;
 
 
 /**
@@ -40,10 +38,10 @@ import org.apache.logging.log4j.util.Strings;
  */
 public class Category {
 
-    private static PrivateAdapter adapter = new PrivateAdapter();
+    private static LoggerFactory loggerFactory = new PrivateFactory();
 
     private static final Map<LoggerContext, ConcurrentMap<String, Logger>> CONTEXT_MAP =
-        new WeakHashMap<>();
+        new WeakHashMap<LoggerContext, ConcurrentMap<String, Logger>>();
 
     private static final String FQCN = Category.class.getName();
 
@@ -68,7 +66,7 @@ public class Category {
      * @param name The name of the Logger.
      */
     protected Category(final String name) {
-        this(PrivateManager.getContext(), name);
+        this((LoggerContext) PrivateManager.getContext(), name);
     }
 
     private Category(final org.apache.logging.log4j.core.Logger logger) {
@@ -76,31 +74,20 @@ public class Category {
     }
 
     public static Category getInstance(final String name) {
-        return getInstance(PrivateManager.getContext(), name, adapter);
+        return getInstance((LoggerContext) PrivateManager.getContext(), name, loggerFactory);
     }
 
-    static Logger getInstance(final LoggerContext context, final String name) {
-        return getInstance(context, name, adapter);
+    static Category getInstance(final LoggerContext context, final String name) {
+        return getInstance(context, name, loggerFactory);
     }
 
-    static Logger getInstance(final LoggerContext context, final String name, final LoggerFactory factory) {
+    static Category getInstance(final LoggerContext context, final String name, final LoggerFactory factory) {
         final ConcurrentMap<String, Logger> loggers = getLoggersMap(context);
         Logger logger = loggers.get(name);
         if (logger != null) {
             return logger;
         }
-        logger = factory.makeNewLoggerInstance(name);
-        final Logger prev = loggers.putIfAbsent(name, logger);
-        return prev == null ? logger : prev;
-    }
-
-    static Logger getInstance(final LoggerContext context, final String name, final PrivateAdapter factory) {
-        final ConcurrentMap<String, Logger> loggers = getLoggersMap(context);
-        Logger logger = loggers.get(name);
-        if (logger != null) {
-            return logger;
-        }
-        logger = factory.newLogger(name, context);
+        logger = factory.makeNewLoggerInstance(context, name);
         final Logger prev = loggers.putIfAbsent(name, logger);
         return prev == null ? logger : prev;
     }
@@ -109,7 +96,7 @@ public class Category {
         return getInstance(clazz.getName());
     }
 
-    static Logger getInstance(final LoggerContext context, @SuppressWarnings("rawtypes") final Class clazz) {
+    static Category getInstance(final LoggerContext context, @SuppressWarnings("rawtypes") final Class clazz) {
         return getInstance(context, clazz.getName());
     }
 
@@ -132,18 +119,19 @@ public class Category {
     }
 
     public static Category getRoot() {
-        return getInstance(Strings.EMPTY);
+        return getInstance("");
     }
 
-    static Logger getRoot(final LoggerContext context) {
-        return getInstance(context, Strings.EMPTY);
+
+    static Category getRoot(final LoggerContext context) {
+        return getInstance(context, "");
     }
 
     private static ConcurrentMap<String, Logger> getLoggersMap(final LoggerContext context) {
         synchronized (CONTEXT_MAP) {
             ConcurrentMap<String, Logger> map = CONTEXT_MAP.get(context);
             if (map == null) {
-                map = new ConcurrentHashMap<>();
+                map = new ConcurrentHashMap<String, Logger>();
                 CONTEXT_MAP.put(context, map);
             }
             return map;
@@ -167,26 +155,19 @@ public class Category {
     }
 
     public final Level getEffectiveLevel() {
-        switch (logger.getLevel().getStandardLevel()) {
-        case ALL:
-            return Level.ALL;
-        case TRACE:
-            return Level.TRACE;
-        case DEBUG:
-            return Level.DEBUG;
-        case INFO:
-            return Level.INFO;
-        case WARN:
-            return Level.WARN;
-        case ERROR:
-            return Level.ERROR;
-        case FATAL:
-            return Level.FATAL;
-        case OFF:
-            return Level.OFF;
-        default:
-            // TODO Should this be an IllegalStateException?
-            return Level.OFF;
+        final org.apache.logging.log4j.Level level = logger.getLevel();
+
+        switch (level) {
+            case TRACE:
+                return Level.TRACE;
+            case DEBUG:
+                return Level.DEBUG;
+            case INFO:
+                return Level.INFO;
+            case WARN:
+                return Level.WARN;
+            default:
+                return Level.ERROR;
         }
     }
 
@@ -354,7 +335,7 @@ public class Category {
     public void forcedLog(final String fqcn, final Priority level, final Object message, final Throwable t) {
         final org.apache.logging.log4j.Level lvl = org.apache.logging.log4j.Level.toLevel(level.toString());
         final Message msg = message instanceof Message ? (Message) message : new ObjectMessage(message);
-        logger.logMessage(fqcn, lvl, null, msg, t);
+        logger.log(null, fqcn, lvl, msg, t);
     }
 
     public boolean exists(final String name) {
@@ -380,9 +361,8 @@ public class Category {
         String name = logger.getName();
         final ConcurrentMap<String, Logger> loggers = getLoggersMap(logger.getContext());
         while ((name = NameUtil.getSubName(name)) != null) {
-            final Logger subLogger = loggers.get(name);
-            if (subLogger != null) {
-				final ResourceBundle rb = subLogger.bundle;
+            if (loggers.containsKey(name)) {
+                final ResourceBundle rb = loggers.get(name).bundle;
                 if (rb != null) {
                     return rb;
                 }
@@ -449,20 +429,18 @@ public class Category {
     private void maybeLog(final String fqcn, final org.apache.logging.log4j.Level level,
             final Object message, final Throwable throwable) {
         if (logger.isEnabled(level, null, message, throwable)) {
-            logger.logMessage(FQCN, level, null, new ObjectMessage(message), throwable);
+            logger.log(null, FQCN, level, new ObjectMessage(message), throwable);
         }
     }
 
-    private static class PrivateAdapter extends AbstractLoggerAdapter<Logger> {
+    /**
+     * Private logger factory.
+     */
+    private static class PrivateFactory implements LoggerFactory {
 
         @Override
-        protected Logger newLogger(final String name, final org.apache.logging.log4j.spi.LoggerContext context) {
-            return new Logger((LoggerContext) context, name);
-        }
-
-        @Override
-        protected org.apache.logging.log4j.spi.LoggerContext getContext() {
-            return PrivateManager.getContext();
+        public Logger makeNewLoggerInstance(final LoggerContext context, final String name) {
+            return new Logger(context, name);
         }
     }
 
@@ -472,8 +450,8 @@ public class Category {
     private static class PrivateManager extends org.apache.logging.log4j.LogManager {
         private static final String FQCN = Category.class.getName();
 
-        public static LoggerContext getContext() {
-            return (LoggerContext) getContext(FQCN, false);
+        public static org.apache.logging.log4j.spi.LoggerContext getContext() {
+            return getContext(FQCN, false);
         }
 
         public static org.apache.logging.log4j.Logger getLogger(final String name) {

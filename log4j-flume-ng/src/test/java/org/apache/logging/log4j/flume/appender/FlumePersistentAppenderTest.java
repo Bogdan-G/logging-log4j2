@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,6 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -91,20 +91,19 @@ public class FlumePersistentAppenderTest {
     public void setUp() throws Exception {
 
         final File file = new File("target/persistent");
-        deleteFiles(file);
+        final boolean result = deleteFiles(file);
 
         /*
         * Clear out all other appenders associated with this logger to ensure we're
         * only hitting the Avro appender.
         */
-        final int primaryPort = AvailablePortFinder.getNextAvailable();
-        final int altPort = AvailablePortFinder.getNextAvailable();
-        System.setProperty("primaryPort", Integer.toString(primaryPort));
-        System.setProperty("alternatePort", Integer.toString(altPort));
-        primary = new EventCollector(primaryPort);
-        alternate = new EventCollector(altPort);
+        final int[] ports = findFreePorts(2);
+        System.setProperty("primaryPort", Integer.toString(ports[0]));
+        System.setProperty("alternatePort", Integer.toString(ports[1]));
+        primary = new EventCollector(ports[0]);
+        alternate = new EventCollector(ports[1]);
         System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
-        ctx = LoggerContext.getContext(false);
+        ctx = (LoggerContext) LogManager.getContext(false);
         ctx.reconfigure();
     }
 
@@ -115,7 +114,7 @@ public class FlumePersistentAppenderTest {
         primary.stop();
         alternate.stop();
         final File file = new File("target/file-channel");
-        deleteFiles(file);
+        final boolean result = deleteFiles(file);
         final MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         final Set<ObjectName> names = server.queryNames(new ObjectName("org.apache.flume.*:*"), null);
         for (final ObjectName name : names) {
@@ -128,7 +127,7 @@ public class FlumePersistentAppenderTest {
     }
 
     @Test
-    public void testLog4Event() throws IOException {
+    public void testLog4Event() throws InterruptedException, IOException {
 
         final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Log4j", "Test");
         EventLogger.logEvent(msg);
@@ -141,7 +140,7 @@ public class FlumePersistentAppenderTest {
     }
 
     @Test
-    public void testMultiple() {
+    public void testMultiple() throws InterruptedException, IOException {
 
         for (int i = 0; i < 10; ++i) {
             final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Multiple " + i, "Test");
@@ -153,7 +152,7 @@ public class FlumePersistentAppenderTest {
             final Event event = primary.poll();
             Assert.assertNotNull("Received " + i + " events. Event " + (i + 1) + " is null", event);
             final String value = event.getHeaders().get("counter");
-            Assert.assertNotNull("Missing 'counter' in map " + event.getHeaders() + ", i = " + i, value);
+            Assert.assertNotNull("Missing counter", value);
             final int counter = Integer.parseInt(value);
             if (fields[counter]) {
                 Assert.fail("Duplicate event");
@@ -168,7 +167,7 @@ public class FlumePersistentAppenderTest {
 
 
     @Test
-    public void testFailover() throws InterruptedException {
+    public void testFailover() throws InterruptedException, IOException {
         final Logger logger = LogManager.getLogger("testFailover");
         logger.debug("Starting testFailover");
         for (int i = 0; i < 10; ++i) {
@@ -222,7 +221,7 @@ public class FlumePersistentAppenderTest {
     }
 
     @Test
-    public void testSingle() throws IOException {
+    public void testSingle() throws InterruptedException, IOException {
 
         final Logger logger = LogManager.getLogger("EventLogger");
         final Marker marker = MarkerManager.getMarker("EVENT");
@@ -236,14 +235,14 @@ public class FlumePersistentAppenderTest {
     }
 
     @Test
-    public void testMultipleConcurrent() throws InterruptedException {
+    public void testMultipleConcurrent() throws InterruptedException, IOException {
 
         final int eventsCount = 10000;
 
-        final Thread writer1 = new WriterThread(0, eventsCount / 4);
-        final Thread writer2 = new WriterThread(eventsCount / 4, eventsCount / 2);
-        final Thread writer3 = new WriterThread(eventsCount / 2, (3 * eventsCount) / 4);
-        final Thread writer4 = new WriterThread((3 * eventsCount) / 4, eventsCount);
+        Thread writer1 = new WriterThread(0, eventsCount / 4);
+        Thread writer2 = new WriterThread(eventsCount / 4, eventsCount / 2);
+        Thread writer3 = new WriterThread(eventsCount / 2, (3 * eventsCount) / 4);
+        Thread writer4 = new WriterThread((3 * eventsCount) / 4, eventsCount);
         writer1.start();
         writer2.start();
         writer3.start();
@@ -251,10 +250,10 @@ public class FlumePersistentAppenderTest {
 
 
         final boolean[] fields = new boolean[eventsCount];
-        final Thread reader1 = new ReaderThread(0, eventsCount / 4, fields);
-        final Thread reader2 = new ReaderThread(eventsCount / 4, eventsCount / 2, fields);
-        final Thread reader3 = new ReaderThread(eventsCount / 2, (eventsCount * 3) / 4, fields);
-        final Thread reader4 = new ReaderThread((eventsCount * 3) / 4, eventsCount, fields);
+        Thread reader1 = new ReaderThread(0, eventsCount / 4, fields);
+        Thread reader2 = new ReaderThread(eventsCount / 4, eventsCount / 2, fields);
+        Thread reader3 = new ReaderThread(eventsCount / 2, (eventsCount * 3) / 4, fields);
+        Thread reader4 = new ReaderThread((eventsCount * 3) / 4, eventsCount, fields);
 
         reader1.start();
         reader2.start();
@@ -276,31 +275,17 @@ public class FlumePersistentAppenderTest {
                 fields[i]);
         }
     }
-    
-    @Test
-    public void testRFC5424Layout() throws IOException {
-
-        final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Log4j", "Test");
-        EventLogger.logEvent(msg);
-
-        final Event event = primary.poll();
-        Assert.assertNotNull(event);
-        final String body = getBody(event);
-        Assert.assertTrue("Structured message does not contain @EID: " + body,
-            body.contains("Test@18060"));
-    }
 
     private class WriterThread extends Thread {
 
         private final int start;
         private final int stop;
 
-        public WriterThread(final int start, final int stop) {
+        public WriterThread(int start, int stop) {
             this.start = start;
             this.stop = stop;
         }
 
-        @Override
         public void run() {
             for (int i = start; i < stop; ++i) {
                 final StructuredDataMessage msg = new StructuredDataMessage(
@@ -316,12 +301,11 @@ public class FlumePersistentAppenderTest {
         private final int stop;
         private final boolean[] fields;
 
-        private ReaderThread(final int start, final int stop, final boolean[] fields) {
+        private ReaderThread(int start, int stop, boolean[] fields) {
             this.start = start;
             this.stop = stop;
             this.fields = fields;
         }
-        @Override
         public void run() {
 
             for (int i = start; i < stop; ++i) {
@@ -371,25 +355,24 @@ public class FlumePersistentAppenderTest {
 
     }
 
-	private static boolean deleteFiles(final File file) {
-		boolean result = true;
-		if (file.isDirectory()) {
+    private static boolean deleteFiles(final File file) {
+        boolean result = true;
+        if (file.isDirectory()) {
 
-			final File[] files = file.listFiles();
-			if (files != null) {
-				for (final File child : files) {
-					result &= deleteFiles(child);
-				}
-			}
-		} else if (!file.exists()) {
-			return true;
-		}
+            final File[] files = file.listFiles();
+            for (final File child : files) {
+                result &= deleteFiles(child);
+            }
 
-		return result && file.delete();
-	}
+        } else if (!file.exists()) {
+            return true;
+        }
+
+        return result &= file.delete();
+    }
 
     private static class EventCollector implements AvroSourceProtocol {
-        private final LinkedBlockingQueue<AvroFlumeEvent> eventQueue = new LinkedBlockingQueue<>();
+        private final LinkedBlockingQueue<AvroFlumeEvent> eventQueue = new LinkedBlockingQueue<AvroFlumeEvent>();
 
         private final NettyServer nettyServer;
 
@@ -413,9 +396,11 @@ public class FlumePersistentAppenderTest {
                 // Ignore the exception.
             }
             if (avroEvent != null) {
-                return EventBuilder.withBody(avroEvent.getBody().array(), toStringMap(avroEvent.getHeaders()));
+                return EventBuilder.withBody(avroEvent.getBody().array(),
+                    toStringMap(avroEvent.getHeaders()));
+            } else {
+                System.out.println("No Event returned");
             }
-            System.out.println("No Event returned");
             return null;
         }
 
@@ -437,10 +422,32 @@ public class FlumePersistentAppenderTest {
     }
 
     private static Map<String, String> toStringMap(final Map<CharSequence, CharSequence> charSeqMap) {
-        final Map<String, String> stringMap = new HashMap<>();
+        final Map<String, String> stringMap = new HashMap<String, String>();
         for (final Map.Entry<CharSequence, CharSequence> entry : charSeqMap.entrySet()) {
             stringMap.put(entry.getKey().toString(), entry.getValue().toString());
         }
         return stringMap;
+    }
+
+    private static int[] findFreePorts(final int count) throws IOException {
+        final int[] ports = new int[count];
+        final ServerSocket[] sockets = new ServerSocket[count];
+        try {
+            for (int i = 0; i < count; ++i) {
+                sockets[i] = new ServerSocket(0);
+                ports[i] = sockets[i].getLocalPort();
+            }
+        } finally {
+            for (int i = 0; i < count; ++i) {
+                if (sockets[i] != null) {
+                    try {
+                        sockets[i].close();
+                    } catch (final Exception ex) {
+                        // Ignore the error.
+                    }
+                }
+            }
+        }
+        return ports;
     }
 }

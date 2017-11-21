@@ -16,13 +16,13 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" name="XMLConfigTest">
+<Configuration status="warn" name="XMLConfigTest" packages="org.apache.logging.log4j.test">
   <Properties>
     <Property name="filename">target/rolling2/rollingtest.log</Property>
   </Properties>
-  <Filters>
+  <filters>
     <ThresholdFilter level="debug"/>
-  </Filters>
+  </filters>
 
   <Appenders>
     <Console name="STDOUT">
@@ -35,9 +35,9 @@
       <TimeBasedTriggeringPolicy interval="2" modulate="true"/>
     </RollingFile>
     <List name="List">
-      <Filters>
+      <filters>
         <ThresholdFilter level="error"/>
-      </Filters>
+      </filters>
     </List>
   </Appenders>
 

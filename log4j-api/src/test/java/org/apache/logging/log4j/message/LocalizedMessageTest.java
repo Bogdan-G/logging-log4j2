@@ -16,74 +16,35 @@
  */
 package org.apache.logging.log4j.message;
 
-import java.io.Serializable;
-import java.util.Locale;
-
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.logging.log4j.junit.Mutable;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.util.Locale;
+
+import static org.junit.Assert.assertTrue;
 
 /**
- * Tests LocalizedMessage.
+ *
  */
 public class LocalizedMessageTest {
 
-    private <T extends Serializable> T roundtrip(final T msg) {
-        return SerializationUtils.roundtrip(msg);
-    }
+    private static final int LOOP_CNT = 500;
+    String[] array = new String[LOOP_CNT];
+
 
     @Test
     public void testMessageFormat() {
-        final LocalizedMessage msg = new LocalizedMessage("MF", new Locale("en", "US"), "msg1", new Object[] { "1", "Test" });
-        assertEquals("This is test number 1 with string argument Test.", msg.getFormattedMessage());
+        final LocalizedMessage msg = new LocalizedMessage("MF", new Locale("en", "US"), "msg1", new Object[] {"1", "Test"});
+        final String result = msg.getFormattedMessage();
+        final String expected = "This is test number 1 with string argument Test.";
+        assertTrue(expected.equals(result));
     }
 
-    @Test
-    public void testSerializationMessageFormat() {
-        final LocalizedMessage msg = new LocalizedMessage("MF", new Locale("en", "US"), "msg1", new Object[] { "1", "Test" });
-        assertEquals("This is test number 1 with string argument Test.", msg.getFormattedMessage());
-        final LocalizedMessage msg2 = roundtrip(msg);
-        assertEquals("This is test number 1 with string argument Test.", msg2.getFormattedMessage());
-    }
-
-    @Test
-    public void testSerializationStringFormat() {
-        final LocalizedMessage msg = new LocalizedMessage("SF", new Locale("en", "US"), "msg1", new Object[] { "1", "Test" });
-        assertEquals("This is test number 1 with string argument Test.", msg.getFormattedMessage());
-        final LocalizedMessage msg2 = roundtrip(msg);
-        assertEquals("This is test number 1 with string argument Test.", msg2.getFormattedMessage());
-    }
 
     @Test
     public void testStringFormat() {
-        final LocalizedMessage msg = new LocalizedMessage("SF", new Locale("en", "US"), "msg1", new Object[] { "1", "Test" });
-        assertEquals("This is test number 1 with string argument Test.", msg.getFormattedMessage());
-    }
-
-    @Test
-    public void testUnsafeWithMutableParams() { // LOG4J2-763
-        final String testMsg = "Test message %s";
-        final Mutable param = new Mutable().set("abc");
-        final LocalizedMessage msg = new LocalizedMessage(testMsg, param);
-
-        // modify parameter before calling msg.getFormattedMessage
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Expected most recent param value", "Test message XYZ", actual);
-    }
-
-    @Test
-    public void testSafeAfterGetFormattedMessageIsCalled() { // LOG4J2-763
-        final String testMsg = "Test message %s";
-        final Mutable param = new Mutable().set("abc");
-        final LocalizedMessage msg = new LocalizedMessage(testMsg, param);
-
-        // modify parameter after calling msg.getFormattedMessage
-        msg.getFormattedMessage();
-        param.set("XYZ");
-        final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "Test message abc", actual);
+        final LocalizedMessage msg = new LocalizedMessage("SF", new Locale("en", "US"), "msg1", new Object[] {"1", "Test"});
+        final String result = msg.getFormattedMessage();
+        final String expected = "This is test number 1 with string argument Test.";
+        assertTrue(expected.equals(result));
     }
 }

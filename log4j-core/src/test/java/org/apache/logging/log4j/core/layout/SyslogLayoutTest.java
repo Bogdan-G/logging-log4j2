@@ -16,34 +16,32 @@
  */
 package org.apache.logging.log4j.core.layout;
 
-import java.util.List;
-import java.util.Locale;
-
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.BasicConfigurationFactory;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.net.Facility;
-import org.apache.logging.log4j.junit.ThreadContextRule;
-import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.test.appender.ListAppender;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.util.List;
+import java.util.Locale;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  *
  */
 public class SyslogLayoutTest {
-    LoggerContext ctx = LoggerContext.getContext();
-    Logger root = ctx.getRootLogger();
+    LoggerContext ctx = (LoggerContext) LogManager.getContext();
+    Logger root = ctx.getLogger("");
 
 
     private static final String line1 = "starting mdc pattern test";
@@ -54,13 +52,10 @@ public class SyslogLayoutTest {
 
     static ConfigurationFactory cf = new BasicConfigurationFactory();
 
-    @Rule
-    public final ThreadContextRule threadContextRule = new ThreadContextRule(); 
-
     @BeforeClass
     public static void setupClass() {
         ConfigurationFactory.setConfigurationFactory(cf);
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         ctx.reconfigure();
     }
 
@@ -68,6 +63,9 @@ public class SyslogLayoutTest {
     public static void cleanupClass() {
         ConfigurationFactory.removeConfigurationFactory(cf);
     }
+
+
+
 
     /**
      * Test case for MDC conversion pattern.
@@ -78,12 +76,7 @@ public class SyslogLayoutTest {
             root.removeAppender(appender);
         }
         // set up appender
-        // @formatter:off
-        final SyslogLayout layout = SyslogLayout.newBuilder()
-                .setFacility(Facility.LOCAL0)
-                .setIncludeNewLine(true)
-                .build();
-        // @formatter:on
+        final SyslogLayout layout = SyslogLayout.createLayout("Local0", "true", null, null);
         //ConsoleAppender appender = new ConsoleAppender("Console", layout);
         final ListAppender appender = new ListAppender("List", null, layout, true, false);
         appender.start();
@@ -110,6 +103,8 @@ public class SyslogLayoutTest {
         msg.put("FromAccount", "123457");
         msg.put("Amount", "200.00");
         root.info(MarkerManager.getMarker("EVENT"), msg);
+
+        ThreadContext.clear();
 
         appender.stop();
 

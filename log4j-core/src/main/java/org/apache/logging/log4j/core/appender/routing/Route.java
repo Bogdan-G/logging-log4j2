@@ -17,7 +17,6 @@
 package org.apache.logging.log4j.core.appender.routing;
 
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
@@ -28,7 +27,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 /**
  * A Route to an appender.
  */
-@Plugin(name = "Route", category = Core.CATEGORY_NAME, printObject = true, deferChildren = true)
+@Plugin(name = "Route", category = "Core", printObject = true, deferChildren = true)
 public final class Route {
     private static final Logger LOGGER = StatusLogger.getLogger();
 
@@ -78,11 +77,11 @@ public final class Route {
             sb.append("invalid Route");
         }
         if (key != null) {
-            sb.append(" key='").append(key).append('\'');
+            sb.append(" key='").append(key).append("'");
         } else {
             sb.append(" default");
         }
-        sb.append(')');
+        sb.append(")");
         return sb.toString();
     }
 
@@ -99,6 +98,9 @@ public final class Route {
             @PluginAttribute("key") final String key,
             @PluginNode final Node node) {
         if (node != null && node.hasChildren()) {
+            for (final Node child : node.getChildren()) {
+
+            }
             if (appenderRef != null) {
                 LOGGER.error("A route cannot be configured with an appender reference and an appender definition");
                 return null;

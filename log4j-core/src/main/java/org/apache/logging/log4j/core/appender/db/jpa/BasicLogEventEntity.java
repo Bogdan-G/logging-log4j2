@@ -19,8 +19,9 @@ package org.apache.logging.log4j.core.appender.db.jpa;
 import java.util.Map;
 import javax.persistence.Basic;
 import javax.persistence.Convert;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
@@ -28,20 +29,18 @@ import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.ContextMapAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.ContextStackAttributeConverter;
-import org.apache.logging.log4j.core.appender.db.jpa.converter.LevelAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.MarkerAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.MessageAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.StackTraceElementAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.ThrowableAttributeConverter;
-import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.message.Message;
 
 /**
  * Users of the JPA appender may want to extend this class instead of {@link AbstractLogEventWrapperEntity}. This class
  * implements all of the required mutator methods but does not implement a mutable entity ID property. In order to
- * create an entity based on this class, you need only create two constructors matching this class's constructors,
- * annotate the class {@link javax.persistence.Entity @Entity} and {@link javax.persistence.Table @Table}, and implement
- * the fully mutable entity ID property annotated with {@link javax.persistence.Id @Id} and
+ * create an entity based on this class, you need only create two constructors matching this class's
+ * constructors, annotate the class {@link javax.persistence.Entity @Entity} and {@link javax.persistence.Table @Table},
+ * and implement the fully mutable entity ID property annotated with {@link javax.persistence.Id @Id} and
  * {@link javax.persistence.GeneratedValue @GeneratedValue} to tell the JPA provider how to calculate an ID for new
  * events.<br>
  * <br>
@@ -72,6 +71,7 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
      * signature. The no-argument constructor is required for a standards-compliant JPA provider to accept this as an
      * entity.
      */
+    @SuppressWarnings("unused")
     public BasicLogEventEntity() {
         super();
     }
@@ -92,7 +92,8 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
      * @return the level.
      */
     @Override
-    @Convert(converter = LevelAttributeConverter.class)
+    @Basic
+    @Enumerated(EnumType.STRING)
     public Level getLevel() {
         return this.getWrappedEvent().getLevel();
     }
@@ -146,28 +147,6 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
     }
 
     /**
-     * Gets the thread ID. Annotated with {@code @Basic}.
-     *
-     * @return the thread ID.
-     */
-    @Override
-    @Basic
-    public long getThreadId() {
-        return this.getWrappedEvent().getThreadId();
-    }
-
-    /**
-     * Gets the thread name. Annotated with {@code @Basic}.
-     *
-     * @return the thread name.
-     */
-    @Override
-    @Basic
-    public int getThreadPriority() {
-        return this.getWrappedEvent().getThreadPriority();
-    }
-
-    /**
      * Gets the thread name. Annotated with {@code @Basic}.
      *
      * @return the thread name.
@@ -185,20 +164,8 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
      */
     @Override
     @Basic
-    public long getTimeMillis() {
-        return this.getWrappedEvent().getTimeMillis();
-    }
-
-    /**
-     * Returns the value of the running Java Virtual Machine's high-resolution time source when this event was created,
-     * or a dummy value if it is known that this value will not be used downstream.
-     *
-     * @return the JVM nano time
-     */
-    @Override
-    @Basic
-    public long getNanoTime() {
-        return this.getWrappedEvent().getNanoTime();
+    public long getMillis() {
+        return this.getWrappedEvent().getMillis();
     }
 
     /**
@@ -214,25 +181,12 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
     }
 
     /**
-     * Gets the exception logged. Annotated with {@code @Convert(converter = ThrowableAttributeConverter.class)}.
-     *
-     * @return the exception logged.
-     * @see ThrowableAttributeConverter
-     */
-    @Override
-    @Transient
-    public ThrowableProxy getThrownProxy() {
-        return this.getWrappedEvent().getThrownProxy();
-    }
-
-    /**
      * Gets the context map. Annotated with {@code @Convert(converter = ContextMapAttributeConverter.class)}.
      *
      * @return the context map.
      * @see ContextMapAttributeConverter
      * @see org.apache.logging.log4j.core.appender.db.jpa.converter.ContextMapJsonAttributeConverter
      */
-    @SuppressWarnings("deprecation")
     @Override
     @Convert(converter = ContextMapAttributeConverter.class)
     public Map<String, String> getContextMap() {
@@ -259,7 +213,7 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
      */
     @Override
     @Basic
-    public String getLoggerFqcn() {
-        return this.getWrappedEvent().getLoggerFqcn();
+    public String getFQCN() {
+        return this.getWrappedEvent().getFQCN();
     }
 }

@@ -26,10 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.util.FileUtils;
-import org.apache.logging.log4j.core.util.NullOutputStream;
 
 /**
  * Extends OutputStreamManager but instead of using a buffered output stream,
@@ -41,17 +37,24 @@ public class RandomAccessFileManager extends OutputStreamManager {
 
     private static final RandomAccessFileManagerFactory FACTORY = new RandomAccessFileManagerFactory();
 
+    private final boolean isImmediateFlush;
     private final String advertiseURI;
     private final RandomAccessFile randomAccessFile;
-    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
+    private final ByteBuffer buffer;
+    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<Boolean>();
 
-    protected RandomAccessFileManager(final LoggerContext loggerContext, final RandomAccessFile file, final String fileName,
-            final OutputStream os, final int bufferSize, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final boolean writeHeader) {
-        super(loggerContext, os, fileName, false, layout, writeHeader, ByteBuffer.wrap(new byte[bufferSize]));
+    protected RandomAccessFileManager(final RandomAccessFile file,
+            final String fileName, final OutputStream os,
+            final boolean immediateFlush, final String advertiseURI,
+            final Layout<? extends Serializable> layout) {
+        super(os, fileName, layout);
+        this.isImmediateFlush = immediateFlush;
         this.randomAccessFile = file;
         this.advertiseURI = advertiseURI;
-        this.isEndOfBatch.set(Boolean.FALSE);
+        isEndOfBatch.set(Boolean.FALSE);
+
+        // TODO make buffer size configurable?
+        buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
     }
 
     /**
@@ -62,51 +65,65 @@ public class RandomAccessFileManager extends OutputStreamManager {
      *            be overwritten.
      * @param isFlush true if the contents should be flushed to disk on every
      *            write
-     * @param bufferSize The buffer size.
      * @param advertiseURI the URI to use when advertising the file
      * @param layout The layout.
-     * @param configuration The configuration.
      * @return A RandomAccessFileManager for the File.
      */
-    public static RandomAccessFileManager getFileManager(final String fileName, final boolean append,
-            final boolean isFlush, final int bufferSize, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final Configuration configuration) {
-        return narrow(RandomAccessFileManager.class, getManager(fileName, new FactoryData(append,
-                isFlush, bufferSize, advertiseURI, layout, configuration), FACTORY));
+    public static RandomAccessFileManager getFileManager(final String fileName,
+            final boolean append, final boolean isFlush,
+            final String advertiseURI, final Layout<? extends Serializable> layout) {
+        return (RandomAccessFileManager) getManager(fileName, new FactoryData(append,
+                isFlush, advertiseURI, layout), FACTORY);
     }
 
     public Boolean isEndOfBatch() {
         return isEndOfBatch.get();
     }
 
-    public void setEndOfBatch(final boolean endOfBatch) {
-        this.isEndOfBatch.set(Boolean.valueOf(endOfBatch));
+    public void setEndOfBatch(final boolean isEndOfBatch) {
+        this.isEndOfBatch.set(Boolean.valueOf(isEndOfBatch));
     }
 
     @Override
-    protected void writeToDestination(final byte[] bytes, final int offset, final int length) {
-        try {
-            randomAccessFile.write(bytes, offset, length);
-        } catch (final IOException ex) {
-            final String msg = "Error writing to RandomAccessFile " + getName();
-            throw new AppenderLoggingException(msg, ex);
+    protected synchronized void write(final byte[] bytes, int offset, int length) {
+        super.write(bytes, offset, length); // writes to dummy output stream
+
+        int chunk = 0;
+        do {
+            if (length > buffer.remaining()) {
+                flush();
+            }
+            chunk = Math.min(length, buffer.remaining());
+            buffer.put(bytes, offset, chunk);
+            offset += chunk;
+            length -= chunk;
+        } while (length > 0);
+
+        if (isImmediateFlush || isEndOfBatch.get() == Boolean.TRUE) {
+            flush();
         }
     }
 
     @Override
     public synchronized void flush() {
-        flushBuffer(byteBuffer);
+        buffer.flip();
+        try {
+            randomAccessFile.write(buffer.array(), 0, buffer.limit());
+        } catch (final IOException ex) {
+            final String msg = "Error writing to RandomAccessFile " + getName();
+            throw new AppenderLoggingException(msg, ex);
+        }
+        buffer.clear();
     }
 
     @Override
-    public synchronized boolean closeOutputStream() {
+    public synchronized void close() {
         flush();
         try {
             randomAccessFile.close();
-            return true;
         } catch (final IOException ex) {
-            logError("Unable to close RandomAccessFile", ex);
-            return false;
+            LOGGER.error("Unable to close RandomAccessFile " + getName() + ". "
+                    + ex);
         }
     }
 
@@ -119,25 +136,27 @@ public class RandomAccessFileManager extends OutputStreamManager {
         return getName();
     }
 
-    /**
-     * Returns the buffer capacity.
-     * @return the buffer size
-     */
-    public int getBufferSize() {
-        return byteBuffer.capacity();
+    /** {@code OutputStream} subclass that does not write anything. */
+    static class DummyOutputStream extends OutputStream {
+        @Override
+        public void write(final int b) throws IOException {
+        }
+
+        @Override
+        public void write(final byte[] b, final int off, final int len) throws IOException {
+        }
     }
 
     /**
-     * Gets this FileManager's content format specified by:
-     * <p>
+     * FileManager's content format is specified by:
+     * <p/>
      * Key: "fileURI" Value: provided "advertiseURI" param.
-     * </p>
      *
      * @return Map of content format keys supporting FileManager
      */
     @Override
     public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>(
+        final Map<String, String> result = new HashMap<String, String>(
                 super.getContentFormat());
         result.put("fileURI", advertiseURI);
         return result;
@@ -146,10 +165,9 @@ public class RandomAccessFileManager extends OutputStreamManager {
     /**
      * Factory Data.
      */
-    private static class FactoryData extends ConfigurationFactoryData {
+    private static class FactoryData {
         private final boolean append;
         private final boolean immediateFlush;
-        private final int bufferSize;
         private final String advertiseURI;
         private final Layout<? extends Serializable> layout;
 
@@ -157,15 +175,11 @@ public class RandomAccessFileManager extends OutputStreamManager {
          * Constructor.
          *
          * @param append Append status.
-         * @param bufferSize size of the buffer
-         * @param configuration The configuration.
          */
-        public FactoryData(final boolean append, final boolean immediateFlush, final int bufferSize,
-                final String advertiseURI, final Layout<? extends Serializable> layout, final Configuration configuration) {
-            super(configuration);
+        public FactoryData(final boolean append, final boolean immediateFlush,
+                final String advertiseURI, final Layout<? extends Serializable> layout) {
             this.append = append;
             this.immediateFlush = immediateFlush;
-            this.bufferSize = bufferSize;
             this.advertiseURI = advertiseURI;
             this.layout = layout;
         }
@@ -187,25 +201,27 @@ public class RandomAccessFileManager extends OutputStreamManager {
         @Override
         public RandomAccessFileManager createManager(final String name, final FactoryData data) {
             final File file = new File(name);
+            final File parent = file.getParentFile();
+            if (null != parent && !parent.exists()) {
+                parent.mkdirs();
+            }
             if (!data.append) {
                 file.delete();
             }
 
-            final boolean writeHeader = !data.append || !file.exists();
-            final OutputStream os = NullOutputStream.getInstance();
+            final OutputStream os = new DummyOutputStream();
             RandomAccessFile raf;
             try {
-                FileUtils.makeParentDirs(file);
                 raf = new RandomAccessFile(name, "rw");
                 if (data.append) {
                     raf.seek(raf.length());
                 } else {
                     raf.setLength(0);
                 }
-                return new RandomAccessFileManager(data.getLoggerContext(), raf, name,
-                        os, data.bufferSize, data.advertiseURI, data.layout, writeHeader);
+                return new RandomAccessFileManager(raf, name, os, data.immediateFlush,
+                        data.advertiseURI, data.layout);
             } catch (final Exception ex) {
-                LOGGER.error("RandomAccessFileManager (" + name + ") " + ex, ex);
+                LOGGER.error("RandomAccessFileManager (" + name + ") " + ex);
             }
             return null;
         }

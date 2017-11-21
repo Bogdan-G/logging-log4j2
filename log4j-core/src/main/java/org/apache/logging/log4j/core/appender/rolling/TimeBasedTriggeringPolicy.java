@@ -16,108 +16,41 @@
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderAttribute;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
-import org.apache.logging.log4j.core.util.Integers;
+import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.helpers.Integers;
 
 /**
- * Rolls a file over based on time.
+ * Triggering Policy that causes a rollover based on time.
  */
-@Plugin(name = "TimeBasedTriggeringPolicy", category = Core.CATEGORY_NAME, printObject = true)
-public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
+@Plugin(name = "TimeBasedTriggeringPolicy", category = "Core", printObject = true)
+public final class TimeBasedTriggeringPolicy implements TriggeringPolicy {
 
-    
-    public static class Builder implements org.apache.logging.log4j.core.util.Builder<TimeBasedTriggeringPolicy> {
-
-        @PluginBuilderAttribute
-        private int interval = 1;
-        
-        @PluginBuilderAttribute
-        private boolean modulate = false;
-        
-        @PluginBuilderAttribute
-        private int maxRandomDelay = 0;
-        
-        @Override
-        public TimeBasedTriggeringPolicy build() {
-            final long maxRandomDelayMillis = TimeUnit.SECONDS.toMillis(maxRandomDelay);
-            return new TimeBasedTriggeringPolicy(interval, modulate, maxRandomDelayMillis);
-        }
-
-        public int getInterval() {
-            return interval;
-        }
-
-        public boolean isModulate() {
-            return modulate;
-        }
-
-        public int getMaxRandomDelay() {
-            return maxRandomDelay;
-        }
-        
-        public Builder withInterval(final int interval){
-            this.interval = interval;
-            return this;
-        }
-        
-        public Builder withModulate(final boolean modulate){
-            this.modulate = modulate;
-            return this;
-        }
-        
-        public Builder withMaxRandomDelay(final int maxRandomDelay){
-            this.maxRandomDelay = maxRandomDelay;
-            return this;
-        }
-
-    }
-
-    private long nextRolloverMillis;
+    private long nextRollover;
     private final int interval;
     private final boolean modulate;
-    private final long maxRandomDelayMillis;
 
     private RollingFileManager manager;
 
-    private TimeBasedTriggeringPolicy(final int interval, final boolean modulate, final long maxRandomDelayMillis) {
+    private TimeBasedTriggeringPolicy(final int interval, final boolean modulate) {
         this.interval = interval;
         this.modulate = modulate;
-        this.maxRandomDelayMillis = maxRandomDelayMillis;
-    }
-
-    public int getInterval() {
-        return interval;
-    }
-
-    public long getNextRolloverMillis() {
-        return nextRolloverMillis;
     }
 
     /**
-     * Initializes the policy.
-     * @param aManager The RollingFileManager.
+     * Initialize the policy.
+     * @param manager The RollingFileManager.
      */
     @Override
-    public void initialize(final RollingFileManager aManager) {
-        this.manager = aManager;
-        
-        // LOG4J2-531: call getNextTime twice to force initialization of both prevFileTime and nextFileTime
-        aManager.getPatternProcessor().getNextTime(aManager.getFileTime(), interval, modulate);
-        
-        nextRolloverMillis = ThreadLocalRandom.current().nextLong(0, 1 + maxRandomDelayMillis)
-                + aManager.getPatternProcessor().getNextTime(aManager.getFileTime(), interval, modulate);
+    public void initialize(final RollingFileManager manager) {
+        this.manager = manager;
+        nextRollover = manager.getPatternProcessor().getNextTime(manager.getFileTime(), interval, modulate);
     }
 
     /**
-     * Determines whether a rollover should occur.
+     * Determine whether a rollover should occur.
      * @param event   A reference to the currently event.
      * @return true if a rollover should occur.
      */
@@ -126,41 +59,31 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
         if (manager.getFileSize() == 0) {
             return false;
         }
-        final long nowMillis = event.getTimeMillis();
-        if (nowMillis >= nextRolloverMillis) {
-            nextRolloverMillis = ThreadLocalRandom.current().nextLong(0, 1 + maxRandomDelayMillis)
-                    + manager.getPatternProcessor().getNextTime(nowMillis, interval, modulate);
+        final long now = System.currentTimeMillis();
+        if (now > nextRollover) {
+            nextRollover = manager.getPatternProcessor().getNextTime(now, interval, modulate);
             return true;
         }
         return false;
     }
 
+    @Override
+    public String toString() {
+        return "TimeBasedTriggeringPolicy";
+    }
+
     /**
-     * Creates a TimeBasedTriggeringPolicy.
+     * Create a TimeBasedTriggeringPolicy.
      * @param interval The interval between rollovers.
      * @param modulate If true the time will be rounded to occur on a boundary aligned with the increment.
      * @return a TimeBasedTriggeringPolicy.
-     * @deprecated Use {@link #newBuilder()}.
      */
-    @Deprecated
+    @PluginFactory
     public static TimeBasedTriggeringPolicy createPolicy(
             @PluginAttribute("interval") final String interval,
             @PluginAttribute("modulate") final String modulate) {
-        return newBuilder()
-                .withInterval(Integers.parseInt(interval, 1))
-                .withModulate(Boolean.parseBoolean(modulate))
-                .build();
+        final int increment = Integers.parseInt(interval, 1);
+        final boolean mod = Boolean.parseBoolean(modulate);
+        return new TimeBasedTriggeringPolicy(increment, mod);
     }
-    
-    @PluginBuilderFactory
-    public static TimeBasedTriggeringPolicy.Builder newBuilder() {
-        return new Builder();
-    }
-
-    @Override
-    public String toString() {
-        return "TimeBasedTriggeringPolicy(nextRolloverMillis=" + nextRolloverMillis + ", interval=" + interval
-                + ", modulate=" + modulate + ")";
-    }
-
 }

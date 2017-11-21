@@ -17,25 +17,29 @@
 */
 package org.apache.logging.slf4j;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Date;
 import java.util.List;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.testUtil.StringListAppender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.apache.logging.log4j.message.StringFormatterMessageFactory;
-import org.apache.logging.log4j.spi.AbstractLogger;
-import org.apache.logging.log4j.spi.MessageFactory2Adapter;
 import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.joran.spi.JoranException;
+import ch.qos.logback.core.testUtil.StringListAppender;
 
 /**
  *
@@ -43,58 +47,57 @@ import static org.junit.Assert.*;
 public class LoggerTest {
 
     private static final String CONFIG = "target/test-classes/logback-slf4j.xml";
+    private static Logger logger;
+    private static org.slf4j.Logger slf4jLogger;
+    private static LoggerContext context;
+    private static Logger root;
+    private static ch.qos.logback.classic.Logger rootLogger;
+    private static StringListAppender<ILoggingEvent> list;
 
-    @ClassRule
-    public static final LoggerContextRule CTX = new LoggerContextRule(CONFIG);
+    @BeforeClass
+    public static void setupClass() throws Exception {
+        slf4jLogger = LoggerFactory.getLogger(LoggerTest.class);
+        context = ((ch.qos.logback.classic.Logger) slf4jLogger).getLoggerContext();
+        configure(CONFIG);
+        logger = LogManager.getLogger(LoggerTest.class);
+        assertTrue("Incorrect SLF4J Logger", ((SLF4JLogger) logger).getLogger() == slf4jLogger);
+        root = LogManager.getRootLogger();
+        rootLogger = context.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        list = (StringListAppender<ILoggingEvent>) rootLogger.getAppender("LIST");
+        rootLogger.detachAppender("console");
+    }
 
-    private Logger logger;
-    private StringListAppender<ILoggingEvent> list;
+    private static void configure(final String file) throws JoranException {
+        final JoranConfigurator jc = new JoranConfigurator();
+        jc.setContext(context);
+        jc.doConfigure(file);
+    }
 
     @Before
-    public void setUp() throws Exception {
-        final org.slf4j.Logger slf4jLogger = CTX.getLogger();
-        logger = LogManager.getLogger();
-        assertThat(slf4jLogger, is(theInstance(((SLF4JLogger) logger).getLogger())));
-        final ch.qos.logback.classic.Logger rootLogger = CTX.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        rootLogger.detachAppender("console");
-        list = TestUtil.getListAppender(rootLogger, "LIST");
-        assertThat(list, is(notNullValue()));
-        assertThat(list.strList, is(notNullValue()));
+    public void before() {
+    	assertNotNull(list);
+    	assertNotNull(list.strList);
         list.strList.clear();
     }
 
     @Test
     public void basicFlow() {
-        logger.traceEntry();
-        logger.traceExit();
-        assertThat(list.strList, hasSize(2));
-    }
-
-    @Test
-    public void basicFlowDepreacted() {
         logger.entry();
         logger.exit();
-        assertThat(list.strList, hasSize(2));
-    }
-
-    @Test
-    public void simpleFlowDeprecated() {
-        logger.entry(CONFIG);
-        logger.exit(0);
-        assertThat(list.strList, hasSize(2));
+        assertTrue("Incorrect number of events. Expected 2, actual " + list.strList.size(), list.strList.size() == 2);
     }
 
     @Test
     public void simpleFlow() {
         logger.entry(CONFIG);
-        logger.traceExit(0);
-        assertThat(list.strList, hasSize(2));
+        logger.exit(0);
+        assertTrue("Incorrect number of events. Expected 2, actual " + list.strList.size(), list.strList.size() == 2);
     }
 
     @Test
     public void throwing() {
         logger.throwing(new IllegalArgumentException("Test Exception"));
-        assertThat(list.strList, hasSize(1));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
     }
 
     @Test
@@ -104,13 +107,13 @@ public class LoggerTest {
         } catch (final Exception e) {
             logger.catching(e);
         }
-        assertThat(list.strList, hasSize(1));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
     }
 
     @Test
     public void debug() {
         logger.debug("Debug message");
-        assertThat(list.strList, hasSize(1));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
     }
 
     @Test
@@ -118,8 +121,8 @@ public class LoggerTest {
         final Logger testLogger = testMessageFactoryMismatch("getLogger_String_MessageFactoryMismatch",
             StringFormatterMessageFactory.INSTANCE, ParameterizedMessageFactory.INSTANCE);
         testLogger.debug("%,d", Integer.MAX_VALUE);
-        assertThat(list.strList, hasSize(1));
-        assertThat(list.strList, hasItem(String.format("%,d", Integer.MAX_VALUE)));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
+        assertEquals(String.format("%,d", Integer.MAX_VALUE), list.strList.get(0));
     }
 
     @Test
@@ -127,60 +130,46 @@ public class LoggerTest {
         final Logger testLogger =  testMessageFactoryMismatch("getLogger_String_MessageFactoryMismatchNull",
             StringFormatterMessageFactory.INSTANCE, null);
         testLogger.debug("%,d", Integer.MAX_VALUE);
-        assertThat(list.strList, hasSize(1));
-        assertThat(list.strList, hasItem(String.format("%,d", Integer.MAX_VALUE)));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
+        assertEquals(String.format("%,d", Integer.MAX_VALUE), list.strList.get(0));
     }
 
     private Logger testMessageFactoryMismatch(final String name, final MessageFactory messageFactory1, final MessageFactory messageFactory2) {
         final Logger testLogger = LogManager.getLogger(name, messageFactory1);
-        assertThat(testLogger, is(notNullValue()));
-        checkMessageFactory(messageFactory1, testLogger);
+        assertNotNull(testLogger);
+        assertEquals(messageFactory1, testLogger.getMessageFactory());
         final Logger testLogger2 = LogManager.getLogger(name, messageFactory2);
-        checkMessageFactory(messageFactory1, testLogger2);
+        assertEquals(messageFactory1, testLogger2.getMessageFactory());
         return testLogger;
-    }
-
-    private static void checkMessageFactory(final MessageFactory messageFactory1, final Logger testLogger1) {
-        if (messageFactory1 == null) {
-            assertEquals(AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS, testLogger1.getMessageFactory().getClass());
-        } else {
-            MessageFactory actual = testLogger1.getMessageFactory();
-            if (actual instanceof MessageFactory2Adapter) {
-                actual = ((MessageFactory2Adapter) actual).getOriginal();
-            }
-            assertEquals(messageFactory1, actual);
-        }
     }
 
     @Test
     public void debugObject() {
         logger.debug(new Date());
-        assertThat(list.strList, hasSize(1));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
     }
 
     @Test
     public void debugWithParms() {
         logger.debug("Hello, {}", "World");
-        assertThat(list.strList, hasSize(1));
+        assertTrue("Incorrect number of events. Expected 1, actual " + list.strList.size(), list.strList.size() == 1);
     }
 
     @Test
     public void testImpliedThrowable() {
         logger.debug("This is a test", new Throwable("Testing"));
         final List<String> msgs = list.strList;
-        assertThat(msgs, hasSize(1));
+        assertTrue("Incorrect number of messages. Expected 1, actual " + msgs.size(), msgs.size() == 1);
         final String expected = "java.lang.Throwable: Testing";
         assertTrue("Incorrect message data", msgs.get(0).contains(expected));
     }
-
-    @SuppressWarnings("unchecked")
     @Test
     public void mdc() {
-        ThreadContext.put("TestYear", Integer.toString(2010));
+        ThreadContext.put("TestYear", new Integer(2010).toString());
         logger.debug("Debug message");
-        ThreadContext.clearMap();
+        ThreadContext.clear();
         logger.debug("Debug message");
-        assertThat(list.strList, hasSize(2));
+        assertTrue("Incorrect number of events. Expected 2, actual " + list.strList.size(), list.strList.size() == 2);
         assertTrue("Incorrect year", list.strList.get(0).startsWith("2010"));
     }
 }

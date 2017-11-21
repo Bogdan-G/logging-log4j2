@@ -19,7 +19,7 @@ package org.apache.logging.log4j.core.net.ssl;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class TlsSyslogTestUtil {
+public class TLSSyslogTestUtil {
     public static final String ABC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     public static final String NUMBERS = "0123456789";
     public static final String WHITESPACES = " \t\n";
@@ -27,11 +27,11 @@ public class TlsSyslogTestUtil {
     public static final String LEGACY_BSD_SYSLOG_CHARSET = ABC + NUMBERS + " \t";
     public static final String SYSLOG_CHARSET = ABC + NUMBERS + WHITESPACES;
 
-    public static ArrayList<String> generateMessages(final int numberOfMessages) {
+    public static ArrayList<String> generateMessages(int numberOfMessages) {
         return generateMessages(numberOfMessages, CHARSET);
     }
 
-    public static ArrayList<String> generateMessages(final int numberOfMessages, final TlsSyslogMessageFormat format) {
+    public static ArrayList<String> generateMessages(int numberOfMessages, TLSSyslogMessageFormat format) {
         switch (format) {
             case SYSLOG:
                 return generateMessages(numberOfMessages, SYSLOG_CHARSET);
@@ -42,33 +42,32 @@ public class TlsSyslogTestUtil {
         }
     }
 
-    private static ArrayList<String> generateMessages(final int numberOfMessages, final String charSet) {
-        final ArrayList<String> messageList = new ArrayList<>(numberOfMessages);
+    private static ArrayList<String> generateMessages(int numberOfMessages, String charSet) {
+        ArrayList<String> messageList = new ArrayList<String>(numberOfMessages);
         for (int i = 0; i < numberOfMessages; i++) {
-            final String message = createRandomMessage(charSet);
+            String message = createRandomMessage(charSet);
             messageList.add(message);
         }
         return messageList;
     }
 
-    private static String createRandomMessage(final String charset) {
-        final char[] chars = charset.toCharArray();
-        final StringBuilder sb = new StringBuilder();
-        final Random random = new Random();
+    private static String createRandomMessage(String charset) {
+        char[] chars = charset.toCharArray();
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
         for (int i = 0; i < random.nextInt(10000); i++) {
-            final char c = chars[random.nextInt(chars.length)];
+            char c = chars[random.nextInt(chars.length)];
             sb.append(c);
         }
-        final String output = sb.toString();
+        String output = sb.toString();
         return output;
     }
 
-    public static int getRandomInt(final int max) {
-        final Random random = new Random();
-        final int n = random.nextInt(max);
-        if (n < 0) {
+    public static int getRandomInt(int max) {
+        Random random = new Random();
+        int n = random.nextInt(max);
+        if (n < 0)
             return -n;
-        }
         return n;
     }
 }

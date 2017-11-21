@@ -16,83 +16,80 @@
  */
 package org.apache.logging.log4j.core.appender;
 
-import java.io.Serializable;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.MarkerManager;
+import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.net.mock.MockSyslogServer;
+import org.apache.logging.log4j.core.net.mock.MockSyslogServerFactory;
+import org.apache.logging.log4j.message.StructuredDataMessage;
+import org.junit.BeforeClass;
+
+import java.io.IOException;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.MarkerManager;
-import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.layout.Rfc5424Layout;
-import org.apache.logging.log4j.core.layout.SyslogLayout;
-import org.apache.logging.log4j.core.net.Facility;
-import org.apache.logging.log4j.core.net.Priority;
-import org.apache.logging.log4j.core.net.mock.MockSyslogServer;
-import org.apache.logging.log4j.message.StructuredDataMessage;
-import org.apache.logging.log4j.util.Strings;
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import static org.junit.Assert.*;
-
-public abstract class SyslogAppenderTestBase {
+public class SyslogAppenderTestBase {
     protected static final String line1 =
             "TestApp - Audit [Transfer@18060 Amount=\"200.00\" FromAccount=\"123457\" ToAccount=\"123456\"]" +
                     "[RequestContext@18060 ipAddress=\"192.168.0.120\" loginId=\"JohnDoe\"] Transfer Complete";
-    protected LoggerContext ctx = LoggerContext.getContext();
+    protected LoggerContext ctx = (LoggerContext) LogManager.getContext();
     protected static final int DEFAULT_TIMEOUT_IN_MS = 100;
-    protected static final int PORTNUM = 8199;
+    protected static final String PORT = "8199";
+    protected static final int PORTNUM = Integer.parseInt(PORT);
     protected MockSyslogServer syslogServer;
     protected SyslogAppender appender;
     protected Logger root = ctx.getLogger("SyslogAppenderTest");
-    protected List<String> sentMessages = new ArrayList<>();
-    protected boolean includeNewLine = true;
+    protected List<String> sentMessages = new ArrayList<String>();
+    protected String includeNewLine = "true";
 
     @BeforeClass
     public static void setupClass() throws Exception {
-        LoggerContext.getContext().reconfigure();
+        ((LoggerContext) LogManager.getContext()).reconfigure();
     }
 
-    protected void sendAndCheckLegacyBsdMessages(final List<String> messagesToSend) throws InterruptedException {
-        for (final String message : messagesToSend) {
-            sendDebugLegacyBsdMessage(message);
-        }
+    protected void sendAndCheckLegacyBSDMessages(List<String> messagesToSend) throws InterruptedException {
+        for (String message : messagesToSend)
+            sendLegacyBSDMessage(message);
         checkTheNumberOfSentAndReceivedMessages();
-        checkTheEqualityOfSentAndReceivedMessages(Level.DEBUG);
+        checkTheEqualityOfSentAndReceivedMessages();
     }
 
-    protected void sendAndCheckLegacyBsdMessage(final String message) throws InterruptedException {
-        sendDebugLegacyBsdMessage(message);
+    protected void sendAndCheckLegacyBSDMessage(String message) throws InterruptedException {
+        sendLegacyBSDMessage(message);
         checkTheNumberOfSentAndReceivedMessages();
-        checkTheEqualityOfSentAndReceivedMessages(Level.DEBUG);
+        checkTheEqualityOfSentAndReceivedMessages();
     }
 
-    protected void sendDebugLegacyBsdMessage(final String message) {
+    protected void sendLegacyBSDMessage(String message) {
         sentMessages.add(message);
         root.debug(message);
     }
 
-    protected void sendAndCheckStructuredMessages(final int numberOfMessages) throws InterruptedException {
-        for (int i = 0; i < numberOfMessages; i++) {
-            sendInfoStructuredMessage();
-        }
+    protected void sendAndCheckStructuredMessages(int numberOfMessages) throws InterruptedException {
+        for (int i = 0; i < numberOfMessages; i++)
+            sendStructuredMessage();
         checkTheNumberOfSentAndReceivedMessages();
-        checkTheEqualityOfSentAndReceivedMessages(Level.INFO);
+        checkTheEqualityOfSentAndReceivedMessages();
     }
 
     protected void sendAndCheckStructuredMessage() throws InterruptedException {
-        sendInfoStructuredMessage();
+        sendStructuredMessage();
         checkTheNumberOfSentAndReceivedMessages();
-        checkTheEqualityOfSentAndReceivedMessages(Level.INFO);
+        checkTheEqualityOfSentAndReceivedMessages();
     }
 
-    protected void sendInfoStructuredMessage() {
+    protected void sendStructuredMessage() {
         ThreadContext.put("loginId", "JohnDoe");
         ThreadContext.put("ipAddress", "192.168.0.120");
         ThreadContext.put("locale", Locale.US.getDisplayName());
@@ -101,8 +98,7 @@ public abstract class SyslogAppenderTestBase {
         msg.put("FromAccount", "123457");
         msg.put("Amount", "200.00");
         // the msg.toString() doesn't contain the parameters of the ThreadContext, so we must use the line1 string
-        final String str = msg.asString(null, null);
-        sentMessages.add(str);
+        sentMessages.add(line1);
         root.info(MarkerManager.getMarker("EVENT"), msg);
     }
 
@@ -111,19 +107,15 @@ public abstract class SyslogAppenderTestBase {
                 sentMessages.size(), getReceivedMessages(DEFAULT_TIMEOUT_IN_MS).size());
     }
 
-    protected void checkTheEqualityOfSentAndReceivedMessages(final Level expectedLevel) throws InterruptedException {
-        final List<String> receivedMessages = getReceivedMessages(DEFAULT_TIMEOUT_IN_MS);
+    protected void checkTheEqualityOfSentAndReceivedMessages() throws InterruptedException {
+        List<String> receivedMessages = getReceivedMessages(DEFAULT_TIMEOUT_IN_MS);
 
         assertNotNull("No messages received", receivedMessages);
         for (int i = 0; i < receivedMessages.size(); i++) {
-            final String receivedMessage = receivedMessages.get(i);
-            final String sentMessage = sentMessages.get(i);
-            final String suffix = includeNewLine ? "\n" : Strings.EMPTY;
-            assertTrue("Incorrect message received: " + receivedMessage,
-                    receivedMessage.endsWith(sentMessage + suffix) || receivedMessage.contains(sentMessage));
-            final int expectedPriority = Priority.getPriority(getExpectedFacility(), expectedLevel);
-            assertTrue("Expected facility " + expectedPriority + " in message " + receivedMessage,
-                    receivedMessage.startsWith("<" + expectedPriority + ">"));
+            String receivedMessage = receivedMessages.get(i);
+            String sentMessage = sentMessages.get(i);
+            String suffix =  "true".equalsIgnoreCase(includeNewLine) ? "\n" : "";
+            assertTrue("Incorrect message received: " + receivedMessage, receivedMessage.endsWith(sentMessage + suffix));
         }
     }
 
@@ -136,39 +128,16 @@ public abstract class SyslogAppenderTestBase {
         }
     }
 
-    protected void initRootLogger(final Appender appender) {
+    protected void initRootLogger(Appender appender) {
         root.addAppender(appender);
         root.setAdditive(false);
         root.setLevel(Level.DEBUG);
     }
 
-    protected List<String> getReceivedMessages(final int timeOutInMs) throws InterruptedException {
+    protected List<String> getReceivedMessages(int timeOutInMs) throws InterruptedException {
         synchronized (syslogServer) {
             syslogServer.wait(timeOutInMs);
         }
         return syslogServer.getMessageList();
-    }
-
-    protected Facility getExpectedFacility() {
-        return Facility.LOCAL0;
-    }
-
-    protected void validate(final SyslogAppender syslogAppender) {
-        final Layout<? extends Serializable> layout = syslogAppender.getLayout();
-        if (layout instanceof SyslogLayout) {
-            validate((SyslogLayout) layout);
-        } else if (layout instanceof Rfc5424Layout) {
-            validate((Rfc5424Layout) layout);
-        } else {
-            Assert.fail("Unexpected layout: " + layout);
-        }
-    }
-
-    protected void validate(final Rfc5424Layout layout) {
-        Assert.assertEquals(getExpectedFacility(), layout.getFacility());
-    }
-
-    protected void validate(final SyslogLayout layout) {
-        Assert.assertEquals(getExpectedFacility(), layout.getFacility());
     }
 }

@@ -29,20 +29,17 @@ import javax.xml.validation.Validator;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.Layouts;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.xml.sax.SAXException;
 
 /**
  * Tests XML validation for a "compact" XML file, no extra spaces or end of lines.
  */
 @Ignore
-@Category(Layouts.Xml.class)
 public class XmlCompactFileAsyncAppenderValidationTest {
 
     @BeforeClass
@@ -59,7 +56,7 @@ public class XmlCompactFileAsyncAppenderValidationTest {
         log.warn("Message 1");
         log.info("Message 2");
         log.debug("Message 3");
-        CoreLoggerContexts.stopLoggerContext(file); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
         this.validateXmlSchema(file);
     }
 
@@ -67,11 +64,11 @@ public class XmlCompactFileAsyncAppenderValidationTest {
     public void validateXmlSchemaNoEvents() throws Exception {
         final File file = new File("target", "XmlCompactFileAsyncAppenderValidationTest.log.xml");
         file.delete();
-        CoreLoggerContexts.stopLoggerContext(file); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
         this.validateXmlSchema(file);
     }
 
-    private void validateXmlSchema(final File file) throws SAXException, IOException {
+    private void validateXmlSchema(File file) throws SAXException, IOException {
         final URL schemaFile = this.getClass().getClassLoader().getResource("Log4j-events.xsd");
         final Source xmlFile = new StreamSource(file);
         final SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);

@@ -14,9 +14,9 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-
 package org.apache.logging.log4j.core.filter;
 
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.DelayQueue;
@@ -25,24 +25,23 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderAttribute;
-import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
+import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
+import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.message.Message;
 
 /**
- * The <code>BurstFilter</code> is a logging filter that regulates logging traffic.
- *
- * <p>
- * Use this filter when you want to control the maximum burst of log statements that can be sent to an appender. The
- * filter is configured in the log4j configuration file. For example, the following configuration limits the number of
- * INFO level (as well as DEBUG and TRACE) log statements that can be sent to the console to a burst of 100 with an
- * average rate of 16 per second. WARN, ERROR and FATAL messages would continue to be delivered.
- * </p>
+ * The <code>BurstFilter</code> is a logging filter that regulates logging
+ * traffic. Use this filter when you want to control the maximum burst of log
+ * statements that can be sent to an appender. The filter is configured in the
+ * log4j configuration file. For example, the following configuration limits the
+ * number of INFO level (as well as DEBUG and TRACE) log statements that can be sent to the
+ * console to a burst of 100 with an average rate of 16 per second. WARN, ERROR and FATAL messages would continue to
+ * be delivered.<br>
+ * <br>
+ * <p/>
  * <code>
  * &lt;Console name="console"&gt;<br>
  * &nbsp;&lt;PatternLayout pattern="%-5p %d{dd-MMM-yyyy HH:mm:ss} %x %t %m%n"/&gt;<br>
@@ -53,10 +52,10 @@ import org.apache.logging.log4j.message.Message;
  * </code><br>
  */
 
-@Plugin(name = "BurstFilter", category = Node.CATEGORY, elementType = Filter.ELEMENT_TYPE, printObject = true)
+@Plugin(name = "BurstFilter", category = "Core", elementType = "filter", printObject = true)
 public final class BurstFilter extends AbstractFilter {
 
-    private static final long NANOS_IN_SECONDS = 1000000000;
+    private static final long NANOS_IN_SECONDS =  1000000000;
 
     private static final int DEFAULT_RATE = 10;
 
@@ -74,13 +73,9 @@ public final class BurstFilter extends AbstractFilter {
 
     private final long burstInterval;
 
-    private final DelayQueue<LogDelay> history = new DelayQueue<>();
+    private final DelayQueue<LogDelay> history = new DelayQueue<LogDelay>();
 
-    private final Queue<LogDelay> available = new ConcurrentLinkedQueue<>();
-
-    static LogDelay createLogDelay(final long expireTime) {
-        return new LogDelay(expireTime);
-    }
+    private final Queue<LogDelay> available = new ConcurrentLinkedQueue<LogDelay>();
 
     private BurstFilter(final Level level, final float rate, final long maxBurst, final Result onMatch,
                         final Result onMismatch) {
@@ -88,7 +83,7 @@ public final class BurstFilter extends AbstractFilter {
         this.level = level;
         this.burstInterval = (long) (NANOS_IN_SECONDS * (maxBurst / rate));
         for (int i = 0; i < maxBurst; ++i) {
-            available.add(createLogDelay(0));
+            available.add(new LogDelay());
         }
     }
 
@@ -115,75 +110,6 @@ public final class BurstFilter extends AbstractFilter {
         return filter(event.getLevel());
     }
 
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8) {
-        return filter(level);
-    }
-
-    @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-            final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8, final Object p9) {
-        return filter(level);
-    }
-
     /**
      * Decide if we're going to log <code>event</code> based on whether the
      * maximum burst of log statements has been exceeded.
@@ -192,7 +118,7 @@ public final class BurstFilter extends AbstractFilter {
      * @return The onMatch value if the filter passes, onMismatch otherwise.
      */
     private Result filter(final Level level) {
-        if (this.level.isMoreSpecificThan(level)) {
+        if (this.level.isAtLeastAsSpecificAs(level)) {
             LogDelay delay = history.poll();
             while (delay != null) {
                 available.add(delay);
@@ -222,7 +148,9 @@ public final class BurstFilter extends AbstractFilter {
      * Clear the history. Used for unit testing.
      */
     public void clear() {
-        for (final LogDelay delay : history) {
+        final Iterator<LogDelay> iter = history.iterator();
+        while (iter.hasNext()) {
+            final LogDelay delay = iter.next();
             history.remove(delay);
             available.add(delay);
         }
@@ -235,16 +163,13 @@ public final class BurstFilter extends AbstractFilter {
 
     /**
      * Delay object to represent each log event that has occurred within the timespan.
-     *
-     * Consider this class private, package visibility for testing.
      */
-    private static class LogDelay implements Delayed {
-
-        LogDelay(final long expireTime) {
-            this.expireTime = expireTime;
-        }
+    private class LogDelay implements Delayed {
 
         private long expireTime;
+
+        public LogDelay() {
+        }
 
         public void setDelay(final long delay) {
             this.expireTime = delay + System.nanoTime();
@@ -257,8 +182,12 @@ public final class BurstFilter extends AbstractFilter {
 
         @Override
         public int compareTo(final Delayed delayed) {
-            final long diff = this.expireTime - ((LogDelay) delayed).expireTime;
-            return Long.signum(diff);
+            if (this.expireTime < ((LogDelay) delayed).expireTime) {
+                return -1;
+            } else if (this.expireTime > ((LogDelay) delayed).expireTime) {
+                return 1;
+            }
+            return 0;
         }
 
         @Override
@@ -285,78 +214,30 @@ public final class BurstFilter extends AbstractFilter {
         }
     }
 
-    @PluginBuilderFactory
-    public static Builder newBuilder() {
-        return new Builder();
-    }
-
-    public static class Builder implements org.apache.logging.log4j.core.util.Builder<BurstFilter> {
-
-        @PluginBuilderAttribute
-        private Level level = Level.WARN;
-
-        @PluginBuilderAttribute
-        private float rate = DEFAULT_RATE;
-
-        @PluginBuilderAttribute
-        private long maxBurst;
-
-        @PluginBuilderAttribute
-        private Result onMatch = Result.NEUTRAL;
-
-        @PluginBuilderAttribute
-        private Result onMismatch = Result.DENY;
-
-        /**
-         * Sets the logging level to use.
-         */
-        public Builder setLevel(final Level level) {
-            this.level = level;
-            return this;
+    /**
+     * @param levelName  The logging level.
+     * @param rate   The average number of events per second to allow.
+     * @param maxBurst  The maximum number of events that can occur before events are filtered for exceeding the
+     * average rate. The default is 10 times the rate.
+     * @param match  The Result to return when the filter matches. Defaults to Result.NEUTRAL.
+     * @param mismatch The Result to return when the filter does not match. The default is Result.DENY.
+     * @return A BurstFilter.
+     */
+    @PluginFactory
+    public static BurstFilter createFilter(
+            @PluginAttribute("level") final String levelName,
+            @PluginAttribute("rate") final String rate,
+            @PluginAttribute("maxBurst") final String maxBurst,
+            @PluginAttribute("onMatch") final String match,
+            @PluginAttribute("onMismatch") final String mismatch) {
+        final Result onMatch = Result.toResult(match, Result.NEUTRAL);
+        final Result onMismatch = Result.toResult(mismatch, Result.DENY);
+        final Level level = Level.toLevel(levelName, Level.WARN);
+        float eventRate = rate == null ? DEFAULT_RATE : Float.parseFloat(rate);
+        if (eventRate <= 0) {
+            eventRate = DEFAULT_RATE;
         }
-
-        /**
-         * Sets the average number of events per second to allow. This must be a positive number.
-         */
-        public Builder setRate(final float rate) {
-            this.rate = rate;
-            return this;
-        }
-
-        /**
-         * Sets the maximum number of events that can occur before events are filtered for exceeding the average rate.
-         * The default is 10 times the rate.
-         */
-        public Builder setMaxBurst(final long maxBurst) {
-            this.maxBurst = maxBurst;
-            return this;
-        }
-
-        /**
-         * Sets the Result to return when the filter matches. Defaults to Result.NEUTRAL.
-         */
-        public Builder setOnMatch(final Result onMatch) {
-            this.onMatch = onMatch;
-            return this;
-        }
-
-        /**
-         * Sets the Result to return when the filter does not match. The default is Result.DENY.
-         */
-        public Builder setOnMismatch(final Result onMismatch) {
-            this.onMismatch = onMismatch;
-            return this;
-        }
-
-        @Override
-        public BurstFilter build() {
-            if (this.rate <= 0) {
-                this.rate = DEFAULT_RATE;
-            }
-            if (this.maxBurst <= 0) {
-                this.maxBurst = (long) (this.rate * DEFAULT_RATE_MULTIPLE);
-            }
-            return new BurstFilter(this.level, this.rate, this.maxBurst, this.onMatch, this.onMismatch);
-        }
+        final long max = maxBurst == null ? (long) (eventRate * DEFAULT_RATE_MULTIPLE) : Long.parseLong(maxBurst);
+        return new BurstFilter(level, eventRate, max, onMatch, onMismatch);
     }
 }

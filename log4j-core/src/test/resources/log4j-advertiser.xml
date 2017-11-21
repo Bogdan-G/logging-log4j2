@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" dest="target/status.log" name="XMLConfigTest"
+<Configuration status="debug" dest="target/status.log" name="XMLConfigTest" packages="org.apache.logging.log4j.core,org.apache.logging.log4j.test" 
                advertiser="memory">
   <ThresholdFilter level="debug"/>
 
@@ -32,11 +32,11 @@
       </PatternLayout>
     </File>
     <Socket name="Socket1" host="localhost" port="5560" protocol="TCP" ignoreExceptions="false"
-              reconnectionDelayMillis="250" advertise="true">
+              reconnectionDelay="250" advertise="true">
       <PatternLayout pattern="%msg%n"/>
     </Socket>
     <Socket name="Socket2" host="localhost" port="5565" protocol="UDP" ignoreExceptions="false"
-          reconnectionDelayMillis="250">
+          reconnectionDelay="250">
       <PatternLayout pattern="%msg%n"/>
     </Socket>
   </Appenders>

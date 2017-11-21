@@ -16,121 +16,65 @@
  */
 package org.apache.logging.log4j.core.net.ssl;
 
-import java.util.Arrays;
-import java.util.Objects;
-
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  *
  */
-public class StoreConfiguration<T> {
+public class StoreConfiguration {
     protected static final StatusLogger LOGGER = StatusLogger.getLogger();
 
     private String location;
-    private PasswordProvider passwordProvider;
+    private String password;
 
-    public StoreConfiguration(final String location, final PasswordProvider passwordProvider) {
+    public StoreConfiguration(String location, String password) {
         this.location = location;
-        this.passwordProvider = Objects.requireNonNull(passwordProvider, "passwordProvider");
-    }
-
-    /**
-     * @deprecated Use {@link #StoreConfiguration(String, PasswordProvider)}
-     */
-    @Deprecated
-    public StoreConfiguration(final String location, final char[] password) {
-        this(location, new MemoryPasswordProvider(password));
-    }
-
-    /**
-     * @deprecated Use {@link #StoreConfiguration(String, PasswordProvider)}
-     */
-    @Deprecated
-    public StoreConfiguration(final String location, final String password) {
-        this(location, new MemoryPasswordProvider(password == null ? null : password.toCharArray()));
-    }
-
-    /**
-     * Clears the secret fields in this object.
-     */
-    public void clearSecrets() {
-        this.location = null;
-        this.passwordProvider = null;
+        this.password = password;
     }
 
     public String getLocation() {
-        return this.location;
+        return location;
     }
 
-    public void setLocation(final String location) {
+    public void setLocation(String location) {
         this.location = location;
     }
 
-    /**
-     *
-     * @deprecated Use getPasswordAsCharArray()
-     */
-    @Deprecated
     public String getPassword() {
-        return String.valueOf(this.passwordProvider.getPassword());
+        return password;
     }
 
     public char[] getPasswordAsCharArray() {
-        return this.passwordProvider.getPassword();
+        if (password == null)
+            return null;
+        else
+            return password.toCharArray();
     }
 
-    public void setPassword(final char[] password) {
-        this.passwordProvider = new MemoryPasswordProvider(password);
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    /**
-     *
-     * @deprecated Use getPasswordAsCharArray()
-     */
-    @Deprecated
-    public void setPassword(final String password) {
-        this.passwordProvider = new MemoryPasswordProvider(password == null ? null : password.toCharArray());
-    }
-
-    /**
-     * @throws StoreConfigurationException May be thrown by subclasses
-     */
-    protected T load() throws StoreConfigurationException {
-        return null;
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((location == null) ? 0 : location.hashCode());
-        result = prime * result + Arrays.hashCode(passwordProvider.getPassword());
-        return result;
-    }
-
-    @Override
-    public boolean equals(final Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
+    public boolean equals(StoreConfiguration config) {
+        if (config == null)
             return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final StoreConfiguration<?> other = (StoreConfiguration<?>) obj;
-        if (location == null) {
-            if (other.location != null) {
-                return false;
-            }
-        } else if (!location.equals(other.location)) {
-            return false;
-        }
-        if (!Arrays.equals(passwordProvider.getPassword(), other.passwordProvider.getPassword())) {
-            return false;
-        }
-        return true;
+
+        boolean locationEquals = false;
+        boolean passwordEquals = false;
+
+        if (location != null)
+            locationEquals = location.equals(config.location);
+        else
+            locationEquals = location == config.location;
+
+        if (password != null)
+            passwordEquals = password.equals(config.password);
+        else
+            passwordEquals = password == config.password;
+
+        return locationEquals && passwordEquals;
+    }
+
+    protected void load() throws StoreConfigurationException {
     }
 }

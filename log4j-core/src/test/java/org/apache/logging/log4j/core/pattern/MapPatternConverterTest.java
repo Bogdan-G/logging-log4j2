@@ -19,10 +19,11 @@ package org.apache.logging.log4j.core.pattern;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.message.StringMapMessage;
+import org.apache.logging.log4j.message.MapMessage;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -32,16 +33,12 @@ public class MapPatternConverterTest {
     @Test
     public void testConverter() {
 
-        final StringMapMessage msg = new StringMapMessage();
+        final MapMessage msg = new MapMessage();
         msg.put("subject", "I");
         msg.put("verb", "love");
         msg.put("object", "Log4j");
         final MapPatternConverter converter = MapPatternConverter.newInstance(null);
-        final LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLoggerName("MyLogger") //
-                .setLevel(Level.DEBUG) //
-                .setMessage(msg) //
-                .build();
+        final LogEvent event = new Log4jLogEvent("MyLogger", null, null, Level.DEBUG, msg, null);
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String str = sb.toString();
@@ -51,23 +48,17 @@ public class MapPatternConverterTest {
         assertTrue("Missing or incorrect verb", str.contains(expected));
         expected = "object=Log4j";
         assertTrue("Missing or incorrect object", str.contains(expected));
-
-        assertEquals("{object=Log4j, subject=I, verb=love}", str);
     }
 
     @Test
     public void testConverterWithKey() {
 
-        final StringMapMessage msg = new StringMapMessage();
+        final MapMessage msg = new MapMessage();
         msg.put("subject", "I");
         msg.put("verb", "love");
         msg.put("object", "Log4j");
         final MapPatternConverter converter = MapPatternConverter.newInstance(new String[] {"object"});
-        final LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLoggerName("MyLogger") //
-                .setLevel(Level.DEBUG) //
-                .setMessage(msg) //
-                .build();
+        final LogEvent event = new Log4jLogEvent("MyLogger", null, null, Level.DEBUG, msg, null);
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String str = sb.toString();

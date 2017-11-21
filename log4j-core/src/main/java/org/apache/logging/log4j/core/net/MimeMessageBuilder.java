@@ -16,8 +16,6 @@
  */
 package org.apache.logging.log4j.core.net;
 
-import java.nio.charset.StandardCharsets;
-
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -25,12 +23,12 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.logging.log4j.core.util.Builder;
+import org.apache.logging.log4j.core.helpers.Charsets;
 
 /**
- * Builder for {@link MimeMessage} instances.
+ *  Helper class for SMTPManager.
  */
-public class MimeMessageBuilder implements Builder<MimeMessage> {
+public class MimeMessageBuilder {
     private final MimeMessage message;
 
     public MimeMessageBuilder(final Session session) {
@@ -73,21 +71,12 @@ public class MimeMessageBuilder implements Builder<MimeMessage> {
 
     public MimeMessageBuilder setSubject(final String subject) throws MessagingException {
         if (subject != null) {
-            message.setSubject(subject, StandardCharsets.UTF_8.name());
+            message.setSubject(subject, Charsets.UTF_8.name());
         }
         return this;
     }
 
-    /**
-     * @deprecated Use {@link #build()}.
-     */
-    @Deprecated
     public MimeMessage getMimeMessage() {
-        return build();
-    }
-
-    @Override
-    public MimeMessage build() {
         return message;
     }
 

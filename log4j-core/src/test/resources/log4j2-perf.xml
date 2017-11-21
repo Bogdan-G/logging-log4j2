@@ -16,11 +16,11 @@
  limitations under the License.
 
 -->
-<Configuration name="XMLPerfTest" status="OFF">
+<Configuration packages="" name="XMLPerfTest" status="error">
   <Appenders>
-    <File name="TestLogfile" fileName="target/testlog4j2.log" immediateFlush="false" append="false">
+    <File name="TestLogfile" fileName="target/testlog4j2.log" immediateFlush="false">
       <PatternLayout>
-        <Pattern>%d %5p [%t] %c{1} %X{transactionId} - %m%n</Pattern>
+        <Pattern>%d{ISO8601} %5p [%t] %c{1} %X{transactionId} - %m%n</Pattern>
       </PatternLayout>
     </File>
   </Appenders>

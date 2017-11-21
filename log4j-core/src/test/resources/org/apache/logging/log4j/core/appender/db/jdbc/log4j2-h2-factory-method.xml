@@ -15,31 +15,30 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-<Configuration status="OFF">
+<Configuration status="debug">
 
   <Appenders>
     <Console name="STDOUT">
       <PatternLayout pattern="%C{1.} %m %level MDC%X%n"/>
     </Console>
     <Jdbc name="databaseAppender" tableName="fmLogEntry" ignoreExceptions="false">
-      <ConnectionFactory class="org.apache.logging.log4j.core.appender.db.jdbc.JdbcAppenderH2FactoryMethodTest"
-                         method="getConnection" />
+      <ConnectionFactory class="org.apache.logging.log4j.core.appender.db.jdbc.JdbcH2AppenderTest"
+                         method="getConfigConnection" />
       <Column name="eventDate" isEventTimestamp="true" />
       <Column name="literalColumn" literal="'Some Other Literal Value'" />
       <Column name="level" pattern="%level" />
       <Column name="logger" pattern="%logger" />
       <Column name="message" pattern="%message" isUnicode="false" />
       <Column name="exception" pattern="%ex{full}" isClob="true" />
-      <ColumnMapping name="anotherDate" type="java.sql.Timestamp"/>
     </Jdbc>
   </Appenders>
 
   <Loggers>
-    <Logger name="org.apache.logging.log4j.core.appender.db" level="debug" additivity="false">
+    <Logger name="org.apache.logging.log4j.core.appender.db" level="debug">
       <AppenderRef ref="databaseAppender" />
     </Logger>
 
-    <Root level="fatal">
+    <Root level="error">
       <AppenderRef ref="STDOUT"/>
     </Root>
   </Loggers>

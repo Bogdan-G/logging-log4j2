@@ -19,7 +19,6 @@ package org.apache.logging.log4j.core.pattern;
 import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
@@ -28,7 +27,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 /**
  * Replace tokens in the LogEvent message.
  */
-@Plugin(name = "replace", category = Core.CATEGORY_NAME, printObject = true)
+@Plugin(name = "replace", category = "Core", printObject = true)
 public final class RegexReplacement {
 
     private static final Logger LOGGER = StatusLogger.getLogger();
@@ -59,7 +58,7 @@ public final class RegexReplacement {
 
     @Override
     public String toString() {
-        return "replace(regex=" + pattern.pattern() + ", replacement=" + substitution + ')';
+        return "replace(regex=" + pattern.pattern() + ", replacement=" + substitution + ")";
     }
 
     /**
@@ -70,7 +69,7 @@ public final class RegexReplacement {
      */
     @PluginFactory
     public static RegexReplacement createRegexReplacement(
-            @PluginAttribute("regex") final Pattern regex,
+            @PluginAttribute("regex") final String regex,
             @PluginAttribute("replacement") final String replacement) {
         if (regex == null) {
             LOGGER.error("A regular expression is required for replacement");
@@ -79,8 +78,8 @@ public final class RegexReplacement {
         if (replacement == null) {
             LOGGER.error("A replacement string is required to perform replacement");
         }
-        // FIXME: should we use Matcher.quoteReplacement() here?
-        return new RegexReplacement(regex, replacement);
+        final Pattern p = Pattern.compile(regex);
+        return new RegexReplacement(p, replacement);
     }
 
 }

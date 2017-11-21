@@ -16,14 +16,12 @@
  */
 package org.apache.logging.log4j.core;
 
-import java.net.URI;
-
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.AbstractConfiguration;
+import org.apache.logging.log4j.core.config.BaseConfiguration;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import java.net.URI;
 
 /**
  *
@@ -31,7 +29,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 public class BasicConfigurationFactory extends ConfigurationFactory {
 
     @Override
-    public Configuration getConfiguration(final LoggerContext loggerContext, final String name, final URI configLocation) {
+    public Configuration getConfiguration(final String name, final URI configLocation) {
         return new BasicConfiguration();
     }
 
@@ -41,20 +39,19 @@ public class BasicConfigurationFactory extends ConfigurationFactory {
     }
 
     @Override
-    public Configuration getConfiguration(final LoggerContext loggerContext, final ConfigurationSource source) {
+    public Configuration getConfiguration(final ConfigurationSource source) {
         return null;
     }
 
-    public class BasicConfiguration extends AbstractConfiguration {
+    public class BasicConfiguration extends BaseConfiguration {
 
         private static final String DEFAULT_LEVEL = "org.apache.logging.log4j.level";
 
         public BasicConfiguration() {
-            super(null, ConfigurationSource.NULL_SOURCE);
 
             final LoggerConfig root = getRootLogger();
-            final String name = System.getProperty(DEFAULT_LEVEL);
-            final Level level = (name != null && Level.getLevel(name) != null) ? Level.getLevel(name) : Level.ERROR;
+            final String l = System.getProperty(DEFAULT_LEVEL);
+            final Level level = (l != null && Level.valueOf(l) != null) ? Level.valueOf(l) : Level.ERROR;
             root.setLevel(level);
         }
     }

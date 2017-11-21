@@ -17,7 +17,6 @@
 package org.apache.logging.log4j.core.appender;
 
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.config.AppenderRef;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
@@ -27,7 +26,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 /**
  * The array of failover Appenders.
  */
-@Plugin(name = "failovers", category = Core.CATEGORY_NAME)
+@Plugin(name = "failovers", category = "Core")
 public final class FailoversPlugin {
 
     private static final Logger LOGGER = StatusLogger.getLogger();

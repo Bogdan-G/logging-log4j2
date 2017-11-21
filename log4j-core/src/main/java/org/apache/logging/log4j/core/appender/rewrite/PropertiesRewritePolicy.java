@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.Property;
@@ -36,7 +35,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 /**
  * This policy modifies events by replacing or possibly adding keys and values to the MapMessage.
  */
-@Plugin(name = "PropertiesRewritePolicy", category = Core.CATEGORY_NAME, elementType = "rewritePolicy", printObject = true)
+@Plugin(name = "PropertiesRewritePolicy", category = "Core", elementType = "rewritePolicy", printObject = true)
 public final class PropertiesRewritePolicy implements RewritePolicy {
     /**
      * Allow subclasses access to the status logger without creating another instance.
@@ -49,7 +48,7 @@ public final class PropertiesRewritePolicy implements RewritePolicy {
 
     private PropertiesRewritePolicy(final Configuration config, final List<Property> props) {
         this.config = config;
-        this.properties = new HashMap<>(props.size());
+        this.properties = new HashMap<Property, Boolean>(props.size());
         for (final Property property : props) {
             final Boolean interpolate = Boolean.valueOf(property.getValue().contains("${"));
             properties.put(property, interpolate);
@@ -64,15 +63,16 @@ public final class PropertiesRewritePolicy implements RewritePolicy {
      */
     @Override
     public LogEvent rewrite(final LogEvent source) {
-        final Map<String, String> props = new HashMap<>(source.getContextData().toMap());
+        final Map<String, String> props = new HashMap<String, String>(source.getContextMap());
         for (final Map.Entry<Property, Boolean> entry : properties.entrySet()) {
             final Property prop = entry.getKey();
             props.put(prop.getName(), entry.getValue().booleanValue() ?
                 config.getStrSubstitutor().replace(prop.getValue()) : prop.getValue());
         }
 
-        final LogEvent result = new Log4jLogEvent.Builder(source).setContextMap(props).build();
-        return result;
+        return new Log4jLogEvent(source.getLoggerName(), source.getMarker(), source.getFQCN(), source.getLevel(),
+            source.getMessage(), source.getThrown(), props, source.getContextStack(), source.getThreadName(),
+            source.getSource(), source.getMillis());
     }
 
     @Override
@@ -85,10 +85,10 @@ public final class PropertiesRewritePolicy implements RewritePolicy {
                 sb.append(", ");
             }
             final Property prop = entry.getKey();
-            sb.append(prop.getName()).append('=').append(prop.getValue());
+            sb.append(prop.getName()).append("=").append(prop.getValue());
             first = false;
         }
-        sb.append('}');
+        sb.append("}");
         return sb.toString();
     }
 

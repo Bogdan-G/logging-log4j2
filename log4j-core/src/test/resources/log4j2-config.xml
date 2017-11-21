@@ -16,13 +16,14 @@
  limitations under the License.
 
 -->
-<Configuration name="ConfigTest" status="OFF" monitorInterval="5">
+<Configuration name="ConfigTest" status="error" packages="org.apache.logging.log4j.test"
+    monitorInterval="5">
   <Appenders>
     <Console name="STDOUT">
       <PatternLayout pattern="%m%n"/>
     </Console>
     <List name="List2">
-      <PatternLayout pattern="%m%n"/>
+      <PatternLayout pattern="${env:PATH} %m%n"/>
     </List>
     <List name="List">
     </List>

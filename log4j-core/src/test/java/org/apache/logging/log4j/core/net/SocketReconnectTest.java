@@ -16,6 +16,10 @@
  */
 package org.apache.logging.log4j.core.net;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
@@ -23,42 +27,41 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.apache.logging.log4j.test.AvailablePortFinder;
-import org.apache.logging.log4j.util.Strings;
-import org.junit.ClassRule;
-import org.junit.Ignore;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.core.helpers.Constants;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-@Ignore("Currently needs better port choosing support")
 public class SocketReconnectTest {
-    private static final int SOCKET_PORT = AvailablePortFinder.getNextAvailable();
+    private static final int SOCKET_PORT = 5514;
 
     private static final String CONFIG = "log4j-socket.xml";
 
-    private static final String SHUTDOWN = "Shutdown" + Strings.LINE_SEPARATOR +
-        "................................................................" + Strings.LINE_SEPARATOR +
-        "................................................................" + Strings.LINE_SEPARATOR +
-        "................................................................" + Strings.LINE_SEPARATOR +
-        "................................................................" + Strings.LINE_SEPARATOR;
+    private static final String SHUTDOWN = "Shutdown" + Constants.LINE_SEP +
+        "................................................................" + Constants.LINE_SEP +
+        "................................................................" + Constants.LINE_SEP +
+        "................................................................" + Constants.LINE_SEP +
+        "................................................................" + Constants.LINE_SEP;
 
-    @ClassRule
-    public static LoggerContextRule context = new LoggerContextRule(CONFIG);
+
+    @BeforeClass
+    public static void before() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+    }
 
     @Test
     public void testReconnect() throws Exception {
 
-        final List<String> list = new ArrayList<>();
+        final List<String> list = new ArrayList<String>();
         TestSocketServer server = new TestSocketServer(list);
         server.start();
         Thread.sleep(300);
 
         //System.err.println("Initializing logger");
-        final Logger logger = context.getLogger();
+        final Logger logger = LogManager.getLogger(SocketReconnectTest.class);
 
         String message = "Log #1";
         logger.error(message);

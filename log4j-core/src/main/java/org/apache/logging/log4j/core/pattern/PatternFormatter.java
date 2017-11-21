@@ -25,22 +25,13 @@ import org.apache.logging.log4j.core.LogEvent;
 public class PatternFormatter {
     private final LogEventPatternConverter converter;
     private final FormattingInfo field;
-    private final boolean skipFormattingInfo;
 
     public PatternFormatter(final LogEventPatternConverter converter, final FormattingInfo field) {
         this.converter = converter;
         this.field = field;
-        this.skipFormattingInfo = field == FormattingInfo.getDefault();
     }
 
     public void format(final LogEvent event, final StringBuilder buf) {
-        if (skipFormattingInfo) {
-            converter.format(event, buf);
-        } else {
-            formatWithInfo(event, buf);
-        }
-    }
-    private void formatWithInfo(final LogEvent event, final StringBuilder buf) {
         final int startField = buf.length();
         converter.format(event, buf);
         field.format(startField, buf);
@@ -53,13 +44,13 @@ public class PatternFormatter {
     public FormattingInfo getFormattingInfo() {
         return field;
     }
-
+    
     /**
-     * Normally pattern formatters are not meant to handle Exceptions although few pattern formatters might.
-     * <p>
-     * By examining the return values for this method, the containing layout will determine whether it handles
-     * throwables or not.
-     * </p>
+     * Normally pattern formatters are not meant to handle Exceptions although
+     * few pattern formatters might.
+     * <p/>
+     * By examining the return values for this method, the containing layout will
+     * determine whether it handles throwables or not.
      *
      * @return true if this PatternConverter handles throwables
      */
@@ -69,18 +60,18 @@ public class PatternFormatter {
 
     /**
      * Returns a String suitable for debugging.
-     *
+     * 
      * @return a String suitable for debugging.
      */
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append(super.toString());
         sb.append("[converter=");
         sb.append(converter);
         sb.append(", field=");
         sb.append(field);
-        sb.append(']');
+        sb.append("]");
         return sb.toString();
     }
 }

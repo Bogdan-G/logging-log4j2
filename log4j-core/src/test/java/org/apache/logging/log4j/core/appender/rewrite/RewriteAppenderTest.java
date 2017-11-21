@@ -27,36 +27,49 @@ import java.util.Map;
 import org.apache.logging.log4j.EventLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.message.MapMessage;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataMessage;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.test.appender.ListAppender;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
  *
  */
 public class RewriteAppenderTest {
-    private ListAppender app;
-    private ListAppender app2;
+    private static final String CONFIG = "log4j-rewrite.xml";
+    private static Configuration config;
+    private static ListAppender app;
+    private static ListAppender app2;
+    private static LoggerContext ctx;
 
-    @ClassRule
-    public static LoggerContextRule init = new LoggerContextRule("log4j-rewrite.xml");
-
-    @Before
-    public void setUp() throws Exception {
-        app = init.getListAppender("List");
-        app2 = init.getListAppender("List2");
+    @BeforeClass
+    public static void setupClass() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        config = ctx.getConfiguration();
+        for (final Map.Entry<String, Appender> entry : config.getAppenders().entrySet()) {
+            if (entry.getKey().equals("List")) {
+                app = (ListAppender) entry.getValue();
+            } else if (entry.getKey().equals("List2")) {
+                app2 = (ListAppender) entry.getValue();
+            }
+        }
     }
 
-    @After
-    public void tearDown() throws Exception {
-        app.clear();
-        app2.clear();
+    @AfterClass
+    public static void cleanupClass() {
+        System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
     }
 
     @Test
@@ -70,13 +83,14 @@ public class RewriteAppenderTest {
         assertTrue("Incorrect number of events. Expected 1, got " + list.size(), list.size() == 1);
         final LogEvent event = list.get(0);
         final Message m = event.getMessage();
-        assertTrue("Message is not a StringMapMessage: " + m.getClass(), m instanceof StructuredDataMessage);
-        final StructuredDataMessage message = (StructuredDataMessage) m;
+        assertTrue("Message is not a MapMessage", m instanceof MapMessage);
+        final MapMessage message = (MapMessage) m;
         final Map<String, String> map = message.getData();
         assertNotNull("No Map", map);
         assertTrue("Incorrect number of map entries, expected 3 got " + map.size(), map.size() == 3);
         final String value = map.get("Key1");
         assertEquals("Apache", value);
+        app.clear();
     }
 
 
@@ -104,6 +118,7 @@ public class RewriteAppenderTest {
         logger.trace(msg);
 
         final List<LogEvent> list = app.getEvents();
-        assertTrue("Events were generated", list == null || list.isEmpty());
+        assertTrue("Events were generated", list == null || list.size() == 0);
+        app.clear();
     }
 }

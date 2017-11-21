@@ -16,12 +16,11 @@
  */
 package org.apache.logging.log4j.core.async;
 
+import java.util.Map;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext.ContextStack;
-import org.apache.logging.log4j.core.ContextDataInjector;
-import org.apache.logging.log4j.core.impl.ContextDataInjectorFactory;
-import org.apache.logging.log4j.util.StringMap;
 import org.apache.logging.log4j.message.Message;
 
 import com.lmax.disruptor.EventTranslator;
@@ -35,74 +34,44 @@ import com.lmax.disruptor.EventTranslator;
 public class RingBufferLogEventTranslator implements
         EventTranslator<RingBufferLogEvent> {
 
-    private final ContextDataInjector injector = ContextDataInjectorFactory.createInjector();
     private AsyncLogger asyncLogger;
-    String loggerName;
-    protected Marker marker;
-    protected String fqcn;
-    protected Level level;
-    protected Message message;
-    protected Throwable thrown;
+    private String loggerName;
+    private Marker marker;
+    private String fqcn;
+    private Level level;
+    private Message message;
+    private Throwable thrown;
+    private Map<String, String> contextMap;
     private ContextStack contextStack;
-    private long threadId = Thread.currentThread().getId();
-    private String threadName = Thread.currentThread().getName();
-    private int threadPriority = Thread.currentThread().getPriority();
+    private String threadName;
     private StackTraceElement location;
     private long currentTimeMillis;
-    private long nanoTime;
 
     // @Override
     @Override
     public void translateTo(final RingBufferLogEvent event, final long sequence) {
-
-        event.setValues(asyncLogger, loggerName, marker, fqcn, level, message, thrown,
-                // config properties are taken care of in the EventHandler thread
-                // in the AsyncLogger#actualAsyncLog method
-                injector.injectContextData(null, (StringMap) event.getContextData()), contextStack,
-                threadId, threadName, threadPriority, location, currentTimeMillis, nanoTime);
-
-        clear(); // clear the translator
+        event.setValues(asyncLogger, loggerName, marker, fqcn, level, message,
+                thrown, contextMap, contextStack, threadName, location,
+                currentTimeMillis);
     }
 
-    /**
-     * Release references held by this object to allow objects to be garbage-collected.
-     */
-    private void clear() {
-        setBasicValues(null, // asyncLogger
-                null, // loggerName
-                null, // marker
-                null, // fqcn
-                null, // level
-                null, // data
-                null, // t
-                null, // contextStack
-                null, // location
-                0, // currentTimeMillis
-                0 // nanoTime
-        );
+    public void setValues(final AsyncLogger asyncLogger, final String loggerName,
+            final Marker marker, final String fqcn, final Level level, final Message message,
+            final Throwable thrown, final Map<String, String> contextMap,
+            final ContextStack contextStack, final String threadName,
+            final StackTraceElement location, final long currentTimeMillis) {
+        this.asyncLogger = asyncLogger;
+        this.loggerName = loggerName;
+        this.marker = marker;
+        this.fqcn = fqcn;
+        this.level = level;
+        this.message = message;
+        this.thrown = thrown;
+        this.contextMap = contextMap;
+        this.contextStack = contextStack;
+        this.threadName = threadName;
+        this.location = location;
+        this.currentTimeMillis = currentTimeMillis;
     }
 
-    public void setBasicValues(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,
-            final String theFqcn, final Level aLevel, final Message msg, final Throwable aThrowable,
-            final ContextStack aContextStack, final StackTraceElement aLocation,
-            final long aCurrentTimeMillis, final long aNanoTime) {
-        this.asyncLogger = anAsyncLogger;
-        this.loggerName = aLoggerName;
-        this.marker = aMarker;
-        this.fqcn = theFqcn;
-        this.level = aLevel;
-        this.message = msg;
-        this.thrown = aThrowable;
-        this.contextStack = aContextStack;
-        this.location = aLocation;
-        this.currentTimeMillis = aCurrentTimeMillis;
-        this.nanoTime = aNanoTime;
-    }
-
-    public void updateThreadValues() {
-        final Thread currentThread = Thread.currentThread();
-        this.threadId = currentThread.getId();
-        this.threadName = currentThread.getName();
-        this.threadPriority = currentThread.getPriority();
-    }
 }

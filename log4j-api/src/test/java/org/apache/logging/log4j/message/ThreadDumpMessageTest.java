@@ -16,12 +16,12 @@
  */
 package org.apache.logging.log4j.message;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -70,48 +70,8 @@ public class ThreadDumpMessageTest {
     @Test
     public void testToString() {
         final ThreadDumpMessage msg = new ThreadDumpMessage("Test");
-        final String actual = msg.toString();
-        assertTrue(actual.contains("Test"));
-        assertTrue(actual.contains("RUNNABLE"));
-        assertTrue(actual.contains(getClass().getName()));
-    }
-
-    @Test
-    public void testUseConstructorThread() throws InterruptedException { // LOG4J2-763
-        final ThreadDumpMessage msg = new ThreadDumpMessage("Test");
-
-        final String[] actual = new String[1];
-        final Thread other = new Thread("OtherThread") {
-            @Override
-            public void run() {
-                actual[0] = msg.getFormattedMessage();
-            }
-        };
-        other.start();
-        other.join();
-
-        assertTrue("No mention of other thread in msg", !actual[0].contains("OtherThread"));
-    }
-
-    @Test
-    public void formatTo_usesCachedMessageString() throws Exception {
-
-        final ThreadDumpMessage message = new ThreadDumpMessage("");
-        final String initial = message.getFormattedMessage();
-        assertFalse("no ThreadWithCountDownLatch thread yet", initial.contains("ThreadWithCountDownLatch"));
-
-        final CountDownLatch started = new CountDownLatch(1);
-        final CountDownLatch keepAlive = new CountDownLatch(1);
-        final ThreadWithCountDownLatch thread = new ThreadWithCountDownLatch(started, keepAlive);
-        thread.start();
-        started.await(); // ensure thread is running
-
-        final StringBuilder result = new StringBuilder();
-        message.formatTo(result);
-        assertFalse("no ThreadWithCountDownLatch captured",
-                result.toString().contains("ThreadWithCountDownLatch"));
-        assertEquals(initial, result.toString());
-        keepAlive.countDown(); // allow thread to die
+        final String expected = "ThreadDumpMessage[Title=\"Test\"]";
+        assertEquals(expected, msg.toString());
     }
 
     private class Thread1 extends Thread {
@@ -138,31 +98,8 @@ public class ThreadDumpMessageTest {
         @Override
         public void run() {
             synchronized (obj) {
+
             }
-        }
-    }
-
-    private class ThreadWithCountDownLatch extends Thread {
-        private final CountDownLatch started;
-        private final CountDownLatch keepAlive;
-        volatile boolean finished;
-
-        public ThreadWithCountDownLatch(final CountDownLatch started, final CountDownLatch keepAlive) {
-            super("ThreadWithCountDownLatch");
-            this.started = started;
-            this.keepAlive = keepAlive;
-            setDaemon(true);
-        }
-
-        @Override
-        public void run() {
-            started.countDown();
-            try {
-                keepAlive.await();
-            } catch (final InterruptedException e) {
-                // ignored
-            }
-            finished = true;
         }
     }
 }

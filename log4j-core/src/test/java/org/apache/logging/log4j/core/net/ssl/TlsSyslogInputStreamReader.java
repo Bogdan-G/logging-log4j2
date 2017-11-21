@@ -22,19 +22,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-public class TlsSyslogInputStreamReader extends TlsSyslogInputStreamReaderBase {
+public class TLSSyslogInputStreamReader extends TLSSyslogInputStreamReaderBase {
     private static final char SPACE = ' ';
 
-    private final ByteArrayOutputStream messageBuffer;
-    private final byte[] messagePartBuffer;
-    private final byte[] lengthBuffer;
-    private final int messagePartBufferSize = 8192;
-    private final int lengthBufferSize = 8192;
+    private ByteArrayOutputStream messageBuffer;
+    private byte[] messagePartBuffer;
+    private byte[] lengthBuffer;
+    private int messagePartBufferSize = 8192;
+    private int lengthBufferSize = 8192;
     private int position = 0;
     private int nextMessageLength = 0;
 
-    public TlsSyslogInputStreamReader(final InputStream inputStream) {
-        super(inputStream, TlsSyslogMessageFormat.SYSLOG);
+    public TLSSyslogInputStreamReader(InputStream inputStream) {
+        super(inputStream, TLSSyslogMessageFormat.SYSLOG);
         this.messageBuffer = new ByteArrayOutputStream(messagePartBufferSize);
         this.lengthBuffer = new byte[lengthBufferSize];
         this.messagePartBuffer = new byte[messagePartBufferSize];
@@ -44,7 +44,7 @@ public class TlsSyslogInputStreamReader extends TlsSyslogInputStreamReaderBase {
     public String read() throws IOException {
         readMessageLength();
         readMessage();
-        final String message =  buildMessage();
+        String message =  buildMessage();
         return message;
     }
 
@@ -56,26 +56,25 @@ public class TlsSyslogInputStreamReader extends TlsSyslogInputStreamReaderBase {
     private void readMessage() throws IOException {
         int remainder = nextMessageLength;
         while (remainder > 0)  {
-            final int bytesToRead = Math.min(remainder, messagePartBufferSize);
-            final int n = inputStream.read(messagePartBuffer, 0, bytesToRead);
+            int bytesToRead = Math.min(remainder, messagePartBufferSize);
+            int n = inputStream.read(messagePartBuffer, 0, bytesToRead);
             messageBuffer.write(messagePartBuffer, 0, n);
             remainder -= n;
         }
     }
 
     private String buildMessage() {
-        final String message = messageBuffer.toString();
+        String message = messageBuffer.toString();
         messageBuffer.reset();
         return message;
     }
 
     private void readBytesUntilNextSpace() throws IOException {
         for (int i = 0; i < lengthBufferSize; i++) {
-            final int b = inputStream.read();
-            if (b < 0) {
+            int b = inputStream.read();
+            if (b < 0)
                 throw new EOFException("The stream has been closed or the end of stream has been reached");
-            }
-            final byte currentByte = (byte)(b & 0xff);
+            byte currentByte = (byte)(b & 0xff);
             if (currentByte == SPACE) {
                 position = i;
                 break;
@@ -85,7 +84,7 @@ public class TlsSyslogInputStreamReader extends TlsSyslogInputStreamReaderBase {
     }
 
     private void calculateNextMessageLength() {
-        final byte[] length = Arrays.copyOfRange(lengthBuffer, 0, position);
-        nextMessageLength = Integer.parseInt(new String(length));
+        byte[] length = Arrays.copyOfRange(lengthBuffer, 0, position);
+        nextMessageLength = new Integer(new String(length));
     }
 }

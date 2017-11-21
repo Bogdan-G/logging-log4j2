@@ -15,10 +15,6 @@
  * limitations under the license.
  */
 /**
- * Log4j 2 Filter support. {@link org.apache.logging.log4j.core.Filter} plugins should use the
- * {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#category() plugin category}
- * {@link org.apache.logging.log4j.core.config.Node#CATEGORY Core} and the
- * {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() element type}
- * {@link org.apache.logging.log4j.core.Filter#ELEMENT_TYPE filter}.
+ * Log4j 2.0 Filter support.
  */
 package org.apache.logging.log4j.core.filter;

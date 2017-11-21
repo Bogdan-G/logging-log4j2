@@ -21,44 +21,17 @@ import org.apache.logging.log4j.Level;
 /**
  *  Severity values used by the Syslog system.
  *
- * <table summary="Syslog Severity Values">
- *     <tr>
- *         <th>Numerical Code</th>
- *         <th>Severity</th>
- *     </tr>
- *     <tr>
- *         <td>0</td>
- *         <td>Emergency: system is unusable</td>
- *     </tr>
- *     <tr>
- *         <td>1</td>
- *         <td>Alert: action must be taken immediately</td>
- *     </tr>
- *     <tr>
- *         <td>2</td>
- *         <td>Critical: critical conditions</td>
- *     </tr>
- *     <tr>
- *         <td>3</td>
- *         <td>Error: error conditions</td>
- *     </tr>
- *     <tr>
- *         <td>4</td>
- *         <td>Warning: warning conditions</td>
- *     </tr>
- *     <tr>
- *         <td>5</td>
- *         <td>Notice: normal but significant condition</td>
- *     </tr>
- *     <tr>
- *         <td>6</td>
- *         <td>Informational: informational messages</td>
- *     </tr>
- *     <tr>
- *         <td>7</td>
- *         <td>Debug: debug-level messages</td>
- *     </tr>
- * </table>
+ *        Numerical   Severity<br>
+ *          Code<br>
+ *
+ *            0       Emergency: system is unusable<br>
+ *            1       Alert: action must be taken immediately<br>
+ *            2       Critical: critical conditions<br>
+ *            3       Error: error conditions<br>
+ *            4       Warning: warning conditions<br>
+ *            5       Notice: normal but significant condition<br>
+ *            6       Informational: informational messages<br>
+ *            7       Debug: debug-level messages
  */
 public enum Severity {
     /** System is unusable. */
@@ -80,7 +53,7 @@ public enum Severity {
 
     private final int code;
 
-    Severity(final int code) {
+    private Severity(final int code) {
         this.code = code;
     }
 
@@ -107,7 +80,7 @@ public enum Severity {
      * @return The matching Severity, or DEBUG if there is no match.
      */
     public static Severity getSeverity(final Level level) {
-        switch (level.getStandardLevel()) {
+        switch (level) {
             case ALL:
                 return DEBUG;
             case TRACE:

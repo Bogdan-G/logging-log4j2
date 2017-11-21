@@ -26,8 +26,7 @@ import java.util.ListIterator;
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
 
-import org.apache.logging.log4j.util.LoaderUtil;
-import org.apache.logging.log4j.util.Strings;
+import org.apache.logging.log4j.core.helpers.Strings;
 
 /**
  * A JPA 2.1 attribute converter for {@link Throwable}s in {@link org.apache.logging.log4j.core.LogEvent}s. This
@@ -101,7 +100,7 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
             throwableClassName = firstLine;
         }
 
-        final List<StackTraceElement> stackTrace = new ArrayList<>();
+        final List<StackTraceElement> stackTrace = new ArrayList<StackTraceElement>();
         Throwable cause = null;
         while (lines.hasNext()) {
             final String line = lines.next();
@@ -125,7 +124,8 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
                                    final StackTraceElement[] stackTrace) {
         try {
             @SuppressWarnings("unchecked")
-            final Class<Throwable> throwableClass = (Class<Throwable>) LoaderUtil.loadClass(throwableClassName);
+            final
+            Class<Throwable> throwableClass = (Class<Throwable>) Class.forName(throwableClassName);
 
             if (!Throwable.class.isAssignableFrom(throwableClass)) {
                 return null;

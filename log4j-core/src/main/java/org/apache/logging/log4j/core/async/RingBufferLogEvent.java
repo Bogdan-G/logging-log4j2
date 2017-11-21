@@ -16,136 +16,82 @@
  */
 package org.apache.logging.log4j.core.async;
 
-import java.io.IOException;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext.ContextStack;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.impl.ContextDataFactory;
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.impl.ThrowableProxy;
-import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.core.config.Property;
+import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 import org.apache.logging.log4j.message.Message;
-import org.apache.logging.log4j.message.ParameterizedMessage;
-import org.apache.logging.log4j.message.ReusableMessage;
 import org.apache.logging.log4j.message.SimpleMessage;
-import org.apache.logging.log4j.message.TimestampMessage;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
-import org.apache.logging.log4j.util.StringBuilders;
-import org.apache.logging.log4j.util.StringMap;
-import org.apache.logging.log4j.util.Strings;
 
 import com.lmax.disruptor.EventFactory;
 
 /**
- * When the Disruptor is started, the RingBuffer is populated with event objects. These objects are then re-used during
- * the life of the RingBuffer.
+ * When the Disruptor is started, the RingBuffer is populated with event
+ * objects. These objects are then re-used during the life of the RingBuffer.
  */
-public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequence {
-
-    /** The {@code EventFactory} for {@code RingBufferLogEvent}s. */
-    public static final Factory FACTORY = new Factory();
-
+public class RingBufferLogEvent implements LogEvent {
     private static final long serialVersionUID = 8462119088943934758L;
-    private static final Message EMPTY = new SimpleMessage(Strings.EMPTY);
 
     /**
      * Creates the events that will be put in the RingBuffer.
      */
     private static class Factory implements EventFactory<RingBufferLogEvent> {
-
+        // @Override
         @Override
         public RingBufferLogEvent newInstance() {
-            final RingBufferLogEvent result = new RingBufferLogEvent();
-            if (Constants.ENABLE_THREADLOCALS) {
-                result.messageText = new StringBuilder(Constants.INITIAL_REUSABLE_MESSAGE_SIZE);
-                result.parameters = new Object[10];
-            }
-            return result;
+            return new RingBufferLogEvent();
         }
     }
 
-    private int threadPriority;
-    private long threadId;
-    private long currentTimeMillis;
-    private long nanoTime;
-    private short parameterCount;
-    private boolean includeLocation;
-    private boolean endOfBatch = false;
-    private Level level;
-    private String threadName;
+    /** The {@code EventFactory} for {@code RingBufferLogEvent}s. */
+    public static final Factory FACTORY = new Factory();
+
+    private AsyncLogger asyncLogger;
     private String loggerName;
-    private Message message;
-    private StringBuilder messageText;
-    private Object[] parameters;
-    private transient Throwable thrown;
-    private ThrowableProxy thrownProxy;
-    private StringMap contextData = ContextDataFactory.createContextData();
     private Marker marker;
     private String fqcn;
-    private StackTraceElement location;
+    private Level level;
+    private Message message;
+    private Throwable thrown;
+    private Map<String, String> contextMap;
     private ContextStack contextStack;
+    private String threadName;
+    private StackTraceElement location;
+    private long currentTimeMillis;
+    private boolean endOfBatch;
+    private boolean includeLocation;
 
-    private transient AsyncLogger asyncLogger;
-
-    public void setValues(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,
-            final String theFqcn, final Level aLevel, final Message msg, final Throwable aThrowable,
-            final StringMap mutableContextData, final ContextStack aContextStack, final long threadId,
-            final String threadName, final int threadPriority, final StackTraceElement aLocation,
-            final long aCurrentTimeMillis, final long aNanoTime) {
-        this.threadPriority = threadPriority;
-        this.threadId = threadId;
-        this.currentTimeMillis = aCurrentTimeMillis;
-        this.nanoTime = aNanoTime;
-        this.level = aLevel;
+    public void setValues(final AsyncLogger asyncLogger,
+            final String loggerName, final Marker marker, final String fqcn,
+            final Level level, final Message data, final Throwable t,
+            final Map<String, String> map, final ContextStack contextStack,
+            final String threadName, final StackTraceElement location,
+            final long currentTimeMillis) {
+        this.asyncLogger = asyncLogger;
+        this.loggerName = loggerName;
+        this.marker = marker;
+        this.fqcn = fqcn;
+        this.level = level;
+        this.message = data;
+        this.thrown = t;
+        this.contextMap = map;
+        this.contextStack = contextStack;
         this.threadName = threadName;
-        this.loggerName = aLoggerName;
-        setMessage(msg);
-        this.thrown = aThrowable;
-        this.thrownProxy = null;
-        this.marker = aMarker;
-        this.fqcn = theFqcn;
-        this.location = aLocation;
-        this.contextData = mutableContextData;
-        this.contextStack = aContextStack;
-        this.asyncLogger = anAsyncLogger;
-    }
-
-    @Override
-    public LogEvent toImmutable() {
-        return createMemento();
-    }
-
-    private void setMessage(final Message msg) {
-        if (msg instanceof ReusableMessage) {
-            final ReusableMessage reusable = (ReusableMessage) msg;
-            reusable.formatTo(getMessageTextForWriting());
-            if (parameters != null) {
-                parameters = reusable.swapParameters(parameters);
-                parameterCount = reusable.getParameterCount();
-            }
-        } else {
-            this.message = InternalAsyncUtil.makeMessageImmutable(msg);
-        }
-    }
-
-    private StringBuilder getMessageTextForWriting() {
-        if (messageText == null) {
-            // Should never happen:
-            // only happens if user logs a custom reused message when Constants.ENABLE_THREADLOCALS is false
-            messageText = new StringBuilder(Constants.INITIAL_REUSABLE_MESSAGE_SIZE);
-        }
-        messageText.setLength(0);
-        return messageText;
+        this.location = location;
+        this.currentTimeMillis = currentTimeMillis;
     }
 
     /**
-     * Event processor that reads the event from the ringbuffer can call this method.
+     * Event processor that reads the event from the ringbuffer can call this
+     * method.
      *
-     * @param endOfBatch flag to indicate if this is the last event in a batch from the RingBuffer
+     * @param endOfBatch flag to indicate if this is the last event in a batch
+     *            from the RingBuffer
      */
     public void execute(final boolean endOfBatch) {
         this.endOfBatch = endOfBatch;
@@ -153,9 +99,11 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
     }
 
     /**
-     * Returns {@code true} if this event is the end of a batch, {@code false} otherwise.
+     * Returns {@code true} if this event is the end of a batch, {@code false}
+     * otherwise.
      *
-     * @return {@code true} if this event is the end of a batch, {@code false} otherwise
+     * @return {@code true} if this event is the end of a batch, {@code false}
+     *         otherwise
      */
     @Override
     public boolean isEndOfBatch() {
@@ -188,156 +136,31 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
     }
 
     @Override
-    public String getLoggerFqcn() {
+    public String getFQCN() {
         return fqcn;
     }
 
     @Override
     public Level getLevel() {
-        if (level == null) {
-            level = Level.OFF; // LOG4J2-462, LOG4J2-465
-        }
         return level;
     }
 
     @Override
     public Message getMessage() {
         if (message == null) {
-            return messageText == null ? EMPTY : this;
+            message = new SimpleMessage("");
         }
         return message;
     }
 
-    /**
-     * @see ReusableMessage#getFormattedMessage()
-     */
-    @Override
-    public String getFormattedMessage() {
-        return messageText != null // LOG4J2-1527: may be null in web apps
-                ? messageText.toString() // note: please keep below "redundant" braces for readability
-                : (message == null ? null : message.getFormattedMessage());
-    }
-
-    /**
-     * @see ReusableMessage#getFormat()
-     */
-    @Override
-    public String getFormat() {
-        return null;
-    }
-
-    /**
-     * @see ReusableMessage#getParameters()
-     */
-    @Override
-    public Object[] getParameters() {
-        return parameters == null ? null : Arrays.copyOf(parameters, parameterCount);
-    }
-
-    /**
-     * @see ReusableMessage#getThrowable()
-     */
-    @Override
-    public Throwable getThrowable() {
-        return getThrown();
-    }
-
-    /**
-     * @see ReusableMessage#formatTo(StringBuilder)
-     */
-    @Override
-    public void formatTo(final StringBuilder buffer) {
-        buffer.append(messageText);
-    }
-
-    /**
-     * Replaces this ReusableMessage's parameter array with the specified value and return the original array
-     * @param emptyReplacement the parameter array that can be used for subsequent uses of this reusable message
-     * @return the original parameter array
-     * @see ReusableMessage#swapParameters(Object[])
-     */
-    @Override
-    public Object[] swapParameters(final Object[] emptyReplacement) {
-        final Object[] result = this.parameters;
-        this.parameters = emptyReplacement;
-        return result;
-    }
-
-    /*
-     * @see ReusableMessage#getParameterCount
-     */
-    @Override
-    public short getParameterCount() {
-        return parameterCount;
-    }
-
-    @Override
-    public Message memento() {
-        if (message != null) {
-            return message;
-        }
-        final Object[] params = parameters == null ? new Object[0] : Arrays.copyOf(parameters, parameterCount);
-        return new ParameterizedMessage(messageText.toString(), params);
-    }
-
-    // CharSequence impl
-
-    @Override
-    public int length() {
-        return messageText.length();
-    }
-
-    @Override
-    public char charAt(final int index) {
-        return messageText.charAt(index);
-    }
-
-    @Override
-    public CharSequence subSequence(final int start, final int end) {
-        return messageText.subSequence(start, end);
-    }
-
-
-    private Message getNonNullImmutableMessage() {
-        return message != null ? message : new SimpleMessage(String.valueOf(messageText));
-    }
-
     @Override
     public Throwable getThrown() {
-        // after deserialization, thrown is null but thrownProxy may be non-null
-        if (thrown == null) {
-            if (thrownProxy != null) {
-                thrown = thrownProxy.getThrowable();
-            }
-        }
         return thrown;
     }
 
     @Override
-    public ThrowableProxy getThrownProxy() {
-        // lazily instantiate the (expensive) ThrowableProxy
-        if (thrownProxy == null) {
-            if (thrown != null) {
-                thrownProxy = new ThrowableProxy(thrown);
-            }
-        }
-        return this.thrownProxy;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public ReadOnlyStringMap getContextData() {
-        return contextData;
-    }
-
-    void setContextData(final StringMap contextData) {
-        this.contextData = contextData;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
     public Map<String, String> getContextMap() {
-        return contextData.toMap();
+        return contextMap;
     }
 
     @Override
@@ -346,18 +169,8 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
     }
 
     @Override
-    public long getThreadId() {
-        return threadId;
-    }
-
-    @Override
     public String getThreadName() {
         return threadName;
-    }
-
-    @Override
-    public int getThreadPriority() {
-        return threadPriority;
     }
 
     @Override
@@ -366,84 +179,57 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
     }
 
     @Override
-    public long getTimeMillis() {
-        return message instanceof TimestampMessage ? ((TimestampMessage) message).getTimestamp() :currentTimeMillis;
-    }
-
-    @Override
-    public long getNanoTime() {
-        return nanoTime;
+    public long getMillis() {
+        return currentTimeMillis;
     }
 
     /**
-     * Release references held by ring buffer to allow objects to be garbage-collected.
+     * Merges the contents of the specified map into the contextMap, after
+     * replacing any variables in the property values with the
+     * StrSubstitutor-supplied actual values.
+     *
+     * @param properties configured properties
+     * @param strSubstitutor used to lookup values of variables in properties
+     */
+    public void mergePropertiesIntoContextMap(
+            final Map<Property, Boolean> properties,
+            final StrSubstitutor strSubstitutor) {
+        if (properties == null) {
+            return; // nothing to do
+        }
+
+        final Map<String, String> map = (contextMap == null) ? new HashMap<String, String>()
+                : new HashMap<String, String>(contextMap);
+
+        for (final Map.Entry<Property, Boolean> entry : properties.entrySet()) {
+            final Property prop = entry.getKey();
+            if (map.containsKey(prop.getName())) {
+                continue; // contextMap overrides config properties
+            }
+            final String value = entry.getValue() ? strSubstitutor.replace(prop
+                    .getValue()) : prop.getValue();
+            map.put(prop.getName(), value);
+        }
+        contextMap = map;
+    }
+
+    /**
+     * Release references held by ring buffer to allow objects to be
+     * garbage-collected.
      */
     public void clear() {
-        this.asyncLogger = null;
-        this.loggerName = null;
-        this.marker = null;
-        this.fqcn = null;
-        this.level = null;
-        this.message = null;
-        this.thrown = null;
-        this.thrownProxy = null;
-        this.contextStack = null;
-        this.location = null;
-        if (contextData != null) {
-            if (contextData.isFrozen()) { // came from CopyOnWrite thread context
-                contextData = null;
-            } else {
-                contextData.clear();
-            }
-        }
-
-        // ensure that excessively long char[] arrays are not kept in memory forever
-        StringBuilders.trimToMaxSize(messageText, Constants.MAX_REUSABLE_MESSAGE_SIZE);
-
-        if (parameters != null) {
-            for (int i = 0; i < parameters.length; i++) {
-                parameters[i] = null;
-            }
-        }
+        setValues(null, // asyncLogger
+                null, // loggerName
+                null, // marker
+                null, // fqcn
+                null, // level
+                null, // data
+                null, // t
+                null, // map
+                null, // contextStack
+                null, // threadName
+                null, // location
+                0 // currentTimeMillis
+        );
     }
-
-    private void writeObject(final java.io.ObjectOutputStream out) throws IOException {
-        getThrownProxy(); // initialize the ThrowableProxy before serializing
-        out.defaultWriteObject();
-    }
-
-    /**
-     * Creates and returns a new immutable copy of this {@code RingBufferLogEvent}.
-     *
-     * @return a new immutable copy of the data in this {@code RingBufferLogEvent}
-     */
-    public LogEvent createMemento() {
-        return new Log4jLogEvent.Builder(this).build();
-
-    }
-
-    /**
-     * Initializes the specified {@code Log4jLogEvent.Builder} from this {@code RingBufferLogEvent}.
-     * @param builder the builder whose fields to populate
-     */
-    public void initializeBuilder(final Log4jLogEvent.Builder builder) {
-        builder.setContextData(contextData) //
-                .setContextStack(contextStack) //
-                .setEndOfBatch(endOfBatch) //
-                .setIncludeLocation(includeLocation) //
-                .setLevel(getLevel()) // ensure non-null
-                .setLoggerFqcn(fqcn) //
-                .setLoggerName(loggerName) //
-                .setMarker(marker) //
-                .setMessage(getNonNullImmutableMessage()) // ensure non-null & immutable
-                .setNanoTime(nanoTime) //
-                .setSource(location) //
-                .setThreadId(threadId) //
-                .setThreadName(threadName) //
-                .setThreadPriority(threadPriority) //
-                .setThrown(getThrown()) // may deserialize from thrownProxy
-                .setThrownProxy(thrownProxy) // avoid unnecessarily creating thrownProxy
-                .setTimeMillis(currentTimeMillis);
-    }
-
 }

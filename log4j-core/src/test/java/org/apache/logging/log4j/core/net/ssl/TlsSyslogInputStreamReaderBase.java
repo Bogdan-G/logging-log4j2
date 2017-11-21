@@ -19,12 +19,12 @@ package org.apache.logging.log4j.core.net.ssl;
 import java.io.IOException;
 import java.io.InputStream;
 
-public abstract class TlsSyslogInputStreamReaderBase {
+public abstract class TLSSyslogInputStreamReaderBase {
 
     protected InputStream inputStream;
-    protected TlsSyslogMessageFormat messageFormat;
+    protected TLSSyslogMessageFormat messageFormat;
 
-    protected TlsSyslogInputStreamReaderBase(final InputStream inputStream, final TlsSyslogMessageFormat messageFormat) {
+    protected TLSSyslogInputStreamReaderBase(InputStream inputStream, TLSSyslogMessageFormat messageFormat) {
         this.inputStream = inputStream;
         this.messageFormat = messageFormat;
     }

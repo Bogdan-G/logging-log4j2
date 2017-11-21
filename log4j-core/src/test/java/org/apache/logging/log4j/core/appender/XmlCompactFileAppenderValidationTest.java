@@ -29,21 +29,18 @@ import javax.xml.validation.Validator;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.Layouts;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.xml.sax.SAXException;
 
 /**
  * Tests XML validation for a "compact" XML file, no extra spaces or end of lines.
  */
 @Ignore
-@Category(Layouts.Xml.class)
 public class XmlCompactFileAppenderValidationTest {
 
     private LoggerContext loggerContext;
@@ -94,7 +91,7 @@ public class XmlCompactFileAppenderValidationTest {
         this.validateXmlSchema(file);
     }
 
-    private void validateXmlSchema(final File file) throws SAXException, IOException {
+    private void validateXmlSchema(File file) throws SAXException, IOException {
         final URL schemaFile = this.getClass().getClassLoader().getResource("Log4j-events.xsd");
         final Source xmlFile = new StreamSource(file);
         final SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);

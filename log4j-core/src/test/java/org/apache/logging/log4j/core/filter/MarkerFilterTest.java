@@ -20,12 +20,12 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -35,30 +35,19 @@ public class MarkerFilterTest {
     @Test
     public void testMarkers() {
         final Marker parent = MarkerManager.getMarker("Parent");
-        final Marker child = MarkerManager.getMarker("Child").setParents(parent);
-        final Marker grandChild = MarkerManager.getMarker("GrandChild").setParents(child);
-        final Marker sibling = MarkerManager.getMarker("Sibling").setParents(parent);
+        final Marker child = MarkerManager.getMarker("Child", parent);
+        final Marker grandChild = MarkerManager.getMarker("GrandChild", child);
+        final Marker sibling = MarkerManager.getMarker("Sibling", parent);
         final Marker stranger = MarkerManager.getMarker("Stranger");
         MarkerFilter filter = MarkerFilter.createFilter("Parent", null, null);
         filter.start();
         assertTrue(filter.isStarted());
-        assertSame(Filter.Result.DENY, filter.filter(null, null, stranger, (Object) null, (Throwable) null));
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, null, child, (Object) null, (Throwable) null));
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, null, grandChild, (Object) null, (Throwable) null));
-        filter.stop();
-        LogEvent event = Log4jLogEvent.newBuilder() //
-                .setMarker(grandChild) //
-                .setLevel(Level.DEBUG) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertSame(Filter.Result.NEUTRAL, filter.filter(event));
+        assertTrue(filter.filter(null, null, stranger, null, (Throwable)null) == Filter.Result.DENY);
+        assertTrue(filter.filter(null, null, child, null, (Throwable)null) == Filter.Result.NEUTRAL);
+        LogEvent event = new Log4jLogEvent(null, grandChild, null, Level.DEBUG, new SimpleMessage("Test"), null);
         filter = MarkerFilter.createFilter("Child", null, null);
-        filter.start();
-        assertSame(Filter.Result.NEUTRAL, filter.filter(event));
-        event = Log4jLogEvent.newBuilder() //
-                .setMarker(sibling) //
-                .setLevel(Level.DEBUG) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertSame(Filter.Result.DENY, filter.filter(event));
-        filter.stop();
+        assertTrue(filter.filter(event) == Filter.Result.NEUTRAL);
+        event = new Log4jLogEvent(null, sibling, null, Level.DEBUG, new SimpleMessage("Test"), null);
+        assertTrue(filter.filter(event) == Filter.Result.DENY);
     }
 }

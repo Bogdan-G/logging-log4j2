@@ -19,76 +19,42 @@ package org.apache.logging.log4j.message;
 import java.util.ResourceBundle;
 
 /**
- * Creates {@link FormattedMessage} instances for {@link MessageFactory2} methods (and {@link MessageFactory} by
- * extension.)
- * 
- * <h4>Note to implementors</h4>
- * <p>
- * This class does <em>not</em> implement any {@link MessageFactory2} methods and lets the superclass funnel those calls
- * through {@link #newMessage(String, Object...)}.
- * </p>
+ * Creates {@link org.apache.logging.log4j.message.LocalizedMessage} instances for
+ * {@link #newMessage(String, Object...)}.
+ *
+ * @version $Id:  $
  */
 public class LocalizedMessageFactory extends AbstractMessageFactory {
-    private static final long serialVersionUID = -1996295808703146741L;
 
-    // FIXME: cannot use ResourceBundle name for serialization until Java 8
-    private transient final ResourceBundle resourceBundle;
-    private final String baseName;
+    private final ResourceBundle bundle;
+    private final String bundleId;
 
-    public LocalizedMessageFactory(final ResourceBundle resourceBundle) {
-        this.resourceBundle = resourceBundle;
-        this.baseName = null;
+    public LocalizedMessageFactory(final ResourceBundle bundle) {
+        this.bundle = bundle;
+        this.bundleId = null;
     }
 
-    public LocalizedMessageFactory(final String baseName) {
-        this.resourceBundle = null;
-        this.baseName = baseName;
+
+    public LocalizedMessageFactory(final String bundleId) {
+        this.bundle = null;
+        this.bundleId = bundleId;
     }
+
 
     /**
-     * Gets the resource bundle base name if set.
+     * Creates {@link org.apache.logging.log4j.message.StringFormattedMessage} instances.
      *
-     * @return the resource bundle base name if set. May be null.
-     */
-    public String getBaseName() {
-        return this.baseName;
-    }
-
-    /**
-     * Gets the resource bundle if set.
-     *
-     * @return the resource bundle if set. May be null.
-     */
-    public ResourceBundle getResourceBundle() {
-        return this.resourceBundle;
-    }
-
-    /**
-     * @since 2.8
-     */
-    @Override
-    public Message newMessage(final String key) {
-        if (resourceBundle == null) {
-            return new LocalizedMessage(baseName,  key);
-        }
-        return new LocalizedMessage(resourceBundle, key);
-    }
-    
-    /**
-     * Creates {@link LocalizedMessage} instances.
-     *
-     * @param key The key String, used as a message if the key is absent.
-     * @param params The parameters for the message at the given key.
-     * @return The LocalizedMessage.
+     * @param message The message format String.
+     * @param params The parameters for the message.
+     * @return The Message.
      *
      * @see org.apache.logging.log4j.message.MessageFactory#newMessage(String, Object...)
      */
     @Override
-    public Message newMessage(final String key, final Object... params) {
-        if (resourceBundle == null) {
-            return new LocalizedMessage(baseName, key, params);
+    public Message newMessage(final String message, final Object... params) {
+        if (bundle == null) {
+            return new LocalizedMessage(bundleId,  message, params);
         }
-        return new LocalizedMessage(resourceBundle, key, params);
+        return new LocalizedMessage(bundle, message, params);
     }
-
 }

@@ -19,21 +19,18 @@ package org.apache.logging.log4j;
 import java.io.Serializable;
 import java.text.DecimalFormat;
 
-import org.apache.logging.log4j.util.StringBuilderFormattable;
-import org.apache.logging.log4j.util.Strings;
-
 /**
  *
  */
-public class Timer implements Serializable, StringBuilderFormattable
+public class Timer implements Serializable
 {
     private static final long serialVersionUID = 9175191792439630013L;
 
-    private final String name;        // The timer's name
-    private String status;            // The timer's status
-    private long startTime;           // The start time
-    private long elapsedTime;         // The elapsed time
-    private final int iterations;
+    private final String m_name;              // The timer's name
+    private String m_status;            // The timer's status
+    private long m_startTime;           // The start time
+    private long m_elapsedTime;         // The elapsed time
+    private final int m_iterations;
     private static long NANO_PER_SECOND = 1000000000L;
     private static long NANO_PER_MINUTE = NANO_PER_SECOND * 60;
     private static long NANO_PER_HOUR = NANO_PER_MINUTE * 60;
@@ -55,10 +52,10 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public Timer(final String name, final int iterations)
     {
-        this.name = name;
-        startTime = 0;
-        status = "Stopped";
-        this.iterations = (iterations > 0) ? iterations : 0;
+        m_name = name;
+        m_startTime = 0;
+        m_status = "Stopped";
+        m_iterations = (iterations > 0) ? iterations : 0;
     }
 
     /**
@@ -66,9 +63,9 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public void start()
     {
-        startTime = System.nanoTime();
-        elapsedTime = 0;
-        status = "Start";
+        m_startTime = System.nanoTime();
+        m_elapsedTime = 0;
+        m_status = "Start";
     }
 
     /**
@@ -76,9 +73,9 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public void stop()
     {
-        elapsedTime += System.nanoTime() - startTime;
-        startTime = 0;
-        status = "Stop";
+        m_elapsedTime += System.nanoTime() - m_startTime;
+        m_startTime = 0;
+        m_status = "Stop";
     }
 
     /**
@@ -86,9 +83,9 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public void pause()
     {
-        elapsedTime += System.nanoTime() - startTime;
-        startTime = 0;
-        status = "Pause";
+        m_elapsedTime += System.nanoTime() - m_startTime;
+        m_startTime = 0;
+        m_status = "Pause";
     }
 
     /**
@@ -96,8 +93,8 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public void resume()
     {
-        startTime = System.nanoTime();
-        status = "Resume";
+        m_startTime = System.nanoTime();
+        m_status = "Resume";
     }
 
     /**
@@ -106,7 +103,7 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public String getName()
     {
-        return name;
+        return m_name;
     }
 
     /**
@@ -116,7 +113,7 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public long getElapsedTime()
     {
-        return elapsedTime / 1000000;
+        return m_elapsedTime / 1000000;
     }
 
     /**
@@ -126,7 +123,7 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public long getElapsedNanoTime()
     {
-        return elapsedTime;
+        return m_elapsedTime;
     }
 
     /**
@@ -136,7 +133,7 @@ public class Timer implements Serializable, StringBuilderFormattable
      */
     public String getStatus()
     {
-        return status;
+        return m_status;
     }
 
     /**
@@ -145,89 +142,91 @@ public class Timer implements Serializable, StringBuilderFormattable
     @Override
     public String toString()
     {
-        final StringBuilder result = new StringBuilder();
-        formatTo(result);
-        return result.toString();
-    }
+        final StringBuilder result = new StringBuilder("Timer ").append(m_name);
+        if (m_status.equals("Start"))
+        {
+            result.append(" started");
+        }
+        else if (m_status.equals("Pause"))
+        {
+            result.append(" paused");
+        }
+        else if (m_status.equals("Resume"))
+        {
+            result.append(" resumed");
+        }
+        else if (m_status.equals("Stop"))
+        {
+            long nanoseconds = m_elapsedTime;
+            // Get elapsed hours
+            long hours = nanoseconds / NANO_PER_HOUR;
+            // Get remaining nanoseconds
+            nanoseconds = nanoseconds % NANO_PER_HOUR;
+            // Get minutes
+            long minutes = nanoseconds / NANO_PER_MINUTE;
+            // Get remaining nanoseconds
+            nanoseconds = nanoseconds % NANO_PER_MINUTE;
+            // Get seconds
+            long seconds = nanoseconds / NANO_PER_SECOND;
+            // Get remaining nanoseconds
+            nanoseconds = nanoseconds % NANO_PER_SECOND;
 
-    @Override
-    public void formatTo(final StringBuilder buffer) {
-        buffer.append("Timer ").append(name);
-        switch (status) {
-            case "Start":
-                buffer.append(" started");
-                break;
-            case "Pause":
-                buffer.append(" paused");
-                break;
-            case "Resume":
-                buffer.append(" resumed");
-                break;
-            case "Stop":
-                long nanoseconds = elapsedTime;
+            String elapsed = "";
+
+            if (hours > 0)
+            {
+                elapsed += hours + " hours ";
+            }
+            if (minutes > 0 || hours > 0)
+            {
+                elapsed += minutes + " minutes ";
+            }
+
+            DecimalFormat numFormat = null;
+            numFormat = new DecimalFormat("#0");
+            elapsed += numFormat.format(seconds) + '.';
+            numFormat = new DecimalFormat("000000000");
+            elapsed += numFormat.format(nanoseconds) + " seconds";
+            result.append(" stopped. Elapsed time: ").append(elapsed);
+            if (m_iterations > 0)
+            {
+                nanoseconds = m_elapsedTime / m_iterations;
                 // Get elapsed hours
-                long hours = nanoseconds / NANO_PER_HOUR;
+                hours = nanoseconds / NANO_PER_HOUR;
                 // Get remaining nanoseconds
                 nanoseconds = nanoseconds % NANO_PER_HOUR;
                 // Get minutes
-                long minutes = nanoseconds / NANO_PER_MINUTE;
+                minutes = nanoseconds / NANO_PER_MINUTE;
                 // Get remaining nanoseconds
                 nanoseconds = nanoseconds % NANO_PER_MINUTE;
                 // Get seconds
-                long seconds = nanoseconds / NANO_PER_SECOND;
+                seconds = nanoseconds / NANO_PER_SECOND;
                 // Get remaining nanoseconds
                 nanoseconds = nanoseconds % NANO_PER_SECOND;
 
-                String elapsed = Strings.EMPTY;
+                elapsed = "";
 
-                if (hours > 0) {
+                if (hours > 0)
+                {
                     elapsed += hours + " hours ";
                 }
-                if (minutes > 0 || hours > 0) {
+                if (minutes > 0 || hours > 0)
+                {
                     elapsed += minutes + " minutes ";
                 }
 
-                DecimalFormat numFormat;
                 numFormat = new DecimalFormat("#0");
                 elapsed += numFormat.format(seconds) + '.';
                 numFormat = new DecimalFormat("000000000");
                 elapsed += numFormat.format(nanoseconds) + " seconds";
-                buffer.append(" stopped. Elapsed time: ").append(elapsed);
-                if (iterations > 0) {
-                    nanoseconds = elapsedTime / iterations;
-                    // Get elapsed hours
-                    hours = nanoseconds / NANO_PER_HOUR;
-                    // Get remaining nanoseconds
-                    nanoseconds = nanoseconds % NANO_PER_HOUR;
-                    // Get minutes
-                    minutes = nanoseconds / NANO_PER_MINUTE;
-                    // Get remaining nanoseconds
-                    nanoseconds = nanoseconds % NANO_PER_MINUTE;
-                    // Get seconds
-                    seconds = nanoseconds / NANO_PER_SECOND;
-                    // Get remaining nanoseconds
-                    nanoseconds = nanoseconds % NANO_PER_SECOND;
-
-                    elapsed = Strings.EMPTY;
-
-                    if (hours > 0) {
-                        elapsed += hours + " hours ";
-                    }
-                    if (minutes > 0 || hours > 0) {
-                        elapsed += minutes + " minutes ";
-                    }
-
-                    numFormat = new DecimalFormat("#0");
-                    elapsed += numFormat.format(seconds) + '.';
-                    numFormat = new DecimalFormat("000000000");
-                    elapsed += numFormat.format(nanoseconds) + " seconds";
-                    buffer.append(" Average per iteration: ").append(elapsed);
-                }
-                break;
-            default:
-                buffer.append(' ').append(status);
-                break;
+                result.append(" Average per iteration: ").append(elapsed);
+            }
         }
+        else
+        {
+            result.append(" ").append(m_status);
+        }
+        return result.toString();
     }
 
     @Override
@@ -241,16 +240,16 @@ public class Timer implements Serializable, StringBuilderFormattable
 
         final Timer timer = (Timer) o;
 
-        if (elapsedTime != timer.elapsedTime) {
+        if (m_elapsedTime != timer.m_elapsedTime) {
             return false;
         }
-        if (startTime != timer.startTime) {
+        if (m_startTime != timer.m_startTime) {
             return false;
         }
-        if (name != null ? !name.equals(timer.name) : timer.name != null) {
+        if (m_name != null ? !m_name.equals(timer.m_name) : timer.m_name != null) {
             return false;
         }
-        if (status != null ? !status.equals(timer.status) : timer.status != null) {
+        if (m_status != null ? !m_status.equals(timer.m_status) : timer.m_status != null) {
             return false;
         }
 
@@ -260,10 +259,10 @@ public class Timer implements Serializable, StringBuilderFormattable
     @Override
     public int hashCode() {
         int result;
-        result = (name != null ? name.hashCode() : 0);
-        result = 29 * result + (status != null ? status.hashCode() : 0);
-        result = 29 * result + (int) (startTime ^ (startTime >>> 32));
-        result = 29 * result + (int) (elapsedTime ^ (elapsedTime >>> 32));
+        result = (m_name != null ? m_name.hashCode() : 0);
+        result = 29 * result + (m_status != null ? m_status.hashCode() : 0);
+        result = 29 * result + (int) (m_startTime ^ (m_startTime >>> 32));
+        result = 29 * result + (int) (m_elapsedTime ^ (m_elapsedTime >>> 32));
         return result;
     }
 

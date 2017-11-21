@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" strict="true" name="XMLConfigTest">
+<Configuration status="debug" strict="true" name="XMLConfigTest" packages="org.apache.logging.log4j.test">
   <Properties>
     <Property name="filename">target/test.log</Property>
   </Properties>
@@ -25,17 +25,17 @@
   <Appenders>
     <appender type="Console" name="STDOUT">
       <layout type="PatternLayout" pattern="%m MDC%X%n"/>
-      <Filters>
+      <filters>
         <Filter type="MarkerFilter" marker="FLOW" onMatch="DENY" onMismatch="NEUTRAL"/>
         <Filter type="MarkerFilter" marker="EXCEPTION" onMatch="DENY" onMismatch="ACCEPT"/>
-      </Filters>
+      </filters>
     </appender>
     <appender type="Console" name="FLOW">
       <layout type="PatternLayout" pattern="%C{1}.%M %m %ex%n"/>
-      <Filters>
+      <filters>
         <Filter type="MarkerFilter" marker="FLOW" onMatch="ACCEPT" onMismatch="NEUTRAL"/>
         <Filter type="MarkerFilter" marker="EXCEPTION" onMatch="ACCEPT" onMismatch="DENY"/>
-      </Filters>
+      </filters>
     </appender>
     <appender type="File" name="File" fileName="${filename}">
       <layout type="PatternLayout">

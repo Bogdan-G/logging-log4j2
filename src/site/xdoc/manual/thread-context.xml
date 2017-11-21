@@ -16,9 +16,7 @@
     limitations under the License.
 -->
 
-<document xmlns="http://maven.apache.org/XDOC/2.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+<document>
     <properties>
         <title>Log4j 2 Thread Context</title>
         <author email="rgoers@apache.org">Ralph Goers</author>
@@ -85,7 +83,7 @@ ThreadContext.pop();</pre>
             as follows:
           </p>
           <pre class="prettyprint linenums">
-ThreadContext.put("id", UUID.randomUUID().toString()); // Add the fishtag;
+ThreadContext.put("id", UUID.randomUUID().toString(); // Add the fishtag;
 ThreadContext.put("ipAddress", request.getRemoteAddr());
 ThreadContext.put("loginId", session.getAttribute("loginId"));
 ThreadContext.put("hostName", request.getServerName());
@@ -97,66 +95,9 @@ logger.debug("Message 2");
 .
 .
 ThreadContext.clear();</pre>
-
-          <h4>CloseableThreadContext</h4>
-		  <p>When placing items on the stack or map, it's necessary to remove then again when appropriate. To assist with
-		  this, the <tt>CloseableThreadContext</tt> implements the <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/AutoCloseable.html">AutoCloseable
-		  interface</a>. This allows items to be pushed to the stack or put in the map, and removed when the <tt>close()</tt> method is called -
-		  or automatically as part of a try-with-resources. For example, to temporarily push something on to the stack and then remove it:
-          </p>
-		  <pre class="prettyprint linenums">
-// Add to the ThreadContext stack for this try block only;
-try (final CloseableThreadContext.Instance ctc = CloseableThreadContext.push(UUID.randomUUID().toString())) {
-
-    logger.debug("Message 1");
-.
-.
-    logger.debug("Message 2");
-.
-.
-}</pre>
-          <p>
-          Or, to temporarily put something in the map:
-          </p>
-		  <pre class="prettyprint linenums">
-// Add to the ThreadContext map for this try block only;
-try (final CloseableThreadContext.Instance ctc = CloseableThreadContext.put("id", UUID.randomUUID().toString())
-                                                                .put("loginId", session.getAttribute("loginId"))) {
-
-    logger.debug("Message 1");
-.
-.
-    logger.debug("Message 2");
-.
-.
-}</pre>
-
-            If you're using a thread pool, then you can initialise a CloseableThreadContext by using the
-            <tt>putAll(final Map&lt;String, String&gt; values)</tt> and/or
-            <tt>pushAll(List&lt;String&gt; messages)</tt> methods;
-            <pre class="prettyprint linenums">
-for( final Session session : sessions ) {
-    try (final CloseableThreadContext.Instance ctc = CloseableThreadContext.put("loginId", session.getAttribute("loginId"))) {
-        logger.debug("Starting background thread for user");
-        final Map&lt;String, String&gt; values = ThreadContext.getImmutableContext();
-        final List&lt;String&gt; messages = ThreadContext.getImmutableStack().asList();
-        executor.submit(new Runnable() {
-        public void run() {
-            try (final CloseableThreadContext.Instance ctc = CloseableThreadContext.putAll(values).pushAll(messages)) {
-                logger.debug("Processing for user started");
-                .
-                logger.debug("Processing for user completed");
-            }
-        });
-    }
-}</pre>
-		  <h4>Implementation details</h4>
-          <p>The Stack and the Map are managed per thread and are based on
-            <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html">ThreadLocal</a>
-            by default. The Map can be configured to use an
-            <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/InheritableThreadLocal.html">InheritableThreadLocal</a>
-            by setting system property <tt>log4j2.isThreadContextMapInheritable</tt> to <tt>true</tt>.
-            When configured this way, the contents of the Map will be passed to child threads. However, as
+          <p>The Stack and the Map are managed per thread and is based on
+            <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/InheritableThreadLocal.html">InheritableThreadLocal</a>.
+            Thus, in many cases the contents of the Stack and Map will be passed to child threads. However, as
             discussed in the
             <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executors.html#privilegedThreadFactory()">Executors</a>
             class and in other cases where thread pooling is utilized, the ThreadContext may not always be
@@ -172,36 +113,18 @@ for( final Session session : sessions ) {
           <h4>Including the ThreadContext when writing logs</h4>
           <p>
             The <a href="../log4j-api/apidocs/org/apache/logging/log4j/core/PatternLayout.html">PatternLayout</a>
-            provides mechanisms to print the contents of the
-            <a href="../log4j-api/apidocs/org/apache/logging/log4j/ThreadContext.html">ThreadContext</a>
-            Map and Stack.
-          </p>
-          <ul>
-            <li>
+            provides mechanisms to print the contents of the 
+            <a href="../log4j-api/apidocs/org/apache/logging/log4j/ThreadContext.html">ThreadContext</a> 
+            Map and Stack. 
+            <ul>
               Use <code>%X</code> by itself to include the full contents of the Map.
-            </li>
-            <li>
-              Use <code>%X{key}</code> to include the specified key.
-            </li>
-            <li>
+            </ul>
+            <ul>
+              Use <code>%X{key}</code> to include the specified key. 
+            </ul>
+            <ul>
               Use <code>%x</code> to include the full contents of the <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Stack.html">Stack</a>.
-            </li>
-          </ul>
-          <h4>Custom context data injectors for non thread-local context data</h4>
-          <p>
-            With the ThreadContext logging statements can be tagged so log entries that were related in some way
-            can be linked via these tags. The limitation is that this only works for logging done on the same application thread
-            (or child threads when configured).
-          </p>
-          <p>
-            Some applications have a thread model that delegates work to other threads, and
-            in such models, tagging attributes that are put into a thread-local map in one thread are not visible
-            in the other threads and logging done in the other threads will not show these attributes.
-          </p>
-          <p>
-            Log4j 2.7 adds a flexible mechanism to tag logging statements with context data coming from
-            other sources than the ThreadContext.
-            See the manual page on <a href="extending.html#Custom_ContextDataInjector">extending Log4j</a> for details.
+            </ul>
           </p>
         </subsection>
       </section>

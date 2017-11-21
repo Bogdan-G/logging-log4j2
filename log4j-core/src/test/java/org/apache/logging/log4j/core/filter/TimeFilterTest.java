@@ -16,45 +16,21 @@
  */
 package org.apache.logging.log4j.core.filter;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.core.LogEvent;
+import org.junit.Test;
+
 import java.util.Calendar;
 import java.util.TimeZone;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.util.Clock;
-import org.apache.logging.log4j.core.util.ClockFactory;
-import org.apache.logging.log4j.core.util.ClockFactoryTest;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
  */
 public class TimeFilterTest {
-    private static long CLOCKTIME = System.currentTimeMillis();
-
-    /** Helper class */
-    public static class FixedTimeClock implements Clock {
-        @Override
-        public long currentTimeMillis() {
-            return CLOCKTIME;
-        }
-    }
-
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty(ClockFactory.PROPERTY_NAME, FixedTimeClock.class.getName());
-    }
-
-    @AfterClass
-    public static void afterClass() throws IllegalAccessException {
-        ClockFactoryTest.resetClocks();
-    }
 
     @Test
     public void testTime() {
@@ -63,21 +39,17 @@ public class TimeFilterTest {
         assertTrue(filter.isStarted());
         final Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("America/LosAngeles"));
         cal.set(Calendar.HOUR_OF_DAY, 2);
-        CLOCKTIME = cal.getTimeInMillis();
-        LogEvent event = Log4jLogEvent.newBuilder().setTimeMillis(CLOCKTIME).build();
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.ERROR, null, (Object) null, (Throwable) null));
-        assertSame(Filter.Result.NEUTRAL, filter.filter(event));
-
+        long tod = cal.getTimeInMillis();
+        LogEvent event = new Log4jLogEvent(null, null, null, null, null, null, null, null, null, null, tod);
+        assertTrue(filter.filter(null, Level.ERROR, null, null, (Throwable)null) == Filter.Result.NEUTRAL);
+        assertTrue(filter.filter(event) == Filter.Result.NEUTRAL);
         cal.roll(Calendar.DAY_OF_MONTH, true);
-        CLOCKTIME = cal.getTimeInMillis();
-        event = Log4jLogEvent.newBuilder().setTimeMillis(CLOCKTIME).build();
-        assertSame(Filter.Result.NEUTRAL, filter.filter(event));
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.ERROR, null, (Object) null, (Throwable) null));
-
+        tod = cal.getTimeInMillis();
+        event = new Log4jLogEvent(null, null, null, null, null, null, null, null, null, null, tod);
+        assertTrue(filter.filter(event) == Filter.Result.NEUTRAL);
         cal.set(Calendar.HOUR_OF_DAY, 4);
-        CLOCKTIME = cal.getTimeInMillis();
-        event = Log4jLogEvent.newBuilder().setTimeMillis(CLOCKTIME).build();
-        assertSame(Filter.Result.DENY, filter.filter(null, Level.ERROR, null, (Object) null, (Throwable) null));
-        assertSame(Filter.Result.DENY, filter.filter(event));
+        tod = cal.getTimeInMillis();
+        event = new Log4jLogEvent(null, null, null, null, null, null, null, null, null, null, tod);
+        assertTrue(filter.filter(event) == Filter.Result.DENY);
     }
 }

@@ -18,54 +18,46 @@ package org.apache.logging.log4j.core.appender.db.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-import org.apache.logging.log4j.junit.JndiRule;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.junit.Rule;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.mockejb.jndi.MockContextFactory;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
-@RunWith(Parameterized.class)
 public class DataSourceConnectionSourceTest {
+    private InitialContext context;
 
-    @Parameterized.Parameters(name = "{0}")
-    public static Object[][] data() {
-        return new Object[][]{
-            {"java:/comp/env/jdbc/Logging01"},
-            {"java:/comp/env/jdbc/Logging02"}
-        };
+    @Before
+    public void setUp() throws NamingException {
+        MockContextFactory.setAsInitial();
+
+        this.context = new InitialContext();
+        this.context.createSubcontext("java:");
+        this.context.createSubcontext("java:/comp");
+        this.context.createSubcontext("java:/comp/env");
+        this.context.createSubcontext("java:/comp/env/jdbc");
     }
 
-    private static final String CONFIG = "log4j-fatalOnly.xml";
-
-    @Rule
-    public final RuleChain rules;
-    private final DataSource dataSource = mock(DataSource.class);
-    private final String jndiURL;
-
-    public DataSourceConnectionSourceTest(final String jndiURL) {
-        this.rules = RuleChain.outerRule(new JndiRule(jndiURL, dataSource))
-            .around(new LoggerContextRule(CONFIG));
-        this.jndiURL = jndiURL;
+    @After
+    public void tearDown() {
+        MockContextFactory.revertSetAsInitial();
     }
 
     @Test
-    public void testNullJndiName() {
+    public void testNoJndiName01() {
         final DataSourceConnectionSource source = DataSourceConnectionSource.createConnectionSource(null);
 
         assertNull("The connection source should be null.", source);
     }
 
     @Test
-    public void testEmptyJndiName() {
+    public void testNoJndiName02() {
         final DataSourceConnectionSource source = DataSourceConnectionSource.createConnectionSource("");
 
         assertNull("The connection source should be null.", source);
@@ -73,29 +65,65 @@ public class DataSourceConnectionSourceTest {
 
     @Test
     public void testNoDataSource() {
-        final DataSourceConnectionSource source = DataSourceConnectionSource.createConnectionSource(jndiURL + "123");
+        final DataSourceConnectionSource source = DataSourceConnectionSource
+                .createConnectionSource("java:/comp/env/jdbc/Logging01");
 
         assertNull("The connection source should be null.", source);
     }
 
     @Test
-    public void testDataSource() throws NamingException, SQLException {
-        final Connection connection1 = mock(Connection.class);
-        final Connection connection2 = mock(Connection.class);
+    public void testDataSource01() throws NamingException, SQLException {
+        final DataSource dataSource = createStrictMock(DataSource.class);
+        final Connection connection1 = createStrictMock(Connection.class);
+        final Connection connection2 = createStrictMock(Connection.class);
 
-        given(dataSource.getConnection()).willReturn(connection1, connection2);
+        expect(dataSource.getConnection()).andReturn(connection1);
+        expect(dataSource.getConnection()).andReturn(connection2);
+        replay(dataSource, connection1, connection2);
 
-        DataSourceConnectionSource source = DataSourceConnectionSource.createConnectionSource(jndiURL);
+        this.context.bind("java:/comp/env/jdbc/Logging01", dataSource);
+
+        DataSourceConnectionSource source = DataSourceConnectionSource
+                .createConnectionSource("java:/comp/env/jdbc/Logging01");
 
         assertNotNull("The connection source should not be null.", source);
-        assertEquals("The toString value is not correct.", "dataSource{ name=" + jndiURL + ", value="
-            + dataSource + " }", source.toString());
+        assertEquals("The toString value is not correct.", "dataSource{ name=java:/comp/env/jdbc/Logging01, value="
+                + dataSource + " }", source.toString());
         assertSame("The connection is not correct (1).", connection1, source.getConnection());
         assertSame("The connection is not correct (2).", connection2, source.getConnection());
 
-        source = DataSourceConnectionSource.createConnectionSource(jndiURL.substring(0, jndiURL.length() - 1));
+        source = DataSourceConnectionSource.createConnectionSource("java:/comp/env/jdbc/Logging02");
 
         assertNull("The connection source should be null now.", source);
+
+        verify(dataSource, connection1, connection2);
     }
 
+    @Test
+    public void testDataSource02() throws NamingException, SQLException {
+        final DataSource dataSource = createStrictMock(DataSource.class);
+        final Connection connection1 = createStrictMock(Connection.class);
+        final Connection connection2 = createStrictMock(Connection.class);
+
+        expect(dataSource.getConnection()).andReturn(connection1);
+        expect(dataSource.getConnection()).andReturn(connection2);
+        replay(dataSource, connection1, connection2);
+
+        this.context.bind("java:/comp/env/jdbc/Logging02", dataSource);
+
+        DataSourceConnectionSource source = DataSourceConnectionSource
+                .createConnectionSource("java:/comp/env/jdbc/Logging02");
+
+        assertNotNull("The connection source should not be null.", source);
+        assertEquals("The toString value is not correct.", "dataSource{ name=java:/comp/env/jdbc/Logging02, value="
+                + dataSource + " }", source.toString());
+        assertSame("The connection is not correct (1).", connection1, source.getConnection());
+        assertSame("The connection is not correct (2).", connection2, source.getConnection());
+
+        source = DataSourceConnectionSource.createConnectionSource("java:/comp/env/jdbc/Logging01");
+
+        assertNull("The connection source should be null now.", source);
+
+        verify(dataSource, connection1, connection2);
+    }
 }

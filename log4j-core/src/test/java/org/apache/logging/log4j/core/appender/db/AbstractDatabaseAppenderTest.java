@@ -16,94 +16,129 @@
  */
 package org.apache.logging.log4j.core.appender.db;
 
-import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
+import org.junit.After;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 
-@RunWith(MockitoJUnitRunner.class)
 public class AbstractDatabaseAppenderTest {
     private LocalAbstractDatabaseAppender appender;
-    @Mock
     private LocalAbstractDatabaseManager manager;
 
     public void setUp(final String name) {
-        appender = new LocalAbstractDatabaseAppender(name, null, true, manager);
+        this.manager = createMockBuilder(LocalAbstractDatabaseManager.class)
+                .withConstructor(String.class, int.class)
+                .withArgs(name, 0)
+                .addMockedMethod("release")
+                .createStrictMock();
+
+        this.appender = createMockBuilder(LocalAbstractDatabaseAppender.class)
+                .withConstructor(String.class, Filter.class, boolean.class, LocalAbstractDatabaseManager.class)
+                .withArgs(name, null, true, this.manager)
+                .createStrictMock();
+    }
+
+    @After
+    public void tearDown() {
+        verify(this.manager, this.appender);
     }
 
     @Test
     public void testNameAndGetLayout01() {
-        setUp("testName01");
+        this.setUp("testName01");
 
-        assertEquals("The name is not correct.", "testName01", appender.getName());
-        assertNull("The layout should always be null.", appender.getLayout());
+        replay(this.manager, this.appender);
+
+        assertEquals("The name is not correct.", "testName01", this.appender.getName());
+        assertNull("The layout should always be null.", this.appender.getLayout());
     }
 
     @Test
     public void testNameAndGetLayout02() {
-        setUp("anotherName02");
+        this.setUp("anotherName02");
 
-        assertEquals("The name is not correct.", "anotherName02", appender.getName());
-        assertNull("The layout should always be null.", appender.getLayout());
+        replay(this.manager, this.appender);
+
+        assertEquals("The name is not correct.", "anotherName02", this.appender.getName());
+        assertNull("The layout should always be null.", this.appender.getLayout());
     }
 
     @Test
     public void testStartAndStop() throws Exception {
-        setUp("name");
+        this.setUp("name");
 
-        appender.start();
-        then(manager).should().startupInternal();
+        this.manager.connectInternal();
+        expectLastCall();
+        replay(this.manager, this.appender);
 
-        appender.stop();
-        then(manager).should().stop(0L, TimeUnit.MILLISECONDS);
+        this.appender.start();
+
+        verify(this.manager, this.appender);
+        reset(this.manager, this.appender);
+        this.manager.release();
+        expectLastCall();
+        replay(this.manager, this.appender);
+
+        this.appender.stop();
     }
 
     @Test
     public void testReplaceManager() throws Exception {
-        setUp("name");
+        this.setUp("name");
 
-        final LocalAbstractDatabaseManager oldManager = appender.getManager();
-        assertSame("The manager should be the same.", manager, oldManager);
+        replay(this.manager, this.appender);
 
-        final LocalAbstractDatabaseManager newManager = mock(LocalAbstractDatabaseManager.class);
-        appender.replaceManager(newManager);
-        then(manager).should().close();
-        then(newManager).should().startupInternal();
+        final LocalAbstractDatabaseManager manager = this.appender.getManager();
 
-        appender.stop();
-        then(newManager).should().stop(0L, TimeUnit.MILLISECONDS);
+        assertSame("The manager should be the same.", this.manager, manager);
+
+        verify(this.manager, this.appender);
+        reset(this.manager, this.appender);
+        this.manager.release();
+        expectLastCall();
+        final LocalAbstractDatabaseManager newManager = createMockBuilder(LocalAbstractDatabaseManager.class)
+                .withConstructor(String.class, int.class).withArgs("name", 0).addMockedMethod("release")
+                .createStrictMock();
+        newManager.connectInternal();
+        expectLastCall();
+        replay(this.manager, this.appender, newManager);
+
+        this.appender.replaceManager(newManager);
+
+        verify(this.manager, this.appender, newManager);
+        reset(this.manager, this.appender, newManager);
+        newManager.release();
+        expectLastCall();
+        replay(this.manager, this.appender, newManager);
+
+        this.appender.stop();
+
+        verify(newManager);
     }
 
     @Test
     public void testAppend() {
-        setUp("name");
-        given(manager.commitAndClose()).willReturn(true);
+        this.setUp("name");
 
-        final LogEvent event1 = mock(LogEvent.class);
-        final LogEvent event2 = mock(LogEvent.class);
+        final LogEvent event1 = createStrictMock(LogEvent.class);
+        final LogEvent event2 = createStrictMock(LogEvent.class);
 
-        appender.append(event1);
-        then(manager).should().connectAndStart();
-        then(manager).should().writeInternal(same(event1));
-        then(manager).should().commitAndClose();
+        this.manager.writeInternal(same(event1));
+        expectLastCall();
+        replay(this.manager, this.appender);
 
-        reset(manager);
+        this.appender.append(event1);
 
-        appender.append(event2);
-        then(manager).should().connectAndStart();
-        then(manager).should().writeInternal(same(event2));
-        then(manager).should().commitAndClose();
+        verify(this.manager, this.appender);
+        reset(this.manager, this.appender);
+        this.manager.writeInternal(same(event2));
+        expectLastCall();
+        replay(this.manager, this.appender);
+
+        this.appender.append(event2);
     }
 
     private static abstract class LocalAbstractDatabaseManager extends AbstractDatabaseManager {
@@ -112,8 +147,8 @@ public class AbstractDatabaseAppenderTest {
         }
     }
 
-    private static class LocalAbstractDatabaseAppender extends AbstractDatabaseAppender<LocalAbstractDatabaseManager> {
-
+    private static abstract class LocalAbstractDatabaseAppender extends
+            AbstractDatabaseAppender<LocalAbstractDatabaseManager> {
         public LocalAbstractDatabaseAppender(final String name, final Filter filter, final boolean exceptionSuppressed,
                                              final LocalAbstractDatabaseManager manager) {
             super(name, filter, exceptionSuppressed, manager);

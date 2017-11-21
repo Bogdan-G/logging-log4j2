@@ -33,12 +33,12 @@ public final class MDC {
         new InheritableThreadLocal<Map<String, Object>>() {
             @Override
             protected Map<String, Object> initialValue() {
-                return new HashMap<>();
+                return new HashMap<String, Object>();
             }
 
             @Override
             protected Map<String, Object> childValue(final Map<String, Object> parentValue) {
-                return parentValue == null ? new HashMap<String, Object>() : new HashMap<>(parentValue);
+                return parentValue == null ? new HashMap<String, Object>() : new HashMap<String, Object>(parentValue);
             }
         };
 
@@ -68,10 +68,10 @@ public final class MDC {
 
     public static void clear() {
         localMap.get().clear();
-        ThreadContext.clearMap();
+        ThreadContext.clear();
     }
 
     public static Hashtable<String, Object> getContext() {
-        return new Hashtable<>(localMap.get());
+        return new Hashtable<String, Object>(localMap.get());
     }
 }

@@ -17,42 +17,51 @@
 package org.apache.logging.log4j;
 
 import org.apache.logging.log4j.message.StructuredDataMessage;
-import org.apache.logging.log4j.spi.ExtendedLogger;
+import org.apache.logging.log4j.spi.AbstractLogger;
+import org.apache.logging.log4j.spi.AbstractLoggerWrapper;
 
 /**
- *  Logs "Events" that are represented as {@link StructuredDataMessage}.
+ *  Logs "Events" that are represented as StructuredDataMessages.
  */
 public final class EventLogger {
 
+    private static final String NAME = "EventLogger";
+
     /**
-     * Defines the Event Marker.
+     * Define the Event Marker.
      */
     public static final Marker EVENT_MARKER = MarkerManager.getMarker("EVENT");
 
-    private static final String NAME = "EventLogger";
-
     private static final String FQCN = EventLogger.class.getName();
 
-    private static final ExtendedLogger LOGGER = LogManager.getContext(false).getLogger(NAME);
+    private static AbstractLoggerWrapper loggerWrapper;
+
+    static {
+        final Logger eventLogger = LogManager.getLogger(NAME);
+        if (!(eventLogger instanceof AbstractLogger)) {
+            throw new LoggingException("Logger returned must be based on AbstractLogger");
+        }
+        loggerWrapper = new AbstractLoggerWrapper((AbstractLogger) eventLogger, NAME, null);
+    }
+
 
     private EventLogger() {
-        // empty
     }
 
     /**
-     * Logs events with a level of ALL.
+     * Log events with a level of ALL.
      * @param msg The event StructuredDataMessage.
      */
     public static void logEvent(final StructuredDataMessage msg) {
-        LOGGER.logIfEnabled(FQCN, Level.OFF, EVENT_MARKER, msg, null);
+        loggerWrapper.log(EVENT_MARKER, FQCN, Level.OFF, msg, null);
     }
 
     /**
-     * Logs events and specify the logging level.
+     * Log events and specify the logging level.
      * @param msg The event StructuredDataMessage.
      * @param level The logging Level.
      */
     public static void logEvent(final StructuredDataMessage msg, final Level level) {
-        LOGGER.logIfEnabled(FQCN, level, EVENT_MARKER, msg, null);
+        loggerWrapper.log(EVENT_MARKER, FQCN, level, msg, null);
     }
 }

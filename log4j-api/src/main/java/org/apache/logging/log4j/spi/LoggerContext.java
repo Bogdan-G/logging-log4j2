@@ -16,6 +16,7 @@
  */
 package org.apache.logging.log4j.spi;
 
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.MessageFactory;
 
 /**
@@ -24,26 +25,26 @@ import org.apache.logging.log4j.message.MessageFactory;
 public interface LoggerContext {
 
     /**
-     * An anchor for some other context, such as a ClassLoader or ServletContext.
+     * An anchor for some other context, such as a ServletContext.
      * @return The external context.
      */
     Object getExternalContext();
 
     /**
-     * Returns an ExtendedLogger.
+     * Returns a Logger.
      * @param name The name of the Logger to return.
      * @return The logger with the specified name.
      */
-    ExtendedLogger getLogger(String name);
+    Logger getLogger(String name);
 
     /**
-     * Returns an ExtendedLogger.
+     * Returns a Logger.
      * @param name The name of the Logger to return.
      * @param messageFactory The message factory is used only when creating a logger, subsequent use does not change
      *                       the logger but will log a warning if mismatched.
      * @return The logger with the specified name.
      */
-    ExtendedLogger getLogger(String name, MessageFactory messageFactory);
+    Logger getLogger(String name, MessageFactory messageFactory);
 
     /**
      * Detects if a Logger with the specified name exists.
@@ -52,21 +53,4 @@ public interface LoggerContext {
      */
     boolean hasLogger(String name);
 
-    /**
-     * Detects if a Logger with the specified name and MessageFactory exists.
-     * @param name The Logger name to search for.
-     * @param messageFactory The message factory to search for.
-     * @return true if the Logger exists, false otherwise.
-     * @since 2.5
-     */
-    boolean hasLogger(String name, MessageFactory messageFactory);
-
-    /**
-     * Detects if a Logger with the specified name and MessageFactory type exists.
-     * @param name The Logger name to search for.
-     * @param messageFactoryClass The message factory class to search for.
-     * @return true if the Logger exists, false otherwise.
-     * @since 2.5
-     */
-    boolean hasLogger(String name, Class<? extends MessageFactory> messageFactoryClass);
 }

@@ -18,7 +18,6 @@ package org.apache.logging.log4j.taglib;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.BodyTag;
 import javax.servlet.jsp.tagext.DynamicAttributes;
@@ -50,7 +49,7 @@ abstract class LoggingMessageTagSupport extends ExceptionAwareTagSupport impleme
         this.message = null;
         this.marker = null;
         if (this.attributes == null) {
-            this.attributes = new ArrayList<>();
+            this.attributes = new ArrayList<Object>();
         } else {
             this.attributes.clear();
         }
@@ -100,7 +99,7 @@ abstract class LoggingMessageTagSupport extends ExceptionAwareTagSupport impleme
             final Object message = this.getMessage();
             final Throwable exception = this.getException();
             if (message instanceof Message) {
-                logger.logIfEnabled(FQCN, level, marker, (Message) message, exception);
+                logger.log(marker, FQCN, level, (Message) message, exception);
             } else if (message instanceof String) {
                 Message data;
                 if (this.attributes.size() > 0) {
@@ -108,9 +107,9 @@ abstract class LoggingMessageTagSupport extends ExceptionAwareTagSupport impleme
                 } else {
                     data = logger.getMessageFactory().newMessage((String) message);
                 }
-                logger.logIfEnabled(FQCN, level, marker, data, exception);
+                logger.log(marker, FQCN, level, data, exception);
             } else {
-                logger.logIfEnabled(FQCN, level, marker, logger.getMessageFactory().newMessage(message), exception);
+                logger.log(marker, FQCN, level, logger.getMessageFactory().newMessage(message), exception);
             }
         }
 

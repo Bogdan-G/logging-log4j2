@@ -20,39 +20,33 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 
 /**
- * Formats a {@link LogEvent} in its Java serialized form.
- *
- * @deprecated Java Serialization has inherent security weaknesses, see https://www.owasp.org/index.php/Deserialization_of_untrusted_data .
- * Using this layout is no longer recommended. An alternative layout containing the same information is
- * {@link JsonLayout} when configured with properties="true". Deprecated since 2.9.
+ * Format a LogEvent in its serialized form.
  */
-@Deprecated
-@Plugin(name = "SerializedLayout", category = Node.CATEGORY, elementType = Layout.ELEMENT_TYPE, printObject = true)
+@Plugin(name = "SerializedLayout", category = "Core", elementType = "layout", printObject = true)
 public final class SerializedLayout extends AbstractLayout<LogEvent> {
 
-    private static byte[] serializedHeader;
+    private static byte[] header;
 
     static {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            new ObjectOutputStream(baos).close();
-            serializedHeader = baos.toByteArray();
+            final ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.close();
+            header = baos.toByteArray();
         } catch (final Exception ex) {
             LOGGER.error("Unable to generate Object stream header", ex);
         }
     }
 
     private SerializedLayout() {
-        super(null, null, null);
-        LOGGER.warn("SerializedLayout is deprecated due to the inherent security weakness in Java Serialization, see https://www.owasp.org/index.php/Deserialization_of_untrusted_data Consider using another layout, e.g. JsonLayout");
     }
 
     /**
@@ -64,9 +58,14 @@ public final class SerializedLayout extends AbstractLayout<LogEvent> {
     @Override
     public byte[] toByteArray(final LogEvent event) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (final ObjectOutputStream oos = new PrivateObjectOutputStream(baos)) {
-            oos.writeObject(event);
-            oos.reset();
+        try {
+            final ObjectOutputStream oos = new PrivateObjectOutputStream(baos);
+            try {
+                oos.writeObject(event);
+                oos.reset();
+            } finally {
+                oos.close();
+            }
         } catch (final IOException ioe) {
             LOGGER.error("Serialization of LogEvent failed.", ioe);
         }
@@ -85,18 +84,27 @@ public final class SerializedLayout extends AbstractLayout<LogEvent> {
     }
 
     /**
-     * Creates a SerializedLayout.
+     * Create a SerializedLayout.
      * @return A SerializedLayout.
      */
-    @Deprecated
     @PluginFactory
     public static SerializedLayout createLayout() {
+
         return new SerializedLayout();
     }
 
     @Override
     public byte[] getHeader() {
-        return serializedHeader;
+        return header;
+    }
+
+    /**
+     * SerializedLayout's format is sufficiently specified via the content type, use empty Map/unspecified.
+     * @return empty Map
+     */
+    @Override
+    public Map<String, String> getContentFormat() {
+        return new HashMap<String, String>();
     }
 
     /**
@@ -119,7 +127,6 @@ public final class SerializedLayout extends AbstractLayout<LogEvent> {
 
         @Override
         protected void writeStreamHeader() {
-            // do nothing
         }
     }
 }

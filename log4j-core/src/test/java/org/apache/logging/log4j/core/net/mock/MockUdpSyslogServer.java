@@ -20,33 +20,24 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-import org.apache.logging.log4j.core.util.Throwables;
-
-public class MockUdpSyslogServer extends MockSyslogServer {
+public class MockUDPSyslogServer extends MockSyslogServer {
     private final DatagramSocket socket;
-    private volatile boolean shutdown = false;
+    private boolean shutdown = false;
     private Thread thread;
 
-    public MockUdpSyslogServer(final int numberOfMessagesToReceive, final int port) throws SocketException {
+    public MockUDPSyslogServer(int numberOfMessagesToReceive, int port) throws SocketException {
         super(numberOfMessagesToReceive, port);
         this.socket = new DatagramSocket(port);
     }
 
-    @Override
     public void shutdown() {
         this.shutdown = true;
-        socket.close();
         thread.interrupt();
-        try {
-            thread.join(100);
-        } catch (InterruptedException ie) {
-            System.out.println("Shutdown of UDP server thread failed.");
-        }
+        socket.close();
     }
 
     @Override
     public void run() {
-        System.out.println("UDP Server Started");
         this.thread = Thread.currentThread();
         final byte[] bytes = new byte[4096];
         final DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
@@ -56,11 +47,10 @@ public class MockUdpSyslogServer extends MockSyslogServer {
                 final String str = new String(packet.getData(), 0, packet.getLength());
                 messageList.add(str);
             }
-        } catch (final Exception e) {
+        } catch (final Exception ex) {
             if (!shutdown) {
-                Throwables.rethrow(e);
+                throw new RuntimeException(ex);
             }
         }
-        System.out.println("UDP Server stopped");
     }
 }

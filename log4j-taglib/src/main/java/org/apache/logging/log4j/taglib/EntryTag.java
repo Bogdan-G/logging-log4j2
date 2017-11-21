@@ -18,7 +18,6 @@ package org.apache.logging.log4j.taglib;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.DynamicAttributes;
 import javax.servlet.jsp.tagext.Tag;
@@ -41,7 +40,7 @@ public class EntryTag extends LoggerAwareTagSupport implements DynamicAttributes
     protected void init() {
         super.init();
         if (this.attributes == null) {
-            this.attributes = new ArrayList<>();
+            this.attributes = new ArrayList<Object>();
         } else {
             this.attributes.clear();
         }

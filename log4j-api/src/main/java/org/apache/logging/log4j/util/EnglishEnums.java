@@ -14,16 +14,12 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-package org.apache.logging.log4j.util;
+ package org.apache.logging.log4j.util;
 
 import java.util.Locale;
 
 /**
- * <em>Consider this class private.</em>
- * 
- * <p>
  * Helps convert English Strings to English Enum values.
- * </p>
  * <p>
  * Enum name arguments are converted internally to upper case with the {@linkplain Locale#ENGLISH ENGLISH} locale to
  * avoid problems on the Turkish locale. Do not use with Turkish enum values.

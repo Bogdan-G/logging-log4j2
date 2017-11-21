@@ -16,7 +16,7 @@
  limitations under the License.
 
 -->
-<Configuration status="OFF" name="XMLConfigTest">
+<Configuration status="warn" name="XMLConfigTest" packages="org.apache.logging.log4j.test">
   <Properties>
     <Property name="filename">target/test.log</Property>
   </Properties>
@@ -32,17 +32,17 @@
       </PatternLayout>
     </File>
     <List name="List">
-      <Filters>
+      <filters>
         <ThresholdFilter level="error"/>
-      </Filters>
+      </filters>
     </List>
   </Appenders>
 
   <Loggers>
     <Logger name="org.apache.logging.log4j.test1" level="debug" additivity="false">
-        <Filters>
+        <filters>
           <!-- This isn't really an error -->
-        </Filters>
+        </filters>
       <AppenderRef ref="STDOUT"/>
     </Logger>>
 

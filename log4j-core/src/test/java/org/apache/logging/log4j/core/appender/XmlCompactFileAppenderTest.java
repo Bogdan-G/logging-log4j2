@@ -16,25 +16,23 @@
  */
 package org.apache.logging.log4j.core.appender;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.Layouts;
-import org.apache.logging.log4j.core.CoreLoggerContexts;
+import org.apache.logging.log4j.core.LifeCycle;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests a "compact" XML file, no extra spaces or end of lines.
  */
-@Category(Layouts.Xml.class)
 public class XmlCompactFileAppenderTest {
 
     @BeforeClass
@@ -50,26 +48,28 @@ public class XmlCompactFileAppenderTest {
         final Logger log = LogManager.getLogger("com.foo.Bar");
         final String logMsg = "Message flushed with immediate flush=false";
         log.info(logMsg);
-        CoreLoggerContexts.stopLoggerContext(false, file); // stop async thread
+        ((LifeCycle) LogManager.getContext()).stop(); // stop async thread
 
+        final BufferedReader reader = new BufferedReader(new FileReader(file));
         String line1;
-        try (final BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        try {
             line1 = reader.readLine();
         } finally {
+            reader.close();
             file.delete();
         }
         assertNotNull("line1", line1);
         final String msg1 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
-        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg1 + ']', line1.contains(msg1));
+        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg1 + "]", line1.contains(msg1));
 
         final String msg2 = "<Events xmlns=\"http://logging.apache.org/log4j/2.0/events\">";
-        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg2 + ']', line1.contains(msg2));
+        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg2 + "]", line1.contains(msg2));
 
         final String msg3 = "<Event ";
-        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg3 + ']', line1.contains(msg3));
+        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg3 + "]", line1.contains(msg3));
 
         final String msg4 = logMsg;
-        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg4 + ']', line1.contains(msg4));
+        assertTrue("line1 incorrect: [" + line1 + "], does not contain: [" + msg4 + "]", line1.contains(msg4));
 
         final String location = "testFlushAtEndOfBatch";
         assertTrue("no location", !line1.contains(location));

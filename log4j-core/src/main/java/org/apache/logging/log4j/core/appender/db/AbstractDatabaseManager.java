@@ -14,12 +14,9 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-
 package org.apache.logging.log4j.core.appender.db;
 
-import java.io.Flushable;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractManager;
@@ -28,11 +25,11 @@ import org.apache.logging.log4j.core.appender.ManagerFactory;
 /**
  * Manager that allows database appenders to have their configuration reloaded without losing events.
  */
-public abstract class AbstractDatabaseManager extends AbstractManager implements Flushable {
+public abstract class AbstractDatabaseManager extends AbstractManager {
     private final ArrayList<LogEvent> buffer;
     private final int bufferSize;
 
-    private boolean running = false;
+    private boolean connected = false;
 
     /**
      * Instantiates the base manager.
@@ -42,30 +39,28 @@ public abstract class AbstractDatabaseManager extends AbstractManager implements
      * @param bufferSize The size of the log event buffer.
      */
     protected AbstractDatabaseManager(final String name, final int bufferSize) {
-        super(null, name);
+        super(name);
         this.bufferSize = bufferSize;
-        this.buffer = new ArrayList<>(bufferSize + 1);
+        this.buffer = new ArrayList<LogEvent>(bufferSize + 1);
     }
 
     /**
-     * Implementations should implement this method to perform any proprietary startup operations. This method will
-     * never be called twice on the same instance. It is safe to throw any exceptions from this method. This method
-     * does not necessarily connect to the database, as it is generally unreliable to connect once and use the same
-     * connection for hours.
+     * Implementations should implement this method to perform any proprietary connection operations. This method will
+     * never be called twice on the same instance. It is safe to throw any exceptions from this method.
      */
-    protected abstract void startupInternal() throws Exception;
+    protected abstract void connectInternal() throws Exception;
 
     /**
      * This method is called within the appender when the appender is started. If it has not already been called, it
-     * calls {@link #startupInternal()} and catches any exceptions it might throw.
+     * calls {@link #connectInternal()} and catches any exceptions it might throw.
      */
-    public final synchronized void startup() {
-        if (!this.isRunning()) {
+    public final synchronized void connect() {
+        if (!this.isConnected()) {
             try {
-                this.startupInternal();
-                this.running = true;
+                this.connectInternal();
+                this.connected = true;
             } catch (final Exception e) {
-                logError("Could not perform database startup operations", e);
+                LOGGER.error("Could not connect to database using logging manager [{}].", this.getName(), e);
             }
         }
     }
@@ -73,50 +68,37 @@ public abstract class AbstractDatabaseManager extends AbstractManager implements
     /**
      * Implementations should implement this method to perform any proprietary disconnection / shutdown operations. This
      * method will never be called twice on the same instance, and it will only be called <em>after</em>
-     * {@link #startupInternal()}. It is safe to throw any exceptions from this method. This method does not
-     * necessarily disconnect from the database for the same reasons outlined in {@link #startupInternal()}.
-     * @return true if all resources were closed normally, false otherwise.
+     * {@link #connectInternal()}. It is safe to throw any exceptions from this method.
      */
-    protected abstract boolean shutdownInternal() throws Exception;
+    protected abstract void disconnectInternal() throws Exception;
 
     /**
-     * This method is called from the {@link #close()} method when the appender is stopped or the appender's manager
-     * is replaced. If it has not already been called, it calls {@link #shutdownInternal()} and catches any exceptions
+     * This method is called from the {@link #release()} method when the appender is stopped or the appender's manager
+     * is replaced. If it has not already been called, it calls {@link #disconnectInternal()} and catches any exceptions
      * it might throw.
-     * @return true if all resources were closed normally, false otherwise.
      */
-    public final synchronized boolean shutdown() {
-        boolean closed = true;
+    public final synchronized void disconnect() {
         this.flush();
-        if (this.isRunning()) {
+        if (this.isConnected()) {
             try {
-                closed &= this.shutdownInternal();
+                this.disconnectInternal();
             } catch (final Exception e) {
-                logWarn("Caught exception while performing database shutdown operations", e);
-                closed = false;
+                LOGGER.warn("Error while disconnecting from database using logging manager [{}].", this.getName(), e);
             } finally {
-                this.running = false;
+                this.connected = false;
             }
         }
-        return closed;
     }
 
     /**
-     * Indicates whether the manager is currently connected {@link #startup()} has been called and {@link #shutdown()}
+     * Indicates whether the manager is currently connected {@link #connect()} has been called and {@link #disconnect()}
      * has not been called).
      *
      * @return {@code true} if the manager is connected.
      */
-    public final boolean isRunning() {
-        return this.running;
+    public final boolean isConnected() {
+        return this.connected;
     }
-
-    /**
-     * Connects to the database and starts a transaction (if applicable). With buffering enabled, this is called when
-     * flushing the buffer begins, before the first call to {@link #writeInternal}. With buffering disabled, this is
-     * called immediately before every invocation of {@link #writeInternal}.
-     */
-    protected abstract void connectAndStart();
 
     /**
      * Performs the actual writing of the event in an implementation-specific way. This method is called immediately
@@ -127,31 +109,15 @@ public abstract class AbstractDatabaseManager extends AbstractManager implements
     protected abstract void writeInternal(LogEvent event);
 
     /**
-     * Commits any active transaction (if applicable) and disconnects from the database (returns the connection to the
-     * connection pool). With buffering enabled, this is called when flushing the buffer completes, after the last call
-     * to {@link #writeInternal}. With buffering disabled, this is called immediately after every invocation of
-     * {@link #writeInternal}.
-     * @return true if all resources were closed normally, false otherwise.
-     */
-    protected abstract boolean commitAndClose();
-
-    /**
      * This method is called automatically when the buffer size reaches its maximum or at the beginning of a call to
-     * {@link #shutdown()}. It can also be called manually to flush events to the database.
+     * {@link #disconnect()}. It can also be called manually to flush events to the database.
      */
-    @Override
     public final synchronized void flush() {
-        if (this.isRunning() && this.buffer.size() > 0) {
-            this.connectAndStart();
-            try {
-                for (final LogEvent event : this.buffer) {
-                    this.writeInternal(event);
-                }
-            } finally {
-                this.commitAndClose();
-                // not sure if this should be done when writing the events failed
-                this.buffer.clear();
+        if (this.isConnected() && this.buffer.size() > 0) {
+            for (final LogEvent event : this.buffer) {
+                this.writeInternal(event);
             }
+            this.buffer.clear();
         }
     }
 
@@ -162,23 +128,18 @@ public abstract class AbstractDatabaseManager extends AbstractManager implements
      */
     public final synchronized void write(final LogEvent event) {
         if (this.bufferSize > 0) {
-            this.buffer.add(event.toImmutable());
+            this.buffer.add(event);
             if (this.buffer.size() >= this.bufferSize || event.isEndOfBatch()) {
                 this.flush();
             }
         } else {
-            this.connectAndStart();
-            try {
-                this.writeInternal(event);
-            } finally {
-                this.commitAndClose();
-            }
+            this.writeInternal(event);
         }
     }
 
     @Override
-    public final boolean releaseSub(final long timeout, final TimeUnit timeUnit) {
-        return this.shutdown();
+    public final void releaseSub() {
+        this.disconnect();
     }
 
     @Override

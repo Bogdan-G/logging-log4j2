@@ -16,151 +16,57 @@
  */
 package org.apache.logging.log4j.core.appender;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.ConsoleAppender.Target;
+import org.apache.logging.log4j.core.helpers.Constants;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.message.SimpleMessage;
-import org.apache.logging.log4j.util.Strings;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.atLeastOnce;
 
 /**
  *
  */
-@RunWith(MockitoJUnitRunner.class)
 public class ConsoleAppenderTest {
 
-    private static final String LOG4J_SKIP_JANSI = "log4j.skipJansi";
-
-    @AfterClass
-    public static void afterClass() {
-        System.clearProperty(LOG4J_SKIP_JANSI);
-    }
+    private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
     @BeforeClass
-    public static void beforeClass() {
-        System.setProperty(LOG4J_SKIP_JANSI, "true");
+    public static void before() {
+        System.setProperty("log4j.skipJansi", "true");
     }
 
-    ByteArrayOutputStream baos;
-
-    @Mock
-    PrintStream psMock;
-
-    @Before
-    public void before() {
-        System.setProperty(LOG4J_SKIP_JANSI, "true");
-        baos = new ByteArrayOutputStream();
-    }
-
-    private enum SystemSetter {
-        SYSTEM_OUT {
-            @Override
-            void systemSet(final PrintStream printStream) {
-                System.setOut(printStream);
-            }
-        },
-        SYSTEM_ERR {
-            @Override
-            void systemSet(final PrintStream printStream) {
-                System.setErr(printStream);
-            }
-        },
-        ;
-        abstract void systemSet(PrintStream printStream);
-    }
-
-    private void testConsoleStreamManagerDoesNotClose(final PrintStream ps, final Target targetName, final SystemSetter systemSetter) {
-        try {
-            systemSetter.systemSet(psMock);
-            final Layout<String> layout = PatternLayout.newBuilder().withAlwaysWriteExceptions(true).build();
-            final ConsoleAppender app = ConsoleAppender.newBuilder().withLayout(layout).setTarget(targetName)
-                    .withName("Console").withIgnoreExceptions(false).build();
-            app.start();
-            assertTrue("Appender did not start", app.isStarted());
-
-            final LogEvent event = Log4jLogEvent.newBuilder() //
-                    .setLoggerName("TestLogger") //
-                    .setLoggerFqcn(ConsoleAppenderTest.class.getName()) //
-                    .setLevel(Level.INFO) //
-                    .setMessage(new SimpleMessage("Test")) //
-                    .build();
-            app.append(event);
-
-            app.stop();
-            assertFalse("Appender did not stop", app.isStarted());
-        } finally {
-            systemSetter.systemSet(ps);
-        }
-        then(psMock).should(atLeastOnce()).write(any(byte[].class), anyInt(), anyInt());
-        then(psMock).should(atLeastOnce()).flush();
+    @AfterClass
+    public static void after() {
+        System.clearProperty("log4j.skipJansi");
     }
 
     @Test
-    public void testFollowSystemErr() {
-        testFollowSystemPrintStream(System.err, Target.SYSTEM_ERR, SystemSetter.SYSTEM_ERR);
-    }
-
-    @Test
-    public void testFollowSystemOut() {
-        testFollowSystemPrintStream(System.out, Target.SYSTEM_OUT, SystemSetter.SYSTEM_OUT);
-    }
-
-    private void testFollowSystemPrintStream(final PrintStream ps, final Target target, final SystemSetter systemSetter) {
-        final ConsoleAppender app = ConsoleAppender.newBuilder().setTarget(target).setFollow(true)
-                .withIgnoreExceptions(false).withName("test").build();
-        Assert.assertEquals(target, app.getTarget());
+    public void testFollow() {
+        final PrintStream ps = System.out;
+        final Layout<String> layout = PatternLayout.createLayout(null, null, null, null, null);
+        final ConsoleAppender app = ConsoleAppender.createAppender(layout, null, "SYSTEM_OUT", "Console", "true", "false");
         app.start();
-        try {
-            final LogEvent event = Log4jLogEvent.newBuilder() //
-                    .setLoggerName("TestLogger") //
-                    .setLoggerFqcn(ConsoleAppenderTest.class.getName()) //
-                    .setLevel(Level.INFO) //
-                    .setMessage(new SimpleMessage("Test")) //
-                    .build();
+        final LogEvent event = new Log4jLogEvent("TestLogger", null, ConsoleAppenderTest.class.getName(), Level.INFO,
+            new SimpleMessage("Test"), null);
 
-            assertTrue("Appender did not start", app.isStarted());
-            systemSetter.systemSet(new PrintStream(baos));
-            try {
-                app.append(event);
-            } finally {
-                systemSetter.systemSet(ps);
-            }
-            final String msg = baos.toString();
-            assertNotNull("No message", msg);
-            assertTrue("Incorrect message: \"" + msg + "\"", msg.endsWith("Test" + Strings.LINE_SEPARATOR));
-        } finally {
-            app.stop();
-        }
+        assertTrue("Appender did not start", app.isStarted());
+        System.setOut(new PrintStream(baos));
+        app.append(event);
+        System.setOut(ps);
+        final String msg = baos.toString();
+        assertNotNull("No message", msg);
+        assertTrue("Incorrect message: " + msg , msg.endsWith("Test" + Constants.LINE_SEP));
+        app.stop();
         assertFalse("Appender did not stop", app.isStarted());
     }
 
-    @Test
-    public void testSystemErrStreamManagerDoesNotClose() {
-        testConsoleStreamManagerDoesNotClose(System.err, Target.SYSTEM_ERR, SystemSetter.SYSTEM_ERR);
-    }
-
-    @Test
-    public void testSystemOutStreamManagerDoesNotClose() {
-        testConsoleStreamManagerDoesNotClose(System.out, Target.SYSTEM_OUT, SystemSetter.SYSTEM_OUT);
-    }
 
 }

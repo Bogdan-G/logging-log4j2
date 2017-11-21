@@ -30,10 +30,9 @@ public final class NDC {
      * Clear any nested diagnostic information if any. This method is
      * useful in cases where the same thread can be potentially used
      * over and over in different unrelated contexts.
-     * <p>
-     * This method is equivalent to calling the {@link #setMaxDepth}
+     * <p/>
+     * <p>This method is equivalent to calling the {@link #setMaxDepth}
      * method with a zero <code>maxDepth</code> argument.
-     * </p>
      */
     public static void clear() {
         org.apache.logging.log4j.ThreadContext.clearStack();
@@ -42,21 +41,20 @@ public final class NDC {
 
     /**
      * Clone the diagnostic context for the current thread.
-     * <p>
-     * Internally a diagnostic context is represented as a stack.  A
+     * <p/>
+     * <p>Internally a diagnostic context is represented as a stack.  A
      * given thread can supply the stack (i.e. diagnostic context) to a
      * child thread so that the child can inherit the parent thread's
      * diagnostic context.
-     * </p>
-     * <p>
-     * The child thread uses the {@link #inherit inherit} method to
+     * <p/>
+     * <p>The child thread uses the {@link #inherit inherit} method to
      * inherit the parent's diagnostic context.
-     * </p>
+     *
      * @return Stack A clone of the current thread's  diagnostic context.
      */
     @SuppressWarnings("rawtypes")
     public static Stack cloneStack() {
-        final Stack<String> stack = new Stack<>();
+        final Stack<String> stack = new Stack<String>();
         for (final String element : org.apache.logging.log4j.ThreadContext.cloneStack().asList()) {
             stack.push(element);
         }
@@ -66,23 +64,21 @@ public final class NDC {
 
     /**
      * Inherit the diagnostic context of another thread.
-     * <p>
-     * The parent thread can obtain a reference to its diagnostic
+     * <p/>
+     * <p>The parent thread can obtain a reference to its diagnostic
      * context using the {@link #cloneStack} method.  It should
      * communicate this information to its child so that it may inherit
      * the parent's diagnostic context.
-     * </p>
-     * <p>
-     * The parent's diagnostic context is cloned before being
+     * <p/>
+     * <p>The parent's diagnostic context is cloned before being
      * inherited. In other words, once inherited, the two diagnostic
      * contexts can be managed independently.
-     * </p>
-     * <p>
-     * In java, a child thread cannot obtain a reference to its
+     * <p/>
+     * <p>In java, a child thread cannot obtain a reference to its
      * parent, unless it is directly handed the reference. Consequently,
      * there is no client-transparent way of inheriting diagnostic
      * contexts. Do you know any solution to this problem?
-     * </p>
+     *
      * @param stack The diagnostic context of the parent thread.
      */
     public static void inherit(final Stack<String> stack) {
@@ -91,8 +87,7 @@ public final class NDC {
 
 
     /**
-     * <strong style="color:#FF4040">Never use this method directly.</strong>
-     *
+     * <font color="#FF4040"><b>Never use this method directly.</b>
      * @return The string value of the specified key.
      */
     public static String get() {
@@ -111,10 +106,10 @@ public final class NDC {
     /**
      * Clients should call this method before leaving a diagnostic
      * context.
-     * <p>
-     * The returned value is the value that was pushed last. If no
+     * <p/>
+     * <p>The returned value is the value that was pushed last. If no
      * context is available, then the empty string "" is returned.
-     * </p>
+     *
      * @return String The innermost diagnostic context.
      */
     public static String pop() {
@@ -124,10 +119,10 @@ public final class NDC {
     /**
      * Looks at the last diagnostic context at the top of this NDC
      * without removing it.
-     * <p>
-     * The returned value is the value that was pushed last. If no
+     * <p/>
+     * <p>The returned value is the value that was pushed last. If no
      * context is available, then the empty string "" is returned.
-     * </p>
+     *
      * @return String The innermost diagnostic context.
      */
     public static String peek() {
@@ -136,10 +131,10 @@ public final class NDC {
 
     /**
      * Push new diagnostic context information for the current thread.
-     * <p>
-     * The contents of the <code>message</code> parameter is
+     * <p/>
+     * <p>The contents of the <code>message</code> parameter is
      * determined solely by the client.
-     * </p>
+     *
      * @param message The new diagnostic context information.
      */
     public static void push(final String message) {
@@ -148,14 +143,13 @@ public final class NDC {
 
     /**
      * Remove the diagnostic context for this thread.
-     * <p>
-     * Each thread that created a diagnostic context by calling
+     * <p/>
+     * <p>Each thread that created a diagnostic context by calling
      * {@link #push} should call this method before exiting. Otherwise,
      * the memory used by the <b>thread</b> cannot be reclaimed by the
      * VM.
-     * </p>
-     * <p>
-     * As this is such an important problem in heavy duty systems and
+     * <p/>
+     * <p>As this is such an important problem in heavy duty systems and
      * because it is difficult to always guarantee that the remove
      * method is called before exiting a thread, this method has been
      * augmented to lazily remove references to dead threads. In
@@ -164,7 +158,6 @@ public final class NDC {
      * thread. However, you must call <code>remove</code> sometime. If
      * you never call it, then your application is sure to run out of
      * memory.
-     * </p>
      */
     public static void remove() {
         org.apache.logging.log4j.ThreadContext.removeStack();
@@ -174,29 +167,26 @@ public final class NDC {
      * Set maximum depth of this diagnostic context. If the current
      * depth is smaller or equal to <code>maxDepth</code>, then no
      * action is taken.
-     * <p>
-     * This method is a convenient alternative to multiple {@link
+     * <p/>
+     * <p>This method is a convenient alternative to multiple {@link
      * #pop} calls. Moreover, it is often the case that at the end of
      * complex call sequences, the depth of the NDC is
      * unpredictable. The <code>setMaxDepth</code> method circumvents
      * this problem.
-     * </p>
-     * <p>
-     * For example, the combination
-     * </p>
+     * <p/>
+     * <p>For example, the combination
      * <pre>
      * void foo() {
      * &nbsp;  int depth = NDC.getDepth();
-     *
+     * <p/>
      * &nbsp;  ... complex sequence of calls
-     *
+     * <p/>
      * &nbsp;  NDC.setMaxDepth(depth);
      * }
      * </pre>
-     * <p>
+     * <p/>
      * ensures that between the entry and exit of foo the depth of the
      * diagnostic stack is conserved.
-     * </p>
      *
      * @see #getDepth
      * @param maxDepth The maximum depth of the stack.

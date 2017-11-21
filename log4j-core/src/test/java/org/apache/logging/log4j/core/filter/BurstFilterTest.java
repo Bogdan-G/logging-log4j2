@@ -17,16 +17,21 @@
  */
 package org.apache.logging.log4j.core.filter;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
+import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.test.appender.ListAppender;
-import org.junit.Before;
-import org.junit.ClassRule;
+import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 /**
  * Unit test for <code>BurstFilter</code>.
  */
@@ -34,20 +39,26 @@ public class BurstFilterTest {
 
     private static final String CONFIG = "log4j-burst.xml";
 
-    @ClassRule
-    public static LoggerContextRule context = new LoggerContextRule(CONFIG);
+    private static Configuration config;
+    private static ListAppender app;
+    private static BurstFilter filter;
+    private static LoggerContext ctx;
 
-    @Before
-    public void setUp() throws Exception {
-        app = context.getListAppender("ListAppender");
-        filter = (BurstFilter) app.getFilter();
-        assertNotNull("No BurstFilter", filter);
+    @BeforeClass
+    public static void setupClass() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        config = ctx.getConfiguration();
+        for (final Map.Entry<String, Appender> entry : config.getAppenders().entrySet()) {
+            if (entry.getKey().equals("ListAppender")) {
+                app = (ListAppender) entry.getValue();
+                filter = (BurstFilter) app.getFilter();
+                break;
+            }
+        }
     }
 
-    private ListAppender app;
-    private BurstFilter filter;
-
-    private final Logger logger = context.getLogger();
+    private final Logger logger = LogManager.getLogger(BurstFilterTest.class.getName());
 
     /**
      * Test BurstFilter by surpassing maximum number of log messages allowed by filter and
@@ -56,7 +67,10 @@ public class BurstFilterTest {
      */
     @Test
     public void test() throws Exception {
-        System.nanoTime();
+        assertNotNull("No ListAppender", app);
+        assertNotNull("No BurstFilter", filter);
+        // exceed the burst limit and make sure no more than 100 errors get logged
+        final long start = System.nanoTime();
         for (int i = 0; i < 110; i++) {
             if (i % 10 == 0) {
                 Thread.sleep(200);
@@ -65,7 +79,7 @@ public class BurstFilterTest {
             assertTrue("Incorrect number of available slots", filter.getAvailable() < 100);
         }
         List<String> msgs = app.getMessages();
-        assertEquals("Incorrect message count. Should be 100, actual " + msgs.size(), 100, msgs.size());
+        assertTrue("Incorrect message count. Should be 100, actual " + msgs.size(), msgs.size() == 100);
         app.clear();
 
         assertTrue("Incorrect number of available slots", filter.getAvailable() < 100);
@@ -77,8 +91,8 @@ public class BurstFilterTest {
         }
 
         msgs = app.getMessages();
-        assertFalse("No messages were counted.", msgs.isEmpty());
-        assertTrue("Incorrect message count. Should be > 0 and < 100, actual " + msgs.size(), msgs.size() < 100);
+        assertTrue("Incorrect message count. Should be > 0 and < 100, actual " + msgs.size(),
+            msgs.size() > 0 && msgs.size() < 100);
         app.clear();
 
         filter.clear();
@@ -86,7 +100,7 @@ public class BurstFilterTest {
         for (int i = 0; i < 110; i++) {
             logger.info("Waited 1.5 seconds and trying to log again, should see more than 0 and less than 100" + (i + 1));
         }
-        assertEquals("", 0, filter.getAvailable());
+        assertTrue("", filter.getAvailable() == 0);
         app.clear();
 
 
@@ -97,7 +111,7 @@ public class BurstFilterTest {
         }
 
         msgs = app.getMessages();
-        assertTrue("Incorrect message count. Should be 0, actual " + msgs.size(), msgs.isEmpty());
+        assertTrue("Incorrect message count. Should be 0, actual " + msgs.size(), msgs.size() == 0);
         app.clear();
 
         // now log 100 warns, they should all get through because the filter's level is set at info
@@ -106,7 +120,7 @@ public class BurstFilterTest {
         }
 
         msgs = app.getMessages();
-        assertEquals("Incorrect message count. Should be 110, actual " + msgs.size(), 110, msgs.size());
+        assertTrue("Incorrect message count. Should be 110, actual " + msgs.size(), msgs.size() == 110);
         app.clear();
 
         // now log 100 errors, they should all get through because the filter level is set at info
@@ -115,7 +129,7 @@ public class BurstFilterTest {
         }
 
         msgs = app.getMessages();
-        assertEquals("Incorrect message count. Should be 110, actual " + msgs.size(), 110, msgs.size());
+        assertTrue("Incorrect message count. Should be 110, actual " + msgs.size(), msgs.size() == 110);
         app.clear();
 
         // now log 100 fatals, they should all get through because the filter level is set at info
@@ -124,7 +138,7 @@ public class BurstFilterTest {
         }
 
         msgs = app.getMessages();
-        assertEquals("Incorrect message count. Should be 110, actual " + msgs.size(), 110, msgs.size());
+        assertTrue("Incorrect message count. Should be 110, actual " + msgs.size(), msgs.size() == 110);
         app.clear();
 
         // wait and make sure we can log messages again despite the fact we just logged a bunch of warns, errors, fatals
@@ -134,7 +148,7 @@ public class BurstFilterTest {
             logger.debug("Waited 3+ seconds, should see 100 logs #" + (i + 1));
         }
         msgs = app.getMessages();
-        assertEquals("Incorrect message count. Should be 100, actual " + msgs.size(), 100, msgs.size());
+        assertTrue("Incorrect message count. Should be 100, actual " + msgs.size(), msgs.size() == 100);
         app.clear();
 
     }

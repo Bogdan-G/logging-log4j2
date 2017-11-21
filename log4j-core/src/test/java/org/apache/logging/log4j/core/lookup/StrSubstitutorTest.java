@@ -16,22 +16,22 @@
  */
 package org.apache.logging.log4j.core.lookup;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.logging.log4j.ThreadContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  *
  */
 public class StrSubstitutorTest {
 
-    private static final String TESTKEY = "TestKey";
+     private static final String TESTKEY = "TestKey";
     private static final String TESTVAL = "TestValue";
 
 
@@ -48,7 +48,7 @@ public class StrSubstitutorTest {
 
     @Test
     public void testLookup() {
-        final Map<String, String> map = new HashMap<>();
+        final Map<String, String> map = new HashMap<String, String>();
         map.put(TESTKEY, TESTVAL);
         final StrLookup lookup = new Interpolator(new MapLookup(map));
         final StrSubstitutor subst = new StrSubstitutor(lookup);
@@ -57,24 +57,5 @@ public class StrSubstitutorTest {
         assertEquals("TestValue-TestValue-TestValue", value);
         value = subst.replace("${BadKey}");
         assertEquals("${BadKey}", value);
-
-        value = subst.replace("${BadKey:-Unknown}-${ctx:BadKey:-Unknown}-${sys:BadKey:-Unknown}");
-        assertEquals("Unknown-Unknown-Unknown", value);
-        value = subst.replace("${BadKey:-Unknown}-${ctx:BadKey}-${sys:BadKey:-Unknown}");
-        assertEquals("Unknown-${ctx:BadKey}-Unknown", value);
-        value = subst.replace("${BadKey:-Unknown}-${ctx:BadKey:-}-${sys:BadKey:-Unknown}");
-        assertEquals("Unknown--Unknown", value);
-    }
-
-    @Test
-    public void testDefault() {
-        final Map<String, String> map = new HashMap<>();
-        map.put(TESTKEY, TESTVAL);
-        final StrLookup lookup = new Interpolator(new MapLookup(map));
-        final StrSubstitutor subst = new StrSubstitutor(lookup);
-        ThreadContext.put(TESTKEY, TESTVAL);
-        //String value = subst.replace("${sys:TestKey1:-${ctx:TestKey}}");
-        final String value = subst.replace("${sys:TestKey1:-${ctx:TestKey}}");
-        assertEquals("TestValue", value);
     }
 }

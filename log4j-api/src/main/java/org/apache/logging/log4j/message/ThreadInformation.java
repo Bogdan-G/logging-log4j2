@@ -19,7 +19,7 @@ package org.apache.logging.log4j.message;
 /**
  * Interface used to print basic or extended thread information.
  */
-public interface ThreadInformation {
+interface ThreadInformation {
     /**
      * Format the thread information into the provided StringBuilder.
      * @param sb The StringBuilder.

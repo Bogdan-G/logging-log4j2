@@ -15,20 +15,6 @@
  * limitations under the license.
  */
 /**
- * Public API for Log4j 2.
- *
- * <p>
- *     The main entry point into Log4j is the {@link org.apache.logging.log4j.LogManager} class which can be used to
- *     obtain {@link org.apache.logging.log4j.Logger} objects, the current
- *     {@link org.apache.logging.log4j.spi.LoggerContext}, a new {@code LoggerContext}, and the current
- *     {@link org.apache.logging.log4j.spi.LoggerContextFactory}.
- * </p>
- * <p>
- *     {@link org.apache.logging.log4j.Marker} objects can be obtained through the
- *     {@link org.apache.logging.log4j.MarkerManager}. The MDC (Mapped Diagnostic Context) can be
- *     used through the {@link org.apache.logging.log4j.ThreadContext} class.
- * </p>
- *
- * @see <a href="http://logging.apache.org/log4j/2.x/manual/api.html">Log4j 2 API manual</a>
+ * Public API for Log4j 2.0.
  */
 package org.apache.logging.log4j;

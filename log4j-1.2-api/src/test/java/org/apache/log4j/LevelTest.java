@@ -17,12 +17,14 @@
 
 package org.apache.log4j;
 
+import org.apache.log4j.util.SerializationTestHelper;
+
 import java.util.Locale;
 
-import org.apache.log4j.util.SerializationTestHelper;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -215,7 +217,7 @@ public class LevelTest {
      */
     @Test
     public void testIntToAll() {
-        final Level level = Level.toLevel(Priority.ALL_INT);
+        final Level level = Level.toLevel(Level.ALL_INT);
         assertEquals("ALL", level.toString());
     }
 
@@ -224,7 +226,7 @@ public class LevelTest {
      */
     @Test
     public void testIntToFatal() {
-        final Level level = Level.toLevel(Priority.FATAL_INT);
+        final Level level = Level.toLevel(Level.FATAL_INT);
         assertEquals("FATAL", level.toString());
     }
 
@@ -234,7 +236,7 @@ public class LevelTest {
      */
     @Test
     public void testIntToOff() {
-        final Level level = Level.toLevel(Priority.OFF_INT);
+        final Level level = Level.toLevel(Level.OFF_INT);
         assertEquals("OFF", level.toString());
     }
 
@@ -276,8 +278,8 @@ public class LevelTest {
         Locale.setDefault(turkey);
         final Level level = Level.toLevel("info");
         Locale.setDefault(defaultLocale);
-        assertEquals("INFO", level.toString());
-    }
+      assertEquals("INFO", level.toString());
+  }
 
 
 }

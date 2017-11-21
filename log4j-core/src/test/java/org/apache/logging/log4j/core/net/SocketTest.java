@@ -16,38 +16,38 @@
  */
 package org.apache.logging.log4j.core.net;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.apache.logging.log4j.test.AvailablePortFinder;
-import org.junit.ClassRule;
-import org.junit.Ignore;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-@Ignore("Currently needs better port choosing support")
 public class SocketTest {
-    private static final int SOCKET_PORT = AvailablePortFinder.getNextAvailable();
+    private static final int SOCKET_PORT = 5514;
 
     private static final String CONFIG = "log4j-socket.xml";
 
-    @ClassRule
-    public static LoggerContextRule context = new LoggerContextRule(CONFIG);
+    @BeforeClass
+    public static void before() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+    }
 
     @Test
     public void testConnect() throws Exception {
-        // TODO: there's a JUnit rule that simplifies this (matt)
         System.err.println("Initializing logger");
         Logger logger = null;
         try {
-            logger = context.getLogger();
+            logger = LogManager.getLogger(SocketTest.class);
         } catch (final NullPointerException e) {
             fail("Unexpected exception; should not occur until first logging statement " + e.getMessage());
         }
@@ -77,7 +77,7 @@ public class SocketTest {
             closeQuietly(server);
         }
 
-        private static void closeQuietly(final ServerSocket socket) {
+        private void closeQuietly(final ServerSocket socket) {
             if (null != socket) {
                 try {
                     socket.close();
@@ -86,7 +86,7 @@ public class SocketTest {
             }
         }
 
-        private static void closeQuietly(final Socket socket) {
+        private void closeQuietly(final Socket socket) {
             if (null != socket) {
                 try {
                     socket.close();
@@ -96,4 +96,15 @@ public class SocketTest {
         }
     }
 
+    private static void closeQuietly(final ExecutorService executor) {
+        if (null != executor) {
+            executor.shutdownNow();
+        }
+    }
+
+    private static void closeQuietly(final TestSocketServer testServer) {
+        if (null != testServer) {
+            testServer.close();
+        }
+    }
 }

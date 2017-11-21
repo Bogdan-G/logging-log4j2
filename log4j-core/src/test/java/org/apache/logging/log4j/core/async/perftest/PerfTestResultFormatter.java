@@ -33,7 +33,7 @@ import java.util.TreeMap;
  * format it for pasting into Excel.
  */
 class PerfTestResultFormatter {
-    static final String LF = System.lineSeparator();
+    static final String LF = System.getProperty("line.separator");
     static final NumberFormat NUM = new DecimalFormat("#,##0");
 
     static class Stats {
@@ -51,7 +51,7 @@ class PerfTestResultFormatter {
         }
     }
 
-    private final Map<String, Map<String, Stats>> results = new TreeMap<>();
+    private final Map<String, Map<String, Stats>> results = new TreeMap<String, Map<String, Stats>>();
 
     public PerfTestResultFormatter() {
     }
@@ -75,7 +75,7 @@ class PerfTestResultFormatter {
         sb.append(LF);
         for (int i = 0; i < 3; i++) {
             for (final String subKey : subKeys) {
-                sb.append('\t').append(subKey);
+                sb.append("\t").append(subKey);
             }
         }
         sb.append(LF);
@@ -87,13 +87,13 @@ class PerfTestResultFormatter {
                     final Stats stats = sub.get(subKey);
                     switch (i) {
                     case 0:
-                        sb.append('\t').append((long) stats.avgLatency);
+                        sb.append("\t").append((long) stats.avgLatency);
                         break;
                     case 1:
-                        sb.append('\t').append((long) stats.latency99Pct);
+                        sb.append("\t").append((long) stats.latency99Pct);
                         break;
                     case 2:
-                        sb.append('\t').append((long) stats.latency99_99Pct);
+                        sb.append("\t").append((long) stats.latency99_99Pct);
                         break;
                     }
                 }
@@ -109,7 +109,7 @@ class PerfTestResultFormatter {
         sb.append("\tThroughput per thread (msg/sec)");
         sb.append(LF);
         for (final String subKey : subKeys) {
-            sb.append('\t').append(subKey);
+            sb.append("\t").append(subKey);
         }
         sb.append(LF);
         for (final String key : results.keySet()) {
@@ -117,7 +117,7 @@ class PerfTestResultFormatter {
             final Map<String, Stats> sub = results.get(key);
             for (final String subKey : sub.keySet()) {
                 final Stats stats = sub.get(subKey);
-                sb.append('\t').append(stats.throughput);
+                sb.append("\t").append(stats.throughput);
             }
             sb.append(LF);
         }
@@ -139,7 +139,7 @@ class PerfTestResultFormatter {
         final Stats stats = new Stats(throughput, avg, pct99, pct99_99);
         Map<String, Stats> map = results.get(key.trim());
         if (map == null) {
-            map = new TreeMap<>(sort());
+            map = new TreeMap<String, Stats>(sort());
             results.put(key.trim(), map);
         }
         String subKey = sub.trim();

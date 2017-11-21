@@ -16,22 +16,15 @@
  */
 package org.apache.logging.log4j.core.config.plugins;
 
-import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.apache.logging.log4j.core.config.plugins.visitors.PluginConfigurationVisitor;
-
 /**
- * Identifies a parameter or field as a Configuration.
- * @see org.apache.logging.log4j.core.config.Configuration
+ * Identifies a parameter as a Configuration.
  */
-@Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.PARAMETER, ElementType.FIELD})
-@PluginVisitorStrategy(PluginConfigurationVisitor.class)
+@Target(ElementType.PARAMETER)
 public @interface PluginConfiguration {
-    // empty
 }

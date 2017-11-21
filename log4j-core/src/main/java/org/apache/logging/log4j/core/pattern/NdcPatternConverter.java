@@ -18,41 +18,41 @@ package org.apache.logging.log4j.core.pattern;
 
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.util.PerformanceSensitive;
 
 
 /**
  * Returns the event's NDC in a StringBuilder.
  */
-@Plugin(name = "NdcPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({"x", "NDC"})
-public final class NdcPatternConverter extends LogEventPatternConverter {
-    /**
-     * Singleton.
-     */
-    private static final NdcPatternConverter INSTANCE =
-        new NdcPatternConverter();
+@Plugin(name = "NDCPatternConverter", category = "Converter")
+@ConverterKeys({"x", "NDC" })
+public final class NDCPatternConverter extends LogEventPatternConverter {
+  /**
+   *   Singleton.
+   */
+  private static final NDCPatternConverter INSTANCE =
+    new NDCPatternConverter();
 
-    /**
-     * Private constructor.
-     */
-    private NdcPatternConverter() {
-        super("NDC", "ndc");
-    }
+  /**
+   * Private constructor.
+   */
+  private NDCPatternConverter() {
+    super("NDC", "ndc");
+  }
 
-    /**
-     * Obtains an instance of NdcPatternConverter.
-     *
-     * @param options options, may be null.
-     * @return instance of NdcPatternConverter.
-     */
-    public static NdcPatternConverter newInstance(final String[] options) {
-        return INSTANCE;
-    }
+  /**
+   * Obtains an instance of NDCPatternConverter.
+   * @param options options, may be null.
+   * @return instance of NDCPatternConverter.
+   */
+  public static NDCPatternConverter newInstance(final String[] options) {
+    return INSTANCE;
+  }
 
-    @Override
-    @PerformanceSensitive("allocation")
-    public void format(final LogEvent event, final StringBuilder toAppendTo) {
-        toAppendTo.append(event.getContextStack());
-    }
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+public void format(final LogEvent event, final StringBuilder toAppendTo) {
+    toAppendTo.append(event.getContextStack());
+  }
 }

@@ -24,6 +24,9 @@ public class BasicConfigurator {
     protected BasicConfigurator() {
     }
 
+    /**
+     * No-op implementation.
+     */
     public static void configure() {
         LogManager.reconfigure();
     }
@@ -33,13 +36,11 @@ public class BasicConfigurator {
      * @param appender The appender.
      */
     public static void configure(final Appender appender) {
-        // no-op
     }
 
     /**
      * No-op implementation.
      */
     public static void resetConfiguration() {
-        // no-op
     }
 }

@@ -17,37 +17,35 @@
 package org.apache.logging.log4j.core.jmx;
 
 import java.util.List;
-import java.util.Objects;
-
 import javax.management.ObjectName;
 
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.AppenderRef;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.helpers.Assert;
 
 /**
  * Implementation of the {@code LoggerConfigAdminMBean} interface.
  */
 public class LoggerConfigAdmin implements LoggerConfigAdminMBean {
 
-    private final LoggerContext loggerContext;
+    private final String contextName;
     private final LoggerConfig loggerConfig;
     private final ObjectName objectName;
 
     /**
-     * Constructs a new {@code LoggerConfigAdmin} with the specified LoggerContext
+     * Constructs a new {@code LoggerConfigAdmin} with the specified contextName
      * and logger config.
      *
-     * @param loggerContext used in the {@code ObjectName} for this mbean
+     * @param contextName used in the {@code ObjectName} for this mbean
      * @param loggerConfig the instrumented object
      */
-    public LoggerConfigAdmin(final LoggerContext loggerContext, final LoggerConfig loggerConfig) {
+    public LoggerConfigAdmin(final String contextName, final LoggerConfig loggerConfig) {
         // super(executor); // no notifications for now
-        this.loggerContext = Objects.requireNonNull(loggerContext, "loggerContext");
-        this.loggerConfig = Objects.requireNonNull(loggerConfig, "loggerConfig");
+        this.contextName = Assert.isNotNull(contextName, "contextName");
+        this.loggerConfig = Assert.isNotNull(loggerConfig, "loggerConfig");
         try {
-            final String ctxName = Server.escape(loggerContext.getName());
+            final String ctxName = Server.escape(this.contextName);
             final String configName = Server.escape(loggerConfig.getName());
             final String name = String.format(PATTERN, ctxName, configName);
             objectName = new ObjectName(name);
@@ -78,8 +76,7 @@ public class LoggerConfigAdmin implements LoggerConfigAdminMBean {
 
     @Override
     public void setLevel(final String level) {
-        loggerConfig.setLevel(Level.getLevel(level));
-        loggerContext.updateLoggers();
+        loggerConfig.setLevel(Level.valueOf(level));
     }
 
     @Override
@@ -90,7 +87,6 @@ public class LoggerConfigAdmin implements LoggerConfigAdminMBean {
     @Override
     public void setAdditive(final boolean additive) {
         loggerConfig.setAdditive(additive);
-        loggerContext.updateLoggers();
     }
 
     @Override

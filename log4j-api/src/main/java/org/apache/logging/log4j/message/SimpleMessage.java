@@ -16,19 +16,13 @@
  */
 package org.apache.logging.log4j.message;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import org.apache.logging.log4j.util.StringBuilderFormattable;
-
 /**
  * The simplest possible implementation of Message. It just returns the String given as the constructor argument.
  */
-public class SimpleMessage implements Message, StringBuilderFormattable, CharSequence {
+public class SimpleMessage implements Message {
     private static final long serialVersionUID = -8398002534962715992L;
 
-    private String message;
-    private transient CharSequence charSequence;
+    private final String message;
 
     /**
      * Basic constructor.
@@ -43,16 +37,6 @@ public class SimpleMessage implements Message, StringBuilderFormattable, CharSeq
      */
     public SimpleMessage(final String message) {
         this.message = message;
-        this.charSequence = message;
-    }
-
-    /**
-     * Constructor that includes the message.
-     * @param charSequence The CharSequence message.
-     */
-    public SimpleMessage(final CharSequence charSequence) {
-        // this.message = String.valueOf(charSequence); // postponed until getFormattedMessage
-        this.charSequence = charSequence;
     }
 
     /**
@@ -61,12 +45,7 @@ public class SimpleMessage implements Message, StringBuilderFormattable, CharSeq
      */
     @Override
     public String getFormattedMessage() {
-        return message = message == null ? String.valueOf(charSequence) : message ;
-    }
-
-    @Override
-    public void formatTo(final StringBuilder buffer) {
-	buffer.append(message != null ? message : charSequence);
+        return message;
     }
 
     /**
@@ -75,7 +54,7 @@ public class SimpleMessage implements Message, StringBuilderFormattable, CharSeq
      */
     @Override
     public String getFormat() {
-        return getFormattedMessage();
+        return message;
     }
 
     /**
@@ -98,17 +77,17 @@ public class SimpleMessage implements Message, StringBuilderFormattable, CharSeq
 
         final SimpleMessage that = (SimpleMessage) o;
 
-        return !(charSequence != null ? !charSequence.equals(that.charSequence) : that.charSequence != null);
+        return !(message != null ? !message.equals(that.message) : that.message != null);
     }
 
     @Override
     public int hashCode() {
-        return charSequence != null ? charSequence.hashCode() : 0;
+        return message != null ? message.hashCode() : 0;
     }
 
     @Override
     public String toString() {
-        return getFormattedMessage();
+        return "SimpleMessage[message=" + message + "]";
     }
 
     /**
@@ -119,34 +98,5 @@ public class SimpleMessage implements Message, StringBuilderFormattable, CharSeq
     @Override
     public Throwable getThrowable() {
         return null;
-    }
-
-
-    // CharSequence impl
-
-    @Override
-    public int length() {
-        return charSequence == null ? 0 : charSequence.length();
-    }
-
-    @Override
-    public char charAt(final int index) {
-        return charSequence.charAt(index);
-    }
-
-    @Override
-    public CharSequence subSequence(final int start, final int end) {
-        return charSequence.subSequence(start, end);
-    }
-
-
-    private void writeObject(final ObjectOutputStream out) throws IOException {
-        getFormattedMessage(); // initialize the message:String field
-        out.defaultWriteObject();
-    }
-
-    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        in.defaultReadObject();
-        charSequence = message;
     }
 }

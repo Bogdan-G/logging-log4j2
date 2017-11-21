@@ -20,18 +20,17 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.10.1-SNAPSHOT</version>
+    <version>2.0-beta9</version>
     <relativePath>../</relativePath>
   </parent>
   <artifactId>log4j-1.2-api</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
   <name>Apache Log4j 1.x Compatibility API</name>
-  <description>The Apache Log4j 1.x Compatibility API</description>
+  <description>The Log4j 1.x Compatibility API</description>
   <properties>
     <log4jParentDir>${basedir}/..</log4jParentDir>
     <docLabel>Log4j 1.2 Documentation</docLabel>
     <projectDir>/log4j12-api</projectDir>
-    <module.name>org.apache.log4j</module.name>
   </properties>
   <dependencies>
     <dependency>
@@ -44,9 +43,9 @@
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.framework</artifactId>
       <scope>test</scope>
-    </dependency>
+    </dependency>    
     <dependency>
-      <groupId>org.eclipse.tycho</groupId>
+      <groupId>org.eclipse.osgi</groupId>
       <artifactId>org.eclipse.osgi</artifactId>
       <scope>test</scope>
     </dependency>
@@ -76,16 +75,6 @@
       <version>1.7</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-xml</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -103,16 +92,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <Fragment-Host>org.apache.logging.log4j.core</Fragment-Host>
-            <Export-Package>org.apache.log4j.*</Export-Package>
-          </instructions>
-        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -137,7 +116,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${checkstyle.plugin.version}</version>
+        <version>2.7</version>
         <configuration>
           <!--<propertiesLocation>${vfs.parent.dir}/checkstyle.properties</propertiesLocation> -->
           <configLocation>${log4jParentDir}/checkstyle.xml</configLocation>
@@ -152,13 +131,30 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>${javadoc.plugin.version}</version>
         <configuration>
-          <bottom><![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
+          <bottom> <![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
             Apache Logging, Apache Log4j, Log4j, Apache, the Apache feather logo, the Apache Logging project logo,
             and the Apache Log4j logo are trademarks of The Apache Software Foundation.</p>]]></bottom>
           <!-- module link generation is completely broken in the javadoc plugin for a multi-module non-aggregating
                project -->
           <detectOfflineLinks>false</detectOfflineLinks>
           <linksource>true</linksource>
+          <tags>
+            <tag>
+              <name>issue</name>
+              <placement>a</placement>
+              <head>JIRA issue:</head>
+            </tag>
+            <tag>
+              <name>doubt</name>
+              <placement>a</placement>
+              <head>Troublesome:</head>
+            </tag>
+            <tag>
+              <name>compare</name>
+              <placement>a</placement>
+              <head>Compare with:</head>
+            </tag>
+          </tags>
         </configuration>
         <reportSets>
           <reportSet>
@@ -172,7 +168,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs.plugin.version}</version>
+        <version>2.5.2</version>
         <configuration>
           <fork>true</fork>
           <jvmArgs>-Duser.language=en</jvmArgs>
@@ -184,7 +180,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>${jxr.plugin.version}</version>
+        <version>2.3</version>
         <reportSets>
           <reportSet>
             <id>non-aggregate</id>
@@ -205,8 +201,19 @@
         <artifactId>maven-pmd-plugin</artifactId>
         <version>${pmd.plugin.version}</version>
         <configuration>
-          <targetJdk>${maven.compiler.target}</targetJdk>
+          <targetJdk>${maven.compile.target}</targetJdk>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>${cobertura.plugin.version}</version>
+        <reportSets>
+          <reportSet>
+            <!-- Disabled as it makes the site build very slow and causes the performance unit test to fail -->
+            <reports />
+          </reportSet>
+        </reportSets>
       </plugin>
     </plugins>
   </reporting>

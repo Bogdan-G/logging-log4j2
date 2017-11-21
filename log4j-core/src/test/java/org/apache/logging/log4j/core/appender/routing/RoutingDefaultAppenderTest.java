@@ -21,36 +21,65 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.EventLogger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.message.StructuredDataMessage;
-import org.junit.Rule;
+import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.test.appender.ListAppender;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
 
 /**
  *
  */
 public class RoutingDefaultAppenderTest {
-    private static final String LOG_FILE = "target/routing1/routingtest.log";
+    private static final String CONFIG = "log4j-routing3.xml";
+    private static Configuration config;
+    private static ListAppender app;
+    private static LoggerContext ctx;
 
-    private final LoggerContextRule loggerContextRule = new LoggerContextRule("log4j-routing3.xml");
+    @BeforeClass
+    public static void setupClass() {
+        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
+        ctx = (LoggerContext) LogManager.getContext(false);
+        config = ctx.getConfiguration();
+        for (final Map.Entry<String, Appender> entry : config.getAppenders().entrySet()) {
+            if (entry.getKey().equals("List")) {
+                app = (ListAppender) entry.getValue();
+                break;
+            }
+        }
+        final File file = new File("target/rolling1/routingtest.log");
+        file.delete();
+    }
 
-    @Rule
-    public RuleChain rules = loggerContextRule.withCleanFilesRule(LOG_FILE);
+    @AfterClass
+    public static void cleanupClass() {
+        System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
+        ctx.reconfigure();
+        StatusLogger.getLogger().reset();
+        final File file = new File("target/rolling1/routingtest.log");
+        file.delete();
+    }
 
     @Test
     public void routingTest() {
         StructuredDataMessage msg = new StructuredDataMessage("Test", "This is a test", "Service");
         EventLogger.logEvent(msg);
-        final List<LogEvent> list = loggerContextRule.getListAppender("List").getEvents();
+        final List<LogEvent> list = app.getEvents();
         assertNotNull("No events generated", list);
         assertTrue("Incorrect number of events. Expected 1, got " + list.size(), list.size() == 1);
         msg = new StructuredDataMessage("Test", "This is a test", "Alert");
         EventLogger.logEvent(msg);
-        final File file = new File(LOG_FILE);
+        File file = new File("target/routing1/routingtest.log");
         assertTrue("Alert file was not created", file.exists());
     }
 }

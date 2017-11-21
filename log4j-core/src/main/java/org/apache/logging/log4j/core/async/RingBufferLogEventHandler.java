@@ -16,7 +16,6 @@
  */
 package org.apache.logging.log4j.core.async;
 
-import com.lmax.disruptor.LifecycleAware;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.SequenceReportingEventHandler;
 
@@ -27,12 +26,11 @@ import com.lmax.disruptor.SequenceReportingEventHandler;
  * constructor.
  */
 public class RingBufferLogEventHandler implements
-        SequenceReportingEventHandler<RingBufferLogEvent>, LifecycleAware {
+        SequenceReportingEventHandler<RingBufferLogEvent> {
 
     private static final int NOTIFY_PROGRESS_THRESHOLD = 50;
     private Sequence sequenceCallback;
     private int counter;
-    private long threadId = -1;
 
     @Override
     public void setSequenceCallback(final Sequence sequenceCallback) {
@@ -54,21 +52,4 @@ public class RingBufferLogEventHandler implements
         }
     }
 
-    /**
-     * Returns the thread ID of the background consumer thread, or {@code -1} if the background thread has not started
-     * yet.
-     * @return the thread ID of the background consumer thread, or {@code -1}
-     */
-    public long getThreadId() {
-        return threadId;
-    }
-
-    @Override
-    public void onStart() {
-        threadId = Thread.currentThread().getId();
-    }
-
-    @Override
-    public void onShutdown() {
-    }
 }

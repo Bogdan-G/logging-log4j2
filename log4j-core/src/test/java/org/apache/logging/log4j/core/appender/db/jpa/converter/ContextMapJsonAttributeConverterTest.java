@@ -19,14 +19,12 @@ package org.apache.logging.log4j.core.appender.db.jpa.converter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.categories.Appenders;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
-@Category(Appenders.Jpa.class)
 public class ContextMapJsonAttributeConverterTest {
     private ContextMapJsonAttributeConverter converter;
 
@@ -35,9 +33,14 @@ public class ContextMapJsonAttributeConverterTest {
         this.converter = new ContextMapJsonAttributeConverter();
     }
 
+    @After
+    public void tearDown() {
+
+    }
+
     @Test
     public void testConvert01() {
-        final Map<String, String> map = new HashMap<>();
+        final Map<String, String> map = new HashMap<String, String>();
         map.put("test1", "another1");
         map.put("key2", "value2");
 
@@ -53,7 +56,7 @@ public class ContextMapJsonAttributeConverterTest {
 
     @Test
     public void testConvert02() {
-        final Map<String, String> map = new HashMap<>();
+        final Map<String, String> map = new HashMap<String, String>();
         map.put("someKey", "coolValue");
         map.put("anotherKey", "testValue");
         map.put("myKey", "yourValue");

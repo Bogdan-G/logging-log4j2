@@ -18,7 +18,6 @@ package org.apache.logging.log4j.taglib;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.PageContext;
 
@@ -38,7 +37,7 @@ import org.apache.logging.log4j.status.StatusLogger;
 final class TagUtils {
     private static final StatusLogger LOGGER = StatusLogger.getLogger();
 
-    private static final Set<Object> WARNED_FOR = new HashSet<>();
+    private static final Set<Object> WARNED_FOR = new HashSet<Object>();
 
     private static final String LOGGER_SCOPE_ATTRIBUTE = "org.apache.logging.log4j.taglib.LOGGER_SCOPE_ATTRIBUTE";
 

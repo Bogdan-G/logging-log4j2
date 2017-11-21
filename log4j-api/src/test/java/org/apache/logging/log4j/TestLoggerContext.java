@@ -16,38 +16,31 @@
  */
 package org.apache.logging.log4j;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.LoggerContext;
-import org.apache.logging.log4j.spi.ExtendedLogger;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  */
 public class TestLoggerContext implements LoggerContext {
-    private final Map<String, ExtendedLogger> map = new HashMap<>();
+    private final Map<String, Logger> map = new HashMap<String, Logger>();
 
     @Override
-    public ExtendedLogger getLogger(final String name) {
-        final ExtendedLogger extendedLogger = map.get(name);
-        if (extendedLogger != null) {
-			return extendedLogger;
+    public Logger getLogger(final String name) {
+        if (map.containsKey(name)) {
+            return map.get(name);
         }
-        final ExtendedLogger logger = new TestLogger(name);
+        final Logger logger = new TestLogger(name);
         map.put(name, logger);
         return logger;
     }
 
     @Override
-    public ExtendedLogger getLogger(final String name, final MessageFactory messageFactory) {
+    public Logger getLogger(final String name, final MessageFactory messageFactory) {
         return new TestLogger(name, messageFactory);
-    }
-
-    @Override
-    public Object getExternalContext() {
-        return null;
     }
 
     @Override
@@ -56,13 +49,8 @@ public class TestLoggerContext implements LoggerContext {
     }
 
     @Override
-    public boolean hasLogger(final String name, final MessageFactory messageFactory) {
-        return false;
-    }
-
-    @Override
-    public boolean hasLogger(final String name, final Class<? extends MessageFactory> messageFactoryClass) {
-        return false;
+    public Object getExternalContext() {
+        return null;
     }
 
 }

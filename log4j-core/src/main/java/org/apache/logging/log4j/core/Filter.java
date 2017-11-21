@@ -26,24 +26,16 @@ import org.apache.logging.log4j.util.EnglishEnums;
  * Interface that must be implemented to allow custom event filtering. It is highly recommended that
  * applications make use of the Filters provided with this implementation before creating their own.
  *
- * <p>This interface supports "global" filters (i.e. - all events must pass through them first), attached to
+ * This interface supports "global" filters (i.e. - all events must pass through them first), attached to
  * specific loggers and associated with Appenders. It is recommended that, where possible, Filter implementations
- * create a generic filtering method that can be called from any of the filter methods.</p>
+ * create a generic filtering method that can be called from any of the filter methods.
  */
-public interface Filter extends LifeCycle {
-
-    /**
-     * Main {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() plugin element type} for
-     * Filter plugins.
-     *
-     * @since 2.1
-     */
-    String ELEMENT_TYPE = "filter";
+public interface Filter {
 
     /**
      * The result that can returned from a filter method call.
      */
-     enum Result {
+    public enum Result {
         /**
          * The event will be processed without further filtering based on the log Level.
          */
@@ -100,177 +92,6 @@ public interface Filter extends LifeCycle {
      * @return the Result.
      */
     Result filter(Logger logger, Level level, Marker marker, String msg, Object... params);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @param p5 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @param p5 the message parameters
-     * @param p6 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @param p5 the message parameters
-     * @param p6 the message parameters
-     * @param p7 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @param p5 the message parameters
-     * @param p6 the message parameters
-     * @param p7 the message parameters
-     * @param p8 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7, Object p8);
-
-    /**
-     * Filter an event.
-     *
-     * @param logger The Logger.
-     * @param level the event logging level.
-     * @param marker The Marker for the event or null.
-     * @param message The message.
-     * @param p0 the message parameters
-     * @param p1 the message parameters
-     * @param p2 the message parameters
-     * @param p3 the message parameters
-     * @param p4 the message parameters
-     * @param p5 the message parameters
-     * @param p6 the message parameters
-     * @param p7 the message parameters
-     * @param p8 the message parameters
-     * @param p9 the message parameters
-     * @return the Result.
-     */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7, Object p8, Object p9);
 
     /**
      * Filter an event.

@@ -16,113 +16,16 @@
  */
 package org.apache.logging.log4j.jcl;
 
-import java.io.Serializable;
-
 import org.apache.commons.logging.Log;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.spi.ExtendedLogger;
+import org.apache.logging.log4j.spi.AbstractLogger;
+import org.apache.logging.log4j.spi.AbstractLoggerWrapper;
 
 /**
  *
  */
-public class Log4jLog implements Log, Serializable {
-    
-    private static final long serialVersionUID = 1L;
-    private static final String FQCN = Log4jLog.class.getName();
+public class Log4jLog extends AbstractLoggerWrapper implements Log {
 
-    private final ExtendedLogger logger;
-
-    public Log4jLog(final ExtendedLogger logger) {
-        this.logger = logger;
-    }
-
-    @Override
-    public boolean isDebugEnabled() {
-        return logger.isEnabled(Level.DEBUG, null, null);
-    }
-
-    @Override
-    public boolean isErrorEnabled() {
-        return logger.isEnabled(Level.ERROR, null, null);
-    }
-
-    @Override
-    public boolean isFatalEnabled() {
-        return logger.isEnabled(Level.FATAL, null, null);
-    }
-
-    @Override
-    public boolean isInfoEnabled() {
-        return logger.isEnabled(Level.INFO, null, null);
-    }
-
-    @Override
-    public boolean isTraceEnabled() {
-        return logger.isEnabled(Level.TRACE, null, null);
-    }
-
-    @Override
-    public boolean isWarnEnabled() {
-        return logger.isEnabled(Level.WARN, null, null);
-    }
-
-    @Override
-    public void trace(final Object message) {
-        logger.logIfEnabled(FQCN, Level.TRACE, null, message, null);
-    }
-
-    @Override
-    public void trace(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.TRACE, null, message, t);
-    }
-
-    @Override
-    public void debug(final Object message) {
-        logger.logIfEnabled(FQCN, Level.DEBUG, null, message, null);
-    }
-
-    @Override
-    public void debug(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.DEBUG, null, message, t);
-    }
-
-    @Override
-    public void info(final Object message) {
-        logger.logIfEnabled(FQCN, Level.INFO, null, message, null);
-    }
-
-    @Override
-    public void info(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.INFO, null, message, t);
-    }
-
-    @Override
-    public void warn(final Object message) {
-        logger.logIfEnabled(FQCN, Level.WARN, null, message, null);
-    }
-
-    @Override
-    public void warn(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.WARN, null, message, t);
-    }
-
-    @Override
-    public void error(final Object message) {
-        logger.logIfEnabled(FQCN, Level.ERROR, null, message, null);
-    }
-
-    @Override
-    public void error(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.ERROR, null, message, t);
-    }
-
-    @Override
-    public void fatal(final Object message) {
-        logger.logIfEnabled(FQCN, Level.FATAL, null, message, null);
-    }
-
-    @Override
-    public void fatal(final Object message, final Throwable t) {
-        logger.logIfEnabled(FQCN, Level.FATAL, null, message, t);
+    public Log4jLog(final AbstractLogger logger, final String name) {
+        super(logger, name, null);
     }
 }

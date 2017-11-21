@@ -18,28 +18,16 @@ package org.apache.logging.log4j.core.appender;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.AbstractLifeCycle;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.ConfigurationException;
-import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Abstract base class used to register managers.
- * <p>
- * This class implements {@link AutoCloseable} mostly to allow unit tests to be written safely and succinctly. While
- * managers do need to allocate resources (usually on construction) and then free these resources, a manager is longer
- * lived than other auto-closeable objects like streams. None the less, making a manager AutoCloseable forces readers to
- * be aware of the the pattern: allocate resources on construction and call {@link #close()} at some point.
- * </p>
  */
-public abstract class AbstractManager implements AutoCloseable {
+public abstract class AbstractManager {
 
     /**
      * Allow subclasses access to the status logger without creating another instance.
@@ -48,7 +36,7 @@ public abstract class AbstractManager implements AutoCloseable {
 
     // Need to lock that map instead of using a ConcurrentMap due to stop removing the
     // manager from the map and closing the stream, requiring the whole stop method to be locked.
-    private static final Map<String, AbstractManager> MAP = new HashMap<>();
+    private static final Map<String, AbstractManager> MAP = new HashMap<String, AbstractManager>();
 
     private static final Lock LOCK = new ReentrantLock();
 
@@ -59,37 +47,9 @@ public abstract class AbstractManager implements AutoCloseable {
 
     private final String name;
 
-    private final LoggerContext loggerContext;
-
-    protected AbstractManager(final LoggerContext loggerContext, final String name) {
-        this.loggerContext = loggerContext;
+    protected AbstractManager(final String name) {
         this.name = name;
         LOGGER.debug("Starting {} {}", this.getClass().getSimpleName(), name);
-    }
-
-    /**
-     * Called to signify that this Manager is no longer required by an Appender.
-     */
-    @Override
-    public void close() {
-        stop(AbstractLifeCycle.DEFAULT_STOP_TIMEOUT, AbstractLifeCycle.DEFAULT_STOP_TIMEUNIT);
-    }
-
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        boolean stopped = true;
-        LOCK.lock();
-        try {
-            --count;
-            if (count <= 0) {
-                MAP.remove(name);
-                LOGGER.debug("Shutting down {} {}", this.getClass().getSimpleName(), getName());
-                stopped = releaseSub(timeout, timeUnit);
-                LOGGER.debug("Shut down {} {}, all resources released: {}", this.getClass().getSimpleName(), getName(), stopped);
-            }
-        } finally {
-            LOCK.unlock();
-        }
-        return stopped;
     }
 
     /**
@@ -101,8 +61,6 @@ public abstract class AbstractManager implements AutoCloseable {
      * @param <T> The type of the Factory data.
      * @return A Manager with the specified name and type.
      */
-    // @SuppressWarnings("resource"): this is a factory method, the resource is allocated and released elsewhere.
-    @SuppressWarnings("resource")
     public static <M extends AbstractManager, T> M getManager(final String name, final ManagerFactory<M, T> factory,
                                                               final T data) {
         LOCK.lock();
@@ -112,22 +70,15 @@ public abstract class AbstractManager implements AutoCloseable {
             if (manager == null) {
                 manager = factory.createManager(name, data);
                 if (manager == null) {
-                    throw new IllegalStateException("ManagerFactory [" + factory + "] unable to create manager for ["
-                            + name + "] with data [" + data + "]");
+                    throw new IllegalStateException("Unable to create a manager");
                 }
                 MAP.put(name, manager);
-            } else {
-                manager.updateData(data);
             }
             manager.count++;
             return manager;
         } finally {
             LOCK.unlock();
         }
-    }
-
-    public void updateData(final Object data) {
-        // This default implementation does nothing.
     }
 
     /**
@@ -145,35 +96,10 @@ public abstract class AbstractManager implements AutoCloseable {
     }
 
     /**
-     * Returns the specified manager, cast to the specified narrow type.
-     * @param narrowClass the type to cast to
-     * @param manager the manager object to return
-     * @param <M> the narrow type
-     * @return the specified manager, cast to the specified narrow type
-     * @throws ConfigurationException if the manager cannot be cast to the specified type, which only happens when
-     *          the configuration has multiple incompatible appenders pointing to the same resource
-     * @since 2.9
-     * @see <a href="https://issues.apache.org/jira/browse/LOG4J2-1908">LOG4J2-1908</a>
+     * May be overridden by Managers to perform processing while the Manager is being released and the
+     * lock is held.
      */
-    protected static <M extends AbstractManager> M narrow(final Class<M> narrowClass, final AbstractManager manager) {
-        if (narrowClass.isAssignableFrom(manager.getClass())) {
-            return (M) manager;
-        }
-        throw new ConfigurationException(
-                "Configuration has multiple incompatible Appenders pointing to the same resource '" +
-                        manager.getName() + "'");
-    }
-
-    /**
-     * May be overridden by managers to perform processing while the manager is being released and the
-     * lock is held. A timeout is passed for implementors to use as they see fit.
-     * @param timeout timeout
-     * @param timeUnit timeout time unit
-     * @return true if all resources were closed normally, false otherwise.
-     */
-    protected boolean releaseSub(final long timeout, final TimeUnit timeUnit) {
-        // This default implementation does nothing.
-        return true;
+    protected void releaseSub() {
     }
 
     protected int getCount() {
@@ -181,23 +107,20 @@ public abstract class AbstractManager implements AutoCloseable {
     }
 
     /**
-     * Gets the logger context used to create this instance or null. The logger context is usually set when an appender
-     * creates a manager and that appender is given a Configuration. Not all appenders are given a Configuration by
-     * their factory method or builder.
-     *
-     * @return the logger context used to create this instance or null.
-     */
-    public LoggerContext getLoggerContext() {
-        return loggerContext;
-    }
-
-    /**
      * Called to signify that this Manager is no longer required by an Appender.
-     * @deprecated In 2.7, use {@link #close()}.
      */
-    @Deprecated
     public void release() {
-        close();
+        LOCK.lock();
+        try {
+            --count;
+            if (count <= 0) {
+                MAP.remove(name);
+                LOGGER.debug("Shutting down {} {}", this.getClass().getSimpleName(), getName());
+                releaseSub();
+            }
+        } finally {
+            LOCK.unlock();
+        }
     }
 
     /**
@@ -216,25 +139,6 @@ public abstract class AbstractManager implements AutoCloseable {
      * format descriptors are specified.
      */
     public Map<String, String> getContentFormat() {
-        return new HashMap<>();
+        return new HashMap<String, String>();
     }
-
-    protected void log(final Level level, final String message, final Throwable throwable) {
-        final Message m = LOGGER.getMessageFactory().newMessage("{} {} {}: {}",
-                getClass().getSimpleName(), getName(), message, throwable);
-        LOGGER.log(level, m, throwable);
-    }
-
-    protected void logDebug(final String message, final Throwable throwable) {
-        log(Level.DEBUG, message, throwable);
-    }
-
-    protected void logError(final String message, final Throwable throwable) {
-        log(Level.ERROR, message, throwable);
-    }
-
-    protected void logWarn(final String message, final Throwable throwable) {
-        log(Level.WARN, message, throwable);
-    }
-
 }

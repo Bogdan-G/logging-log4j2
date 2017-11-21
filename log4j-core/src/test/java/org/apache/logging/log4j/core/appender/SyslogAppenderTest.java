@@ -16,16 +16,13 @@
  */
 package org.apache.logging.log4j.core.appender;
 
-import java.io.IOException;
-import java.net.SocketException;
-
-import org.apache.logging.log4j.core.appender.SyslogAppender.Builder;
-import org.apache.logging.log4j.core.net.Protocol;
 import org.apache.logging.log4j.core.net.mock.MockSyslogServerFactory;
-import org.apache.logging.log4j.util.EnglishEnums;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.SocketException;
 
 /**
  *
@@ -53,16 +50,16 @@ public class SyslogAppenderTest extends SyslogAppenderTestBase {
     public void testTCPAppender() throws Exception {
         initTCPTestEnvironment(null);
 
-        sendAndCheckLegacyBsdMessage("This is a test message");
-        sendAndCheckLegacyBsdMessage("This is a test message 2");
+        sendAndCheckLegacyBSDMessage("This is a test message");
+        sendAndCheckLegacyBSDMessage("This is a test message 2");
     }
 
     @Test
     public void testDefaultAppender() throws Exception {
         initTCPTestEnvironment(null);
 
-        sendAndCheckLegacyBsdMessage("This is a test message");
-        sendAndCheckLegacyBsdMessage("This is a test message 2");
+        sendAndCheckLegacyBSDMessage("This is a test message");
+        sendAndCheckLegacyBSDMessage("This is a test message 2");
     }
 
     @Test
@@ -76,7 +73,7 @@ public class SyslogAppenderTest extends SyslogAppenderTestBase {
     public void testUDPAppender() throws Exception {
         initUDPTestEnvironment("bsd");
 
-        sendAndCheckLegacyBsdMessage("This is a test message");
+        sendAndCheckLegacyBSDMessage("This is a test message");
         root.removeAppender(appender);
         appender.stop();
     }
@@ -90,44 +87,27 @@ public class SyslogAppenderTest extends SyslogAppenderTestBase {
         appender.stop();
     }
 
-    protected void initUDPTestEnvironment(final String messageFormat) throws SocketException {
+    protected void initUDPTestEnvironment(String messageFormat) throws SocketException {
         syslogServer = MockSyslogServerFactory.createUDPSyslogServer(1, PORTNUM);
         syslogServer.start();
         initAppender("udp", messageFormat);
     }
 
-    protected void initTCPTestEnvironment(final String messageFormat) throws IOException {
+    protected void initTCPTestEnvironment(String messageFormat) throws IOException {
         syslogServer = MockSyslogServerFactory.createTCPSyslogServer(1, PORTNUM);
         syslogServer.start();
         initAppender("tcp", messageFormat);
     }
 
-    protected void initAppender(final String transportFormat, final String messageFormat) {
+    protected void initAppender(String transportFormat, String messageFormat) {
         appender = createAppender(transportFormat, messageFormat);
-        validate(appender);
         appender.start();
-        initRootLogger(appender);
+       initRootLogger(appender);
     }
 
-    protected SyslogAppender createAppender(final String protocol, final String format) {
-        return newSyslogAppenderBuilder(protocol, format, includeNewLine).build();
-    }
-
-    protected Builder newSyslogAppenderBuilder(final String protocol, final String format, final boolean newLine) {
-        // @formatter:off
-        return SyslogAppender.newSyslogAppenderBuilder()
-                .withPort(PORTNUM)
-                .withProtocol(EnglishEnums.valueOf(Protocol.class, protocol))
-                .withReconnectDelayMillis(-1)
-                .withName("TestApp")
-                .withIgnoreExceptions(false)
-                .setId("Audit")
-                .setEnterpriseNumber(18060)
-                .setMdcId("RequestContext")
-                .setNewLine(newLine)
-                .setAppName("TestApp")
-                .setMsgId("Test")
-                .setFormat(format);
-        // @formatter:on
+    private SyslogAppender createAppender(final String protocol, final String format) {
+        return SyslogAppender.createAppender("localhost", PORT, protocol, "-1", null, "Test", "true", "false", "LOCAL0", "Audit",
+            "18060", "true", "RequestContext", null, null, includeNewLine, null, "TestApp", "Test", null, "ipAddress,loginId",
+            null, format, null, null, null, null, null, null);
     }
 }

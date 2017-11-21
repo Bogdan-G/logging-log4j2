@@ -43,13 +43,9 @@ public class Priority {
      * @return The integer value of the priority.
      */
     public static int getPriority(final Facility facility, final Level level) {
-        return toPriority(facility, Severity.getSeverity(level));
+        return (facility.getCode() << 3) + Severity.getSeverity(level).getCode();
     }
 
-    private static int toPriority(final Facility aFacility, final Severity aSeverity) {
-        return (aFacility.getCode() << 3) + aSeverity.getCode();
-    }
-    
     /**
      * Returns the Facility.
      * @return the Facility.
@@ -71,7 +67,7 @@ public class Priority {
      * @return the value of this Priority.
      */
     public int getValue() {
-        return toPriority(facility, severity);
+        return facility.getCode() << 3 + severity.getCode();
     }
 
     @Override

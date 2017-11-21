@@ -18,11 +18,12 @@ package org.apache.logging.log4j.core.appender.db.jpa;
 
 import java.util.Date;
 import java.util.Map;
-
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -34,16 +35,14 @@ import javax.persistence.Transient;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.db.jpa.converter.LevelAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.MessageAttributeConverter;
 import org.apache.logging.log4j.core.appender.db.jpa.converter.ThrowableAttributeConverter;
-import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.message.Message;
 
 @Entity
 @Table(name = "jpaBaseLogEntry")
+@SuppressWarnings("unused")
 public class TestBaseEntity extends AbstractLogEventWrapperEntity {
     private static final long serialVersionUID = 1L;
 
@@ -71,7 +70,7 @@ public class TestBaseEntity extends AbstractLogEventWrapperEntity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "eventDate")
     public Date getEventDate() {
-        return new Date(this.getTimeMillis());
+        return new Date(this.getMillis());
     }
 
     public void setEventDate(final Date date) {
@@ -79,7 +78,7 @@ public class TestBaseEntity extends AbstractLogEventWrapperEntity {
     }
 
     @Override
-    @Convert(converter = LevelAttributeConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "level")
     public Level getLevel() {
         return this.getWrappedEvent().getLevel();
@@ -113,32 +112,14 @@ public class TestBaseEntity extends AbstractLogEventWrapperEntity {
 
     @Override
     @Transient
-    public long getThreadId() {
-        return this.getWrappedEvent().getThreadId();
-    }
-
-    @Override
-    @Transient
     public String getThreadName() {
         return this.getWrappedEvent().getThreadName();
     }
 
     @Override
     @Transient
-    public int getThreadPriority() {
-        return this.getWrappedEvent().getThreadPriority();
-    }
-
-    @Override
-    @Transient
-    public long getTimeMillis() {
-        return this.getWrappedEvent().getTimeMillis();
-    }
-
-    @Override
-    @Transient
-    public long getNanoTime() {
-        return this.getWrappedEvent().getNanoTime();
+    public long getMillis() {
+        return this.getWrappedEvent().getMillis();
     }
 
     @Override
@@ -150,21 +131,8 @@ public class TestBaseEntity extends AbstractLogEventWrapperEntity {
 
     @Override
     @Transient
-    public ThrowableProxy getThrownProxy() {
-        return this.getWrappedEvent().getThrownProxy();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    @Transient
     public Map<String, String> getContextMap() {
         return this.getWrappedEvent().getContextMap();
-    }
-
-    @Override
-    @Transient
-    public ReadOnlyStringMap getContextData() {
-        return this.getWrappedEvent().getContextData();
     }
 
     @Override
@@ -175,7 +143,7 @@ public class TestBaseEntity extends AbstractLogEventWrapperEntity {
 
     @Override
     @Transient
-    public String getLoggerFqcn() {
-        return this.getWrappedEvent().getLoggerFqcn();
+    public String getFQCN() {
+        return this.getWrappedEvent().getFQCN();
     }
 }

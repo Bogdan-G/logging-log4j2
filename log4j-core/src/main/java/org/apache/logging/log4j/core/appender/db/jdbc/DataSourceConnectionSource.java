@@ -24,17 +24,16 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.helpers.Strings;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.Strings;
 
 /**
- * A {@link JdbcAppender} connection source that uses a {@link DataSource} to connect to the database.
+ * A {@link JDBCAppender} connection source that uses a {@link DataSource} to connect to the database.
  */
-@Plugin(name = "DataSource", category = Core.CATEGORY_NAME, elementType = "connectionSource", printObject = true)
+@Plugin(name = "DataSource", category = "Core", elementType = "connectionSource", printObject = true)
 public final class DataSourceConnectionSource implements ConnectionSource {
     private static final Logger LOGGER = StatusLogger.getLogger();
 

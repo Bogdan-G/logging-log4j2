@@ -21,15 +21,15 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 
 /**
- * Looks up keys from {@link org.apache.logging.log4j.message.StructuredDataMessage} log messages.
+ * Looks up keys from system properties.
  */
-@Plugin(name = "sd", category = StrLookup.CATEGORY)
+@Plugin(name = "sd", category = "Lookup")
 public class StructuredDataLookup implements StrLookup {
 
     /**
-     * Returns {@code null}. This Lookup plugin does not make sense outside the context of a LogEvent.
+     * Lookup the value for the key.
      * @param key  the key to be looked up, may be null
-     * @return {@code null}
+     * @return The value for the key.
      */
     @Override
     public String lookup(final String key) {
@@ -37,7 +37,7 @@ public class StructuredDataLookup implements StrLookup {
     }
 
     /**
-     * Looks up the value for the key using the data in the LogEvent.
+     * Lookup the value for the key using the data in the LogEvent.
      * @param event The current LogEvent.
      * @param key  the key to be looked up, may be null
      * @return The value associated with the key.

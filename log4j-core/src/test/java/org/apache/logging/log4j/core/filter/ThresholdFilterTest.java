@@ -18,12 +18,12 @@ package org.apache.logging.log4j.core.filter;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -32,20 +32,14 @@ public class ThresholdFilterTest {
 
     @Test
     public void testThresholds() {
-        final ThresholdFilter filter = ThresholdFilter.createFilter(Level.ERROR, null, null);
+        final ThresholdFilter filter = ThresholdFilter.createFilter("ERROR", null, null);
         filter.start();
         assertTrue(filter.isStarted());
-        assertSame(Filter.Result.DENY, filter.filter(null, Level.DEBUG, null, (Object) null, (Throwable) null));
-        assertSame(Filter.Result.NEUTRAL, filter.filter(null, Level.ERROR, null, (Object) null, (Throwable) null));
-        LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLevel(Level.DEBUG) //
-                .setMessage(new SimpleMessage("Test")) //
-                .build();
-        assertSame(Filter.Result.DENY, filter.filter(event));
-        event = Log4jLogEvent.newBuilder() //
-                .setLevel(Level.ERROR) //
-                .setMessage(new SimpleMessage("Test")) //
-                .build();
-        assertSame(Filter.Result.NEUTRAL, filter.filter(event));
+        assertTrue(filter.filter(null, Level.DEBUG, null, null, (Throwable)null) == Filter.Result.DENY);
+        assertTrue(filter.filter(null, Level.ERROR, null, null, (Throwable)null) == Filter.Result.NEUTRAL);
+        LogEvent event = new Log4jLogEvent(null, null, null, Level.DEBUG, new SimpleMessage("Test"), null);
+        assertTrue(filter.filter(event) == Filter.Result.DENY);
+        event = new Log4jLogEvent(null, null, null, Level.ERROR, new SimpleMessage("Test"), null);
+        assertTrue(filter.filter(event) == Filter.Result.NEUTRAL);
     }
 }

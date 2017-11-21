@@ -22,9 +22,8 @@ import org.apache.logging.log4j.core.LogEvent;
  * Factory to create Flume events.
  */
 public interface FlumeEventFactory {
-    
     /**
-     * Creates a Flume event.
+     * Create a Flume event.
      * @param event The Log4j LogEvent.
      * @param includes A comma separated list of MDC elements to include.
      * @param excludes A comma separated list of MDC elements to exclude.

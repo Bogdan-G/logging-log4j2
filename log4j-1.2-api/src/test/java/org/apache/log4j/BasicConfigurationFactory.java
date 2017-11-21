@@ -16,15 +16,12 @@
  */
 package org.apache.log4j;
 
-import java.net.URI;
-
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.AbstractConfiguration;
+import org.apache.logging.log4j.core.config.BaseConfiguration;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import java.net.URI;
 
 /**
  *
@@ -33,33 +30,28 @@ public class BasicConfigurationFactory extends ConfigurationFactory {
 
     @Override
     public String[] getSupportedTypes() {
-        return new String[] { "*" };
+        return new String[] {"*"};
     }
 
     @Override
-    public Configuration getConfiguration(final LoggerContext loggerContext, final ConfigurationSource source) {
-        return new BasicConfiguration(loggerContext);
+    public Configuration getConfiguration(final ConfigurationSource source) {
+        return new BasicConfiguration();
     }
 
     @Override
-    public Configuration getConfiguration(final LoggerContext loggerContext, final String name, final URI configLocation) {
-        return new BasicConfiguration(loggerContext);
+    public Configuration getConfiguration(final String name, final URI configLocation) {
+        return new BasicConfiguration();
     }
 
-    public class BasicConfiguration extends AbstractConfiguration {
-
-        private static final long serialVersionUID = -2716784321395089563L;
+    public class BasicConfiguration extends BaseConfiguration {
 
         private static final String DEFAULT_LEVEL = "org.apache.logging.log4j.level";
 
-        public BasicConfiguration(final LoggerContext loggerContext) {
-            super(loggerContext, ConfigurationSource.NULL_SOURCE);
-
+        public BasicConfiguration() {
             final LoggerConfig root = getRootLogger();
             setName("BasicConfiguration");
             final String levelName = System.getProperty(DEFAULT_LEVEL);
-            final Level level = (levelName != null && Level.getLevel(levelName) != null) ? Level.getLevel(levelName)
-                    : Level.DEBUG;
+            final Level level = (levelName != null && Level.valueOf(levelName) != null) ? Level.valueOf(levelName) : Level.DEBUG;
             root.setLevel(level);
         }
 

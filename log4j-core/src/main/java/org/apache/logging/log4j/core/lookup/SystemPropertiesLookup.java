@@ -16,24 +16,31 @@
  */
 package org.apache.logging.log4j.core.lookup;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Looks up keys from system properties.
  */
-@Plugin(name = "sys", category = StrLookup.CATEGORY)
-public class SystemPropertiesLookup extends AbstractLookup {
-
-    private static final Logger LOGGER = StatusLogger.getLogger();
-    private static final Marker LOOKUP = MarkerManager.getMarker("LOOKUP");
+@Plugin(name = "sys", category = "Lookup")
+public class SystemPropertiesLookup implements StrLookup {
 
     /**
-     * Looks up the value for the key using the data in the LogEvent.
+     * Lookup the value for the key.
+     * @param key  the key to be looked up, may be null
+     * @return The value for the key.
+     */
+    @Override
+    public String lookup(final String key) {
+        try {
+            return System.getProperty(key);
+        } catch (final Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Lookup the value for the key using the data in the LogEvent.
      * @param event The current LogEvent.
      * @param key  the key to be looked up, may be null
      * @return The value associated with the key.
@@ -43,7 +50,6 @@ public class SystemPropertiesLookup extends AbstractLookup {
         try {
             return System.getProperty(key);
         } catch (final Exception ex) {
-            LOGGER.warn(LOOKUP, "Error while getting system property [{}].", key, ex);
             return null;
         }
     }

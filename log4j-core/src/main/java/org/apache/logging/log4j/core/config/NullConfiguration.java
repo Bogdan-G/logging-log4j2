@@ -21,19 +21,14 @@ import org.apache.logging.log4j.Level;
 /**
  * This configuration defaults to no logging.
  */
-public class NullConfiguration extends AbstractConfiguration {
+public class NullConfiguration extends BaseConfiguration {
 
-    /**
-     * Name of this configuration.
-     */
     public static final String NULL_NAME = "Null";
 
     public NullConfiguration() {
-        super(null, ConfigurationSource.NULL_SOURCE);
 
         setName(NULL_NAME);
         final LoggerConfig root = getRootLogger();
         root.setLevel(Level.OFF);
     }
-
 }

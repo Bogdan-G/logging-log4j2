@@ -1,186 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Licensed to the Apache Software Foundation (ASF) under one or more
-  ~ contributor license agreements. See the NOTICE file distributed with
-  ~ this work for additional information regarding copyright ownership.
-  ~ The ASF licenses this file to You under the Apache license, Version 2.0
-  ~ (the "License"); you may not use this file except in compliance with
-  ~ the License. You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the license for the specific language governing permissions and
-  ~ limitations under the license.
-  -->
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.10.1-SNAPSHOT</version>
+    <version>2.0-beta9</version>
     <relativePath>../</relativePath>
   </parent>
   <artifactId>log4j-core</artifactId>
   <packaging>jar</packaging>
   <name>Apache Log4j Core</name>
-  <description>The Apache Log4j Implementation</description>
+  <description>The Log4j Implementation</description>
   <properties>
     <log4jParentDir>${basedir}/..</log4jParentDir>
     <docLabel>Core Documentation</docLabel>
     <projectDir>/core</projectDir>
   </properties>
   <dependencies>
-    <!-- Naturally, all implementations require the log4j-api JAR -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
     </dependency>
-    <!-- Used for OSGi bundle support -->
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <!-- Required for AsyncLoggers -->
-    <dependency>
-      <groupId>com.lmax</groupId>
-      <artifactId>disruptor</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Alternative implementation of BlockingQueue using Conversant Disruptor for AsyncAppender -->
-    <dependency>
-      <groupId>com.conversantmedia</groupId>
-      <artifactId>disruptor</artifactId>
-      <classifier>jdk7</classifier>
-      <optional>true</optional>
-    </dependency>
-    <!-- Alternative implementation of BlockingQueue using JCTools for AsyncAppender -->
-    <dependency>
-      <groupId>org.jctools</groupId>
-      <artifactId>jctools-core</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for JSON support -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for JSON support -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for YAML support (including JSON requirements) -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-yaml</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for XML layout and receiver support -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-xml</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- POM for jackson-dataformat-xml 2.9.1 depends on woodstox-core 5.0.3 -->
-    <dependency>
-      <groupId>com.fasterxml.woodstox</groupId>
-      <artifactId>woodstox-core</artifactId>
-      <version>5.0.3</version>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for console color support in Windows -->
-    <dependency>
-      <groupId>org.fusesource.jansi</groupId>
-      <artifactId>jansi</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Required for SMTPAppender -->
-    <dependency>
-      <groupId>com.sun.mail</groupId>
-      <artifactId>javax.mail</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for JPA appenders (needs an implementation of course) -->
-    <dependency>
-      <groupId>org.eclipse.persistence</groupId>
-      <artifactId>javax.persistence</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for JMS appenders (needs an implementation of course) -->
-    <dependency>
-      <groupId>org.jboss.spec.javax.jms</groupId>
-      <artifactId>jboss-jms-api_1.1_spec</artifactId>
-      <scope>provided</scope>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for Kafka appender -->
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka-clients</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for ZeroMQ JeroMQ appender -->
-    <dependency>
-      <groupId>org.zeromq</groupId>
-      <artifactId>jeromq</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for compressing to formats other than zip and gz -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Used for the CSV layout -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-csv</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <!-- Command line for TCP and UDP servers -->
-    <dependency>
-      <groupId>com.beust</groupId>
-      <artifactId>jcommander</artifactId>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- TEST DEPENDENCIES -->
-
-    <!-- Pull in useful test classes from API -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    <!--  Apache Commons Compress -->
     <dependency>
-      <groupId>org.tukaani</groupId>
-      <artifactId>xz</artifactId>
-      <scope>test</scope>
+      <groupId>org.osgi</groupId>
+      <artifactId>core</artifactId>
+      <scope>provided</scope>
     </dependency>
-    <!-- Zeroconf advertiser tests -->
     <dependency>
-      <groupId>org.jmdns</groupId>
+      <groupId>com.lmax</groupId>
+      <artifactId>disruptor</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.fusesource.jansi</groupId>
+      <artifactId>jansi</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>javax.jmdns</groupId>
       <artifactId>jmdns</artifactId>
-      <version>3.5.1</version>
+      <version>3.4.1</version>
       <scope>test</scope>
     </dependency>
-    <!-- Log4j 1.2 tests -->
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.17</version>
       <scope>test</scope>
     </dependency>
-    <!-- SLF4J tests -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -191,24 +90,16 @@
       <artifactId>slf4j-ext</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- JUnit, naturally -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Mocking framework for use with JUnit -->
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Embedded JDBC drivers for database appender tests -->
     <dependency>
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
@@ -219,36 +110,16 @@
       <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- JPA Tests -->
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
       <artifactId>org.eclipse.persistence.jpa</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Useful mock classes and utilities -->
     <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-test</artifactId>
+      <groupId>org.mockejb</groupId>
+      <artifactId>mockejb</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- JPA, JNDI and JMS tests -->
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-broker</artifactId>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.geronimo.specs</groupId>
-          <artifactId>geronimo-jms_1.1_spec</artifactId>
-        </exclusion>
-      </exclusions>    
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Logback performance tests -->
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-core</artifactId>
@@ -259,9 +130,48 @@
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- OSGi tests -->
     <dependency>
-      <groupId>org.eclipse.tycho</groupId>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jms_1.1_spec</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.mail</groupId>
+      <artifactId>javax.mail</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.0.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>javax.persistence</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.mongodb</groupId>
+      <artifactId>mongo-java-driver</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.lightcouch</groupId>
+      <artifactId>lightcouch</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>3.2.4.RELEASE</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.osgi</groupId>
       <artifactId>org.eclipse.osgi</artifactId>
       <scope>test</scope>
     </dependency>
@@ -269,148 +179,13 @@
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.framework</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.plexus</groupId>
-      <artifactId>plexus-utils</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!--  GELF -->
-    <dependency>
-      <groupId>net.javacrumbs.json-unit</groupId>
-      <artifactId>json-unit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.xmlunit</groupId>
-      <artifactId>xmlunit-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.xmlunit</groupId>
-      <artifactId>xmlunit-matchers</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Other -->
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache-extras.beanshell</groupId>
-      <artifactId>bsh</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.groovy</groupId>
-      <artifactId>groovy-all</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Used for testing HttpAppender -->
-    <dependency>
-      <groupId>com.github.tomakehurst</groupId>
-      <artifactId>wiremock</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- GC-free -->
-    <dependency>
-      <groupId>com.google.code.java-allocation-instrumenter</groupId>
-      <artifactId>java-allocation-instrumenter</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hdrhistogram</groupId>
-      <artifactId>HdrHistogram</artifactId>
-      <scope>test</scope>
-    </dependency>
+    </dependency>    
   </dependencies>
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <!-- disable annotation processing for first pass -->
-            <id>default-compile</id>
-            <configuration>
-              <excludes>
-                <exclude>module-info.java</exclude>
-              </excludes>
-              <proc>none</proc>
-            </configuration>
-          </execution>
-          <execution>
-            <!-- then do a processing-only pass to generate plugins .dat file -->
-            <id>process-plugins</id>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <phase>process-classes</phase>
-            <configuration>
-              <excludes>
-                <exclude>module-info.java</exclude>
-              </excludes>
-              <proc>only</proc>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <excludedGroups>
-            org.apache.logging.log4j.categories.PerformanceTests
-          </excludedGroups>
-          <forkCount>1</forkCount>
-          <reuseForks>false</reuseForks>
-          <systemPropertyVariables>
-            <org.apache.activemq.SERIALIZABLE_PACKAGES>*</org.apache.activemq.SERIALIZABLE_PACKAGES>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <configuration>
-          <skipTests>true</skipTests>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestFile>${manifestfile}</manifestFile>
-            <manifestEntries>
-              <Specification-Title>${project.name}</Specification-Title>
-              <Specification-Version>${project.version}</Specification-Version>
-              <Specification-Vendor>${project.organization.name}</Specification-Vendor>
-              <Implementation-Title>${project.name}</Implementation-Title>
-              <Implementation-Version>${project.version}</Implementation-Version>
-              <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
-              <Implementation-Vendor-Id>org.apache</Implementation-Vendor-Id>
-              <X-Compile-Source-JDK>${maven.compiler.source}</X-Compile-Source-JDK>
-              <X-Compile-Target-JDK>${maven.compiler.target}</X-Compile-Target-JDK>
-              <Automatic-Module-Name>org.apache.logging.log4j.core</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
         <executions>
           <execution>
             <goals>
@@ -420,20 +195,72 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <mainClass>org.apache.logging.log4j.core.config.plugins.PluginManager</mainClass>
+          <arguments>
+            <argument>${project.build.outputDirectory}</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <configuration>
+          <!--
+            dummy entry to stop bundle plugin from picking up jar config and reporting
+            WARNING: Duplicate name in Manifest
+            See http://markmail.org/message/mpkl24wk3jrjhhjg
+          -->
+          <archive>
+            <forced>true</forced>
+          </archive>
+          <excludeDependencies>true</excludeDependencies>
+          <manifestLocation>target/osgi</manifestLocation>
           <instructions>
-            <Bundle-SymbolicName>org.apache.logging.log4j.core</Bundle-SymbolicName>
-            <!-- TODO: exclude internal classes from export -->
-            <Export-Package>org.apache.logging.log4j.core.*</Export-Package>
-            <Import-Package>
-              sun.reflect;resolution:=optional,
-              *
-            </Import-Package>
-            <Bundle-Activator>org.apache.logging.log4j.core.osgi.Activator</Bundle-Activator>
+            <!-- stops the "uses" clauses being added to "Export-Package" manifest entry -->
+            <_nouses>true</_nouses>
+            <!-- Stop the JAVA_1_n_HOME variables from being treated as headers by Bnd -->
+            <_removeheaders>JAVA_1_3_HOME,JAVA_1_4_HOME,JAVA_1_5_HOME,JAVA_1_6_HOME,JAVA_1_7_HOME,JAVA_1_8_HOME,JAVA_1_9_HOME</_removeheaders>
+            <Bundle-SymbolicName>${osgi.symbolicName}</Bundle-SymbolicName>
+            <Export-Package>${osgi.export}</Export-Package>
+            <Private-Package>${osgi.private}</Private-Package>
+            <Import-Package>${osgi.import}</Import-Package>
+            <DynamicImport-Package>${osgi.dynamicImport}</DynamicImport-Package>
+            <Bundle-DocURL>${project.url}</Bundle-DocURL>
+            <Fragment-Host>org.apache.logging.log4j-api;bundle-version=${project.version.osgi}</Fragment-Host>
           </instructions>
         </configuration>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>cleanVersions</goal>
+            </goals>
+            <configuration>
+              <versions>
+                <project.version.osgi>${project.version}</project.version.osgi>
+              </versions>
+            </configuration>
+          </execution>
+          <execution>
+            <id>bundle-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -458,7 +285,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>${checkstyle.plugin.version}</version>
+        <version>2.7</version>
         <configuration>
           <!--<propertiesLocation>${vfs.parent.dir}/checkstyle.properties</propertiesLocation> -->
           <configLocation>${log4jParentDir}/checkstyle.xml</configLocation>
@@ -473,41 +300,33 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>${javadoc.plugin.version}</version>
         <configuration>
-          <failOnError>false</failOnError>
-          <bottom><![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
+          <bottom> <![CDATA[<p align="center">Copyright &#169; {inceptionYear}-{currentYear} {organizationName}. All Rights Reserved.<br />
             Apache Logging, Apache Log4j, Log4j, Apache, the Apache feather logo, the Apache Logging project logo,
             and the Apache Log4j logo are trademarks of The Apache Software Foundation.</p>]]></bottom>
           <!-- module link generation is completely broken in the javadoc plugin for a multi-module non-aggregating
-               project -->
+         project -->
           <detectOfflineLinks>false</detectOfflineLinks>
           <linksource>true</linksource>
           <links>
             <link>http://docs.oracle.com/javaee/6/api/</link>
-            <link>http://www.osgi.org/javadoc/r4v43/core/</link>
-            <link>https://commons.apache.org/proper/commons-lang/javadocs/api-release/</link>
           </links>
-          <groups>
-            <group>
-              <title>Core API</title>
-              <packages>org.apache.logging.log4j.core</packages>
-            </group>
-            <group>
-              <title>Configuration</title>
-              <packages>org.apache.logging.log4j.core.config*:org.apache.logging.log4j.core.selector</packages>
-            </group>
-            <group>
-              <title>Core Plugins</title>
-              <packages>org.apache.logging.log4j.core.appender*:org.apache.logging.log4j.core.filter:org.apache.logging.log4j.core.layout:org.apache.logging.log4j.core.lookup:org.apache.logging.log4j.core.pattern:org.apache.logging.log4j.core.script</packages>
-            </group>
-            <group>
-              <title>Tools</title>
-              <packages>org.apache.logging.log4j.core.net*:org.apache.logging.log4j.core.tools</packages>
-            </group>
-            <group>
-              <title>Internals</title>
-              <packages>org.apache.logging.log4j.core.async:org.apache.logging.log4j.core.impl:org.apache.logging.log4j.core.util*:org.apache.logging.log4j.core.osgi:org.apache.logging.log4j.core.jackson:org.apache.logging.log4j.core.jmx</packages>
-            </group>
-          </groups>
+          <tags>
+            <tag>
+              <name>issue</name>
+              <placement>a</placement>
+              <head>JIRA issue:</head>
+            </tag>
+            <tag>
+              <name>doubt</name>
+              <placement>a</placement>
+              <head>Troublesome:</head>
+            </tag>
+            <tag>
+              <name>compare</name>
+              <placement>a</placement>
+              <head>Compare with:</head>
+            </tag>
+          </tags>
         </configuration>
         <reportSets>
           <reportSet>
@@ -521,7 +340,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs.plugin.version}</version>
+        <version>2.5.2</version>
         <configuration>
           <fork>true</fork>
           <jvmArgs>-Duser.language=en</jvmArgs>
@@ -533,7 +352,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>${jxr.plugin.version}</version>
+        <version>2.3</version>
         <reportSets>
           <reportSet>
             <id>non-aggregate</id>
@@ -554,10 +373,51 @@
         <artifactId>maven-pmd-plugin</artifactId>
         <version>${pmd.plugin.version}</version>
         <configuration>
-          <targetJdk>${maven.compiler.target}</targetJdk>
+          <targetJdk>${maven.compile.target}</targetJdk>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>${cobertura.plugin.version}</version>
+        <reportSets>
+          <reportSet>
+            <!-- Disabled as it makes the site build very slow and causes the performance unit test to fail -->
+            <reports />
+          </reportSet>
+        </reportSets>
       </plugin>
     </plugins>
   </reporting>
+  <profiles>
+    <profile>
+      <!-- http://www.yourkit.com/docs/80/help/agent.jsp -->
+      <id>yourkit</id>
+
+      <properties>
+        <yourkit.home>/Applications/YourKit_Java_Profiler_8.0.17.app</yourkit.home>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.yourkit</groupId>
+          <artifactId>yjp-controller-api-redist</artifactId>
+          <version>8.0.17</version>
+          <scope>system</scope>
+          <systemPath>${yourkit.home}/lib/yjp-controller-api-redist.jar</systemPath>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>-agentpath:"${yourkit.home}/bin/mac/libyjpagent.jnilib"</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
 

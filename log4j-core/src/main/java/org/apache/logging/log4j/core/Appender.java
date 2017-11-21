@@ -19,35 +19,14 @@ package org.apache.logging.log4j.core;
 import java.io.Serializable;
 
 /**
- * Appends {@link LogEvent}s. An Appender can contain a {@link Layout} if applicable as well
- * as an {@link ErrorHandler}. Typical Appender implementations coordinate with an
- * implementation of {@link org.apache.logging.log4j.core.appender.AbstractManager} to handle external resources
- * such as streams, connections, and other shared state. As Appenders are plugins, concrete implementations need to
- * be annotated with {@link org.apache.logging.log4j.core.config.plugins.Plugin} and need to provide a static
- * factory method annotated with {@link org.apache.logging.log4j.core.config.plugins.PluginFactory}.
- *
- * <p>Most core plugins are written using a related Manager class that handle the actual task of serializing a
- * {@link LogEvent} to some output location. For instance, many Appenders can take
- * advantage of the {@link org.apache.logging.log4j.core.appender.OutputStreamManager} class.</p>
- *
- * <p>It is recommended that Appenders don't do any heavy lifting since there can be many instances of the class
- * being used at any given time. When resources require locking (e.g., through {@link java.nio.channels.FileLock}),
- * it is important to isolate synchronized code to prevent concurrency issues.</p>
+ * Appends log events.
  */
 public interface Appender extends LifeCycle {
 
     /**
-     * Main {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() plugin element type} for
-     * Appender plugins.
-     *
-     * @since 2.6
-     */
-    String ELEMENT_TYPE = "appender";
-
-    /**
-     * Logs a LogEvent using whatever logic this Appender wishes to use. It is typically recommended to use a
-     * bridge pattern not only for the benefits from decoupling an Appender from its implementation, but it is also
-     * handy for sharing resources which may require some form of locking.
+     * Log in <code>Appender</code> specific way. When appropriate,
+     * Loggers will call the <code>doAppend</code> method of appender
+     * implementations in order to log.
      *
      * @param event The LogEvent.
      */
@@ -55,38 +34,28 @@ public interface Appender extends LifeCycle {
 
 
     /**
-     * Gets the name of this Appender.
+     * Get the name of this appender.
      *
      * @return name, may be null.
      */
     String getName();
 
     /**
-     * Returns the Layout used by this Appender if applicable.
+     * Returns this appender's layout.
      *
-     * @return the Layout for this Appender or {@code null} if none is configured.
+     * @return the Layout for the Appender or null if none is configured.
      */
     Layout<? extends Serializable> getLayout();
 
     /**
-     * Some Appenders need to propagate exceptions back to the application. When {@code ignoreExceptions} is
+     * Some appenders need to propagate exceptions back to the application. When {@code ignoreExceptions} is
      * {@code false} the AppenderControl will allow the exception to percolate.
      *
-     * @return {@code true} if exceptions will be logged but not thrown, {@code false} otherwise.
+     * @return {@code true} if exceptions will be logged but now thrown, {@code false} otherwise.
      */
     boolean ignoreExceptions();
 
-    /**
-     * Gets the {@link ErrorHandler} used for handling exceptions.
-     *
-     * @return the ErrorHandler for handling exceptions.
-     */
     ErrorHandler getHandler();
 
-    /**
-     * Sets the {@link ErrorHandler} used for handling exceptions.
-     *
-     * @param handler the ErrorHandler to use for handling exceptions.
-     */
     void setHandler(ErrorHandler handler);
 }

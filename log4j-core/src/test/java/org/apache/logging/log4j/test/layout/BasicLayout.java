@@ -16,42 +16,48 @@
  */
 package org.apache.logging.log4j.test.layout;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
-import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.helpers.Charsets;
+import org.apache.logging.log4j.core.helpers.Constants;
 import org.apache.logging.log4j.core.layout.AbstractStringLayout;
-import org.apache.logging.log4j.util.Strings;
+
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  */
-@Plugin(name = "BasicLayout", category = Core.CATEGORY_NAME, elementType = "layout", printObject = true)
+@Plugin(name = "BasicLayout", category = "Core", elementType = "layout", printObject = true)
 public class BasicLayout extends AbstractStringLayout {
 
-    private static final String HEADER = "Header" + Strings.LINE_SEPARATOR;
+    private static final String HEADER = "Header" + Constants.LINE_SEP;
+
+    @Override
+    public byte[] getHeader() {
+        return HEADER.getBytes(getCharset());
+    }
 
     public BasicLayout(final Charset charset) {
         super(charset);
     }
 
     @Override
-    public byte[] getHeader() {
-        return getBytes(HEADER);
+    public String toSerializable(final LogEvent event) {
+        return event.getMessage().getFormattedMessage() + Constants.LINE_SEP;
     }
 
     @Override
-    public String toSerializable(final LogEvent event) {
-        return event.getMessage().getFormattedMessage() + Strings.LINE_SEPARATOR;
+    public Map<String, String> getContentFormat() {
+        return new HashMap<String, String>();
     }
 
     /**
      */
     @PluginFactory
     public static BasicLayout createLayout() {
-        return new BasicLayout(StandardCharsets.UTF_8);
+        return new BasicLayout(Charsets.UTF_8);
     }
 }

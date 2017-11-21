@@ -16,606 +16,131 @@
  */
 package org.apache.logging.log4j.core.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.MarkerManager;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.core.BasicConfigurationFactory;
-import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.BasicConfigurationFactory;
+import org.apache.logging.log4j.core.appender.FileAppender;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.lookup.MainMapLookup;
-import org.apache.logging.log4j.junit.ThreadContextRule;
+import org.apache.logging.log4j.core.util.Compare;
 import org.apache.logging.log4j.message.SimpleMessage;
-import org.apache.logging.log4j.util.Strings;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  *
  */
 public class PatternLayoutTest {
-    public class FauxLogger {
-        public String formatEvent(final LogEvent event, final Layout<?> layout) {
-            return new String(layout.toByteArray(event));
-        }
-    }
-    static ConfigurationFactory cf = new BasicConfigurationFactory();
+    static String OUTPUT_FILE   = "target/output/PatternParser";
+    static String WITNESS_FILE  = "witness/PatternParser";
+    LoggerContext ctx = (LoggerContext) LogManager.getContext();
+    Logger root = ctx.getLogger("");
+
     static String msgPattern = "%m%n";
-    static String OUTPUT_FILE = "target/output/PatternParser";
     static final String regexPattern = "%replace{%logger %msg}{\\.}{/}";
-
-    static String WITNESS_FILE = "witness/PatternParser";
-
-    public static void cleanupClass() {
-        ConfigurationFactory.removeConfigurationFactory(cf);
-    }
+    static ConfigurationFactory cf = new BasicConfigurationFactory();
 
     @BeforeClass
     public static void setupClass() {
         ConfigurationFactory.setConfigurationFactory(cf);
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         ctx.reconfigure();
     }
 
-    LoggerContext ctx = LoggerContext.getContext();
-
-    Logger root = ctx.getRootLogger();
-
-    @Rule
-    public final ThreadContextRule threadContextRule = new ThreadContextRule();
-
-    private static class Destination implements ByteBufferDestination {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[2048]);
-        @Override
-        public ByteBuffer getByteBuffer() {
-            return byteBuffer;
-        }
-
-        @Override
-        public ByteBuffer drain(final ByteBuffer buf) {
-            throw new IllegalStateException("Unexpected message larger than 2048 bytes");
-        }
-
-        @Override
-        public void writeBytes(final ByteBuffer data) {
-            byteBuffer.put(data);
-        }
-
-        @Override
-        public void writeBytes(final byte[] data, final int offset, final int length) {
-            byteBuffer.put(data, offset, length);
-        }
+    @AfterClass
+    public static void cleanupClass() {
+        ConfigurationFactory.removeConfigurationFactory(cf);
     }
 
-    private void assertToByteArray(final String expectedStr, final PatternLayout layout, final LogEvent event) {
-        final byte[] result = layout.toByteArray(event);
-        assertEquals(expectedStr, new String(result));
-    }
-
-    private void assertEncode(final String expectedStr, final PatternLayout layout, final LogEvent event) {
-        final Destination destination = new Destination();
-        layout.encode(event, destination);
-        final ByteBuffer byteBuffer = destination.getByteBuffer();
-        byteBuffer.flip(); // set limit to position, position back to zero
-        assertEquals(expectedStr, new String(byteBuffer.array(), byteBuffer.arrayOffset() + byteBuffer.position(),
-                byteBuffer.remaining()));
-    }
-
-    @Test
-    public void testEqualsEmptyMarker() throws Exception {
-        // replace "[]" with the empty string
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("[%logger]%equals{[%marker]}{[]}{} %msg")
-                .withConfiguration(ctx.getConfiguration()).build();
-        // Not empty marker
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMarker(MarkerManager.getMarker("TestMarker")) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("[org.apache.logging.log4j.core.layout.PatternLayoutTest][TestMarker] Hello, world!", layout,
-                event1);
-        assertEncode("[org.apache.logging.log4j.core.layout.PatternLayoutTest][TestMarker] Hello, world!", layout,
-                event1);
-        // empty marker
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("[org.apache.logging.log4j.core.layout.PatternLayoutTest] Hello, world!", layout, event2);
-        assertEncode("[org.apache.logging.log4j.core.layout.PatternLayoutTest] Hello, world!", layout, event2);
-    }
-
-    @Test
-    public void testHeaderFooterJavaLookup() throws Exception {
-        // % does not work here.
-        final String pattern = "%d{UNIX} MyApp%n${java:version}%n${java:runtime}%n${java:vm}%n${java:os}%n${java:hw}";
-        final PatternLayout layout = PatternLayout.newBuilder().withConfiguration(ctx.getConfiguration())
-                .withHeader("Header: " + pattern).withFooter("Footer: " + pattern).build();
-        final byte[] header = layout.getHeader();
-        assertNotNull("No header", header);
-        final String headerStr = new String(header);
-        assertTrue(headerStr, headerStr.contains("Header: "));
-        assertTrue(headerStr, headerStr.contains("Java version "));
-        assertTrue(headerStr, headerStr.contains("(build "));
-        assertTrue(headerStr, headerStr.contains(" from "));
-        assertTrue(headerStr, headerStr.contains(" architecture: "));
-        assertFalse(headerStr, headerStr.contains("%d{UNIX}"));
-        //
-        final byte[] footer = layout.getFooter();
-        assertNotNull("No footer", footer);
-        final String footerStr = new String(footer);
-        assertTrue(footerStr, footerStr.contains("Footer: "));
-        assertTrue(footerStr, footerStr.contains("Java version "));
-        assertTrue(footerStr, footerStr.contains("(build "));
-        assertTrue(footerStr, footerStr.contains(" from "));
-        assertTrue(footerStr, footerStr.contains(" architecture: "));
-        assertFalse(footerStr, footerStr.contains("%d{UNIX}"));
-    }
 
     /**
-     * Tests LOG4J2-962.
+     * Test case for MDC conversion pattern.
      */
     @Test
-    public void testHeaderFooterMainLookup() {
-        MainMapLookup.setMainArguments("value0", "value1", "value2");
-        final PatternLayout layout = PatternLayout.newBuilder().withConfiguration(ctx.getConfiguration())
-                .withHeader("${main:0}").withFooter("${main:2}").build();
-        final byte[] header = layout.getHeader();
-        assertNotNull("No header", header);
-        final String headerStr = new String(header);
-        assertTrue(headerStr, headerStr.contains("value0"));
-        //
-        final byte[] footer = layout.getFooter();
-        assertNotNull("No footer", footer);
-        final String footerStr = new String(footer);
-        assertTrue(footerStr, footerStr.contains("value2"));
-    }
+    public void mdcPattern() throws Exception {
 
-    @Test
-    public void testHeaderFooterThreadContext() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%d{UNIX} %m")
-                .withConfiguration(ctx.getConfiguration()).withHeader("${ctx:header}").withFooter("${ctx:footer}")
-                .build();
-        ThreadContext.put("header", "Hello world Header");
-        ThreadContext.put("footer", "Hello world Footer");
-        final byte[] header = layout.getHeader();
-        assertNotNull("No header", header);
-        assertTrue("expected \"Hello world Header\", actual " + Strings.dquote(new String(header)),
-                new String(header).equals(new String("Hello world Header")));
-    }
+        final String mdcMsgPattern1 = "%m : %X%n";
+        final String mdcMsgPattern2 = "%m : %X{key1}%n";
+        final String mdcMsgPattern3 = "%m : %X{key2}%n";
+        final String mdcMsgPattern4 = "%m : %X{key3}%n";
+        final String mdcMsgPattern5 = "%m : %X{key1},%X{key2},%X{key3}%n";
 
-    private void testMdcPattern(final String patternStr, final String expectedStr, final boolean useThreadContext)
-            throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern(patternStr)
-                .withConfiguration(ctx.getConfiguration()).build();
-        if (useThreadContext) {
-            ThreadContext.put("key1", "value1");
-            ThreadContext.put("key2", "value2");
-        }
-        final LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello")).build();
-        assertToByteArray(expectedStr, layout, event);
-        assertEncode(expectedStr, layout, event);
-    }
+        // set up appender
+        final PatternLayout layout = PatternLayout.createLayout(msgPattern, ctx.getConfiguration(), null, null, null);
+        //FileOutputStream fos = new FileOutputStream(OUTPUT_FILE + "_mdc");
+        final FileAppender appender = FileAppender.createAppender(OUTPUT_FILE + "_mdc", "false", "false", "File", "false",
+            "true", "false", layout, null, "false", null, null);
+        appender.start();
 
-    @Test
-    public void testMdcPattern0() throws Exception {
-        testMdcPattern("%m : %X", "Hello : {key1=value1, key2=value2}", true);
-    }
+        // set appender on root and set level to debug
+        root.addAppender(appender);
+        root.setLevel(Level.DEBUG);
 
-    @Test
-    public void testMdcPattern1() throws Exception {
-        testMdcPattern("%m : %X", "Hello : {}", false);
-    }
+        // output starting message
+        root.debug("starting mdc pattern test");
 
-    @Test
-    public void testMdcPattern2() throws Exception {
-        testMdcPattern("%m : %X{key1}", "Hello : value1", true);
-    }
+        layout.setConversionPattern(mdcMsgPattern1);
+        root.debug("empty mdc, no key specified in pattern");
 
-    @Test
-    public void testMdcPattern3() throws Exception {
-        testMdcPattern("%m : %X{key2}", "Hello : value2", true);
-    }
+        layout.setConversionPattern(mdcMsgPattern2);
+        root.debug("empty mdc, key1 in pattern");
 
-    @Test
-    public void testMdcPattern4() throws Exception {
-        testMdcPattern("%m : %X{key3}", "Hello : ", true);
-    }
+        layout.setConversionPattern(mdcMsgPattern3);
+        root.debug("empty mdc, key2 in pattern");
 
-    @Test
-    public void testMdcPattern5() throws Exception {
-        testMdcPattern("%m : %X{key1}, %X{key2}, %X{key3}", "Hello : value1, value2, ", true);
-    }
+        layout.setConversionPattern(mdcMsgPattern4);
+        root.debug("empty mdc, key3 in pattern");
 
-    @Test
-    public void testPatternSelector() throws Exception {
-        final PatternMatch[] patterns = new PatternMatch[1];
-        patterns[0] = new PatternMatch("FLOW", "%d %-5p [%t]: ====== %C{1}.%M:%L %m ======%n");
-        final PatternSelector selector = MarkerPatternSelector.createSelector(patterns, "%d %-5p [%t]: %m%n", true, true, ctx.getConfiguration());
-        final PatternLayout layout = PatternLayout.newBuilder().withPatternSelector(selector)
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.layout.PatternLayoutTest$FauxLogger")
-                .setMarker(MarkerManager.getMarker("FLOW"))
-                .setLevel(Level.TRACE) //
-                .setIncludeLocation(true)
-                .setMessage(new SimpleMessage("entry")).build();
-        final String result1 = new FauxLogger().formatEvent(event1, layout);
-        final String expectPattern1 = String.format(".*====== PatternLayoutTest.testPatternSelector:\\d+ entry ======%n");
-        assertTrue("Unexpected result: " + result1, result1.matches(expectPattern1));
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 1!")).build();
-        final String result2 = new String(layout.toByteArray(event2));
-        final String expectSuffix2 = String.format("Hello, world 1!%n");
-        assertTrue("Unexpected result: " + result2, result2.endsWith(expectSuffix2));
+        layout.setConversionPattern(mdcMsgPattern5);
+        root.debug("empty mdc, key1, key2, and key3 in pattern");
+
+        ThreadContext.put("key1", "value1");
+        ThreadContext.put("key2", "value2");
+
+        layout.setConversionPattern(mdcMsgPattern1);
+        root.debug("filled mdc, no key specified in pattern");
+
+        layout.setConversionPattern(mdcMsgPattern2);
+        root.debug("filled mdc, key1 in pattern");
+
+        layout.setConversionPattern(mdcMsgPattern3);
+        root.debug("filled mdc, key2 in pattern");
+
+        layout.setConversionPattern(mdcMsgPattern4);
+        root.debug("filled mdc, key3 in pattern");
+
+        layout.setConversionPattern(mdcMsgPattern5);
+        root.debug("filled mdc, key1, key2, and key3 in pattern");
+
+        ThreadContext.remove("key1");
+        ThreadContext.remove("key2");
+
+        layout.setConversionPattern(msgPattern);
+        root.debug("finished mdc pattern test");
+
+        assertTrue(Compare.compare(this.getClass(), OUTPUT_FILE + "_mdc", WITNESS_FILE + "_mdc"));
+
+        root.removeAppender(appender);
+
+        appender.stop();
     }
 
     @Test
     public void testRegex() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern(regexPattern)
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("org/apache/logging/log4j/core/layout/PatternLayoutTest Hello, world!", layout, event);
-        assertEncode("org/apache/logging/log4j/core/layout/PatternLayoutTest Hello, world!", layout, event);
-    }
-
-    @Test
-    public void testRegexEmptyMarker() throws Exception {
-        // replace "[]" with the empty string
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("[%logger]%replace{[%marker]}{\\[\\]}{} %msg")
-                .withConfiguration(ctx.getConfiguration()).build();
-        // Not empty marker
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMarker(MarkerManager.getMarker("TestMarker")) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("[org.apache.logging.log4j.core.layout.PatternLayoutTest][TestMarker] Hello, world!", layout,
-                event1);
-        assertEncode("[org.apache.logging.log4j.core.layout.PatternLayoutTest][TestMarker] Hello, world!", layout,
-                event1);
-
-        // empty marker
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("[org.apache.logging.log4j.core.layout.PatternLayoutTest] Hello, world!", layout, event2);
-        assertEncode("[org.apache.logging.log4j.core.layout.PatternLayoutTest] Hello, world!", layout, event2);
-    }
-
-    @Test
-    public void testEqualsMarkerWithMessageSubstitution() throws Exception {
-        // replace "[]" with the empty string
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("[%logger]%equals{[%marker]}{[]}{[%msg]}")
-            .withConfiguration(ctx.getConfiguration()).build();
-        // Not empty marker
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-            .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-            .setLevel(Level.INFO) //
-            .setMarker(MarkerManager.getMarker("TestMarker"))
-            .setMessage(new SimpleMessage("Hello, world!")).build();
-        final byte[] result1 = layout.toByteArray(event1);
-        assertEquals("[org.apache.logging.log4j.core.layout.PatternLayoutTest][TestMarker]", new String(result1));
-        // empty marker
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-            .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-            .setLevel(Level.INFO)
-            .setMessage(new SimpleMessage("Hello, world!")).build();
-        final byte[] result2 = layout.toByteArray(event2);
-        assertEquals("[org.apache.logging.log4j.core.layout.PatternLayoutTest][Hello, world!]", new String(result2));
-    }
-
-    @Test
-    public void testSpecialChars() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("\\\\%level\\t%msg\\n\\t%logger\\r\\n\\f")
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world!")).build();
-        assertToByteArray("\\INFO\tHello, world!\n" +
-                "\torg.apache.logging.log4j.core.layout.PatternLayoutTest\r\n" +
-                "\f", layout, event);
-        assertEncode("\\INFO\tHello, world!\n" +
-                "\torg.apache.logging.log4j.core.layout.PatternLayoutTest\r\n" +
-                "\f", layout, event);
-    }
-
-    @Test
-    public void testUnixTime() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%d{UNIX} %m")
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 1!")).build();
-        final byte[] result1 = layout.toByteArray(event1);
-        assertEquals(event1.getTimeMillis() / 1000 + " Hello, world 1!", new String(result1));
-        // System.out.println("event1=" + event1.getTimeMillis() / 1000);
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 2!")).build();
-        final byte[] result2 = layout.toByteArray(event2);
-        assertEquals(event2.getTimeMillis() / 1000 + " Hello, world 2!", new String(result2));
-        // System.out.println("event2=" + event2.getTimeMillis() / 1000);
-    }
-
-    @SuppressWarnings("unused")
-    private void testUnixTime(final String pattern) throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern(pattern + " %m")
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 1!")).build();
-        final byte[] result1 = layout.toByteArray(event1);
-        assertEquals(event1.getTimeMillis() + " Hello, world 1!", new String(result1));
-        // System.out.println("event1=" + event1.getMillis());
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 2!")).build();
-        final byte[] result2 = layout.toByteArray(event2);
-        assertEquals(event2.getTimeMillis() + " Hello, world 2!", new String(result2));
-        // System.out.println("event2=" + event2.getMillis());
-    }
-
-    @Test
-    public void testUnixTimeMillis() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%d{UNIX_MILLIS} %m")
-                .withConfiguration(ctx.getConfiguration()).build();
-        final LogEvent event1 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 1!")).build();
-        final byte[] result1 = layout.toByteArray(event1);
-        assertEquals(event1.getTimeMillis() + " Hello, world 1!", new String(result1));
-        // System.out.println("event1=" + event1.getTimeMillis());
-        final LogEvent event2 = Log4jLogEvent.newBuilder() //
-                .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //
-                .setLevel(Level.INFO) //
-                .setMessage(new SimpleMessage("Hello, world 2!")).build();
-        final byte[] result2 = layout.toByteArray(event2);
-        assertEquals(event2.getTimeMillis() + " Hello, world 2!", new String(result2));
-        // System.out.println("event2=" + event2.getTimeMillis());
-    }
-
-    @Test
-    public void testUsePlatformDefaultIfNoCharset() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%m")
-                .withConfiguration(ctx.getConfiguration()).build();
-        assertEquals(Charset.defaultCharset(), layout.getCharset());
-    }
-
-    @Test
-    public void testUseSpecifiedCharsetIfExists() throws Exception {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%m")
-                .withConfiguration(ctx.getConfiguration()).withCharset(StandardCharsets.UTF_8).build();
-        assertEquals(StandardCharsets.UTF_8, layout.getCharset());
-    }
-
-    @Test
-    public void testLoggerNameTruncationByRetainingPartsFromEnd() throws Exception {
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{1} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName().substring(this.getClass().getName().lastIndexOf(".") + 1) + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{2} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(0, this.getClass().getName().lastIndexOf("."));
-            name = name.substring(0, name.lastIndexOf("."));
-            assertEquals(this.getClass().getName().substring(name.length() + 1) + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{20} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName() + " Hello, world 1!", new String(result1));
-        }
-    }
-
-    @Test
-    public void testCallersFqcnTruncationByRetainingPartsFromEnd() throws Exception {
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{1} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByRetainingPartsFromEnd", this.getClass().getCanonicalName() + ".java", 440))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName().substring(this.getClass().getName().lastIndexOf(".") + 1) + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{2} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByRetainingPartsFromEnd", this.getClass().getCanonicalName() + ".java", 440))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(0, this.getClass().getName().lastIndexOf("."));
-            name = name.substring(0, name.lastIndexOf("."));
-            assertEquals(this.getClass().getName().substring(name.length() + 1) + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{20} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByRetainingPartsFromEnd", this.getClass().getCanonicalName() + ".java", 440))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName() + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%class{1} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByRetainingPartsFromEnd", this.getClass().getCanonicalName() + ".java", 440))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName().substring(this.getClass().getName().lastIndexOf(".") + 1) + " Hello, world 1!", new String(result1));
-        }
-    }
-
-    @Test
-    public void testLoggerNameTruncationByDroppingPartsFromFront() throws Exception {
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{-1} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            final String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{-3} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%logger{-3} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%c{-20} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!")).build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName() + " Hello, world 1!", new String(result1));
-        }
-
-    }
-
-    @Test
-    public void testCallersFqcnTruncationByDroppingPartsFromFront() throws Exception {
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{-1} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByDroppingPartsFromFront", this.getClass().getCanonicalName() + ".java", 546))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            final String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{-3} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByDroppingPartsFromFront", this.getClass().getCanonicalName() + ".java", 546))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%class{-3} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByDroppingPartsFromFront", this.getClass().getCanonicalName() + ".java", 546))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            String name = this.getClass().getName().substring(this.getClass().getName().indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            name = name.substring(name.indexOf(".") + 1);
-            assertEquals(name + " Hello, world 1!", new String(result1));
-        }
-        {
-            final PatternLayout layout = PatternLayout.newBuilder().withPattern("%C{-20} %m")
-                    .withConfiguration(ctx.getConfiguration()).build();
-            final LogEvent event1 = Log4jLogEvent.newBuilder()
-                    .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger")
-                    .setLevel(Level.INFO)
-                    .setMessage(new SimpleMessage("Hello, world 1!"))
-                    .setSource(new StackTraceElement(this.getClass().getName(), "testCallersFqcnTruncationByDroppingPartsFromFront", this.getClass().getCanonicalName() + ".java", 546))
-                    .build();
-            final String result1 = layout.toSerializable(event1);
-            assertEquals(this.getClass().getName() + " Hello, world 1!", new String(result1));
-        }
-
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
+        final PatternLayout layout = PatternLayout.createLayout(regexPattern, ctx.getConfiguration(),
+            null, null, null);
+        final LogEvent event = new Log4jLogEvent(this.getClass().getName(), null, "org.apache.logging.log4j.core.Logger",
+            Level.INFO, new SimpleMessage("Hello, world!"), null);
+        final byte[] result = layout.toByteArray(event);
+        assertEquals("org/apache/logging/log4j/core/layout/PatternLayoutTest Hello, world!", new String(result));
     }
 }

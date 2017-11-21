@@ -23,30 +23,21 @@ import java.util.Map;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
-import org.apache.logging.log4j.core.util.KeyValuePair;
+import org.apache.logging.log4j.core.helpers.KeyValuePair;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataMessage;
-import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
-import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.StringBuilders;
 
 /**
  * Filter based on data in a StructuredDataMessage.
  */
-@Plugin(name = "StructuredDataFilter", category = Node.CATEGORY, elementType = Filter.ELEMENT_TYPE, printObject = true)
-@PerformanceSensitive("allocation")
+@Plugin(name = "StructuredDataFilter", category = "Core", elementType = "filter", printObject = true)
 public final class StructuredDataFilter extends MapFilter {
-
-    private static final int MAX_BUFFER_SIZE = 2048;
-    private static ThreadLocal<StringBuilder> threadLocalStringBuilder = new ThreadLocal<>();
 
     private StructuredDataFilter(final Map<String, List<String>> map, final boolean oper, final Result onMatch,
                                  final Result onMismatch) {
@@ -73,11 +64,10 @@ public final class StructuredDataFilter extends MapFilter {
 
     protected Result filter(final StructuredDataMessage message) {
         boolean match = false;
-        final IndexedReadOnlyStringMap map = getStringMap();
-        for (int i = 0; i < map.size(); i++) {
-            final StringBuilder toMatch = getValue(message, map.getKeyAt(i));
+        for (final Map.Entry<String, List<String>> entry : getMap().entrySet()) {
+            final String toMatch = getValue(message, entry.getKey());
             if (toMatch != null) {
-                match = listContainsValue((List<String>) map.getValueAt(i), toMatch);
+                match = entry.getValue().contains(toMatch);
             } else {
                 match = false;
             }
@@ -88,62 +78,18 @@ public final class StructuredDataFilter extends MapFilter {
         return match ? onMatch : onMismatch;
     }
 
-    private StringBuilder getValue(final StructuredDataMessage data, final String key) {
-        final StringBuilder sb = getStringBuilder();
+    private String getValue(final StructuredDataMessage data, final String key) {
         if (key.equalsIgnoreCase("id")) {
-            data.getId().formatTo(sb);
-            return sb;
+            return data.getId().toString();
         } else if (key.equalsIgnoreCase("id.name")) {
-            return appendOrNull(data.getId().getName(), sb);
+            return data.getId().getName();
         } else if (key.equalsIgnoreCase("type")) {
-            return appendOrNull(data.getType(), sb);
+            return data.getType();
         } else if (key.equalsIgnoreCase("message")) {
-            data.formatTo(sb);
-            return sb;
+            return data.getFormattedMessage();
         } else {
-            return appendOrNull(data.get(key), sb);
+            return data.getData().get(key);
         }
-    }
-
-    private StringBuilder getStringBuilder() {
-        StringBuilder result = threadLocalStringBuilder.get();
-        if (result == null) {
-            result = new StringBuilder();
-            threadLocalStringBuilder.set(result);
-        }
-        StringBuilders.trimToMaxSize(result, MAX_BUFFER_SIZE);
-        result.setLength(0);
-        return result;
-    }
-
-    private StringBuilder appendOrNull(final String value, final StringBuilder sb) {
-        if (value == null) {
-            return null;
-        }
-        sb.append(value);
-        return sb;
-    }
-
-    private boolean listContainsValue(final List<String> candidates, final StringBuilder toMatch) {
-        if (toMatch == null) {
-            for (int i = 0; i < candidates.size(); i++) {
-                final String candidate = candidates.get(i);
-                if (candidate == null) {
-                    return true;
-                }
-            }
-        } else {
-            for (int i = 0; i < candidates.size(); i++) {
-                final String candidate = candidates.get(i);
-                if (candidate == null) {
-                    return false;
-                }
-                if (StringBuilders.equals(candidate, 0, candidate.length(), toMatch, 0, toMatch.length())) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -158,13 +104,13 @@ public final class StructuredDataFilter extends MapFilter {
     public static StructuredDataFilter createFilter(
             @PluginElement("Pairs") final KeyValuePair[] pairs,
             @PluginAttribute("operator") final String oper,
-            @PluginAttribute("onMatch") final Result match,
-            @PluginAttribute("onMismatch") final Result mismatch) {
+            @PluginAttribute("onMatch") final String match,
+            @PluginAttribute("onMismatch") final String mismatch) {
         if (pairs == null || pairs.length == 0) {
             LOGGER.error("keys and values must be specified for the StructuredDataFilter");
             return null;
         }
-        final Map<String, List<String>> map = new HashMap<>();
+        final Map<String, List<String>> map = new HashMap<String, List<String>>();
         for (final KeyValuePair pair : pairs) {
             final String key = pair.getKey();
             if (key == null) {
@@ -180,16 +126,18 @@ public final class StructuredDataFilter extends MapFilter {
             if (list != null) {
                 list.add(value);
             } else {
-                list = new ArrayList<>();
+                list = new ArrayList<String>();
                 list.add(value);
                 map.put(pair.getKey(), list);
             }
         }
-        if (map.isEmpty()) {
+        if (map.size() == 0) {
             LOGGER.error("StructuredDataFilter is not configured with any valid key value pairs");
             return null;
         }
         final boolean isAnd = oper == null || !oper.equalsIgnoreCase("or");
-        return new StructuredDataFilter(map, isAnd, match, mismatch);
+        final Result onMatch = Result.toResult(match);
+        final Result onMismatch = Result.toResult(mismatch);
+        return new StructuredDataFilter(map, isAnd, onMatch, onMismatch);
     }
 }

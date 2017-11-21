@@ -16,17 +16,17 @@
  */
 package org.apache.logging.log4j.core.config;
 
-import java.io.File;
-import java.util.Map;
-
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.xml.XmlConfiguration;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.io.File;
+import java.util.Map;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -41,10 +41,10 @@ public class AdvertiserTest {
         final File file = new File(STATUS_LOG);
         file.delete();
         System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY, CONFIG);
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         final Configuration config = ctx.getConfiguration();
-        if (config instanceof XmlConfiguration) {
-            final String name = config.getName();
+        if (config instanceof XMLConfiguration) {
+            final String name = ((XMLConfiguration) config).getName();
             if (name == null || !name.equals("XMLConfigTest")) {
                 ctx.reconfigure();
             }
@@ -56,7 +56,7 @@ public class AdvertiserTest {
     @AfterClass
     public static void cleanupClass() {
         System.clearProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY);
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         ctx.reconfigure();
         StatusLogger.getLogger().reset();
         final File file = new File(STATUS_LOG);
@@ -100,7 +100,7 @@ public class AdvertiserTest {
     public void testAdvertisementsRemovedOnConfigStop() {
         verifyExpectedEntriesAdvertised(InMemoryAdvertiser.getAdvertisedEntries());
 
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         ctx.stop();
 
         final Map<Object, Map<String, String>> entries = InMemoryAdvertiser.getAdvertisedEntries();
@@ -114,7 +114,7 @@ public class AdvertiserTest {
     public void testAdvertisementsAddedOnReconfigAfterStop() {
         verifyExpectedEntriesAdvertised(InMemoryAdvertiser.getAdvertisedEntries());
 
-        final LoggerContext ctx = LoggerContext.getContext();
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext();
         ctx.stop();
 
         final Map<Object, Map<String, String>> entries = InMemoryAdvertiser.getAdvertisedEntries();

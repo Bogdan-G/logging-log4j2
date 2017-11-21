@@ -16,31 +16,21 @@
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.core.Core;
-import org.apache.logging.log4j.core.LifeCycle;
-import org.apache.logging.log4j.core.LifeCycle2;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 
 /**
- * Triggering policy that wraps other triggering policies.
+ * Triggering policy that wraps other policies.
  */
-@Plugin(name = "Policies", category = Core.CATEGORY_NAME, printObject = true)
-public final class CompositeTriggeringPolicy extends AbstractTriggeringPolicy {
+@Plugin(name = "Policies", category = "Core", printObject = true)
+public final class CompositeTriggeringPolicy implements TriggeringPolicy {
 
-    private final TriggeringPolicy[] triggeringPolicies;
+    private final TriggeringPolicy[] policies;
 
-    private CompositeTriggeringPolicy(final TriggeringPolicy... triggeringPolicies) {
-        this.triggeringPolicies = triggeringPolicies;
-    }
-
-    public TriggeringPolicy[] getTriggeringPolicies() {
-        return triggeringPolicies;
+    private CompositeTriggeringPolicy(final TriggeringPolicy... policies) {
+        this.policies = policies;
     }
 
     /**
@@ -49,8 +39,8 @@ public final class CompositeTriggeringPolicy extends AbstractTriggeringPolicy {
      */
     @Override
     public void initialize(final RollingFileManager manager) {
-        for (final TriggeringPolicy triggeringPolicy : triggeringPolicies) {
-            triggeringPolicy.initialize(manager);
+        for (final TriggeringPolicy policy : policies) {
+            policy.initialize(manager);
         }
     }
 
@@ -61,44 +51,37 @@ public final class CompositeTriggeringPolicy extends AbstractTriggeringPolicy {
      */
     @Override
     public boolean isTriggeringEvent(final LogEvent event) {
-        for (final TriggeringPolicy triggeringPolicy : triggeringPolicies) {
-            if (triggeringPolicy.isTriggeringEvent(event)) {
+        for (final TriggeringPolicy policy : policies) {
+            if (policy.isTriggeringEvent(event)) {
                 return true;
             }
         }
         return false;
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("CompositeTriggeringPolicy{");
+        boolean first = true;
+        for (final TriggeringPolicy policy : policies) {
+            if (!first) {
+                sb.append(", ");
+            }
+            sb.append(policy.toString());
+            first = false;
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
     /**
-     * Creates a CompositeTriggeringPolicy.
-     * @param triggeringPolicy The triggering policies.
+     * Create a CompositeTriggeringPolicy.
+     * @param policies The triggering policies.
      * @return A CompositeTriggeringPolicy.
      */
     @PluginFactory
     public static CompositeTriggeringPolicy createPolicy(
-                                                @PluginElement("Policies") final TriggeringPolicy... triggeringPolicy) {
-        return new CompositeTriggeringPolicy(triggeringPolicy);
+                                                @PluginElement("Policies") final TriggeringPolicy... policies) {
+        return new CompositeTriggeringPolicy(policies);
     }
-
-    @Override
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        setStopping();
-        boolean stopped = true;
-        for (final TriggeringPolicy triggeringPolicy : triggeringPolicies) {
-            if (triggeringPolicy instanceof LifeCycle2) {
-                stopped &= ((LifeCycle2) triggeringPolicy).stop(timeout, timeUnit);
-            } else if (triggeringPolicy instanceof LifeCycle) {
-                ((LifeCycle) triggeringPolicy).stop();
-                stopped &= true;
-            }
-        }
-        setStopped();
-        return stopped;
-    }
-
-    @Override
-    public String toString() {
-        return "CompositeTriggeringPolicy(policies=" + Arrays.toString(triggeringPolicies) + ")";
-    }
-
 }

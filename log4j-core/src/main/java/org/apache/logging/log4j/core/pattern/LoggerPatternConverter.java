@@ -18,15 +18,13 @@ package org.apache.logging.log4j.core.pattern;
 
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.util.PerformanceSensitive;
 
 
 /**
  * Formats a logger name.
  */
-@Plugin(name = "LoggerPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "c", "logger" })
-@PerformanceSensitive("allocation")
+@Plugin(name = "LoggerPatternConverter", category = "Converter")
+@ConverterKeys({"c", "logger" })
 public final class LoggerPatternConverter extends NamePatternConverter {
     /**
      * Singleton.
@@ -63,6 +61,6 @@ public final class LoggerPatternConverter extends NamePatternConverter {
      */
     @Override
     public void format(final LogEvent event, final StringBuilder toAppendTo) {
-        abbreviate(event.getLoggerName(), toAppendTo);
+        toAppendTo.append(abbreviate(event.getLoggerName()));
     }
 }

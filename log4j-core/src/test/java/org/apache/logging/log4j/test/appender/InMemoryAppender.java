@@ -17,7 +17,6 @@
 package org.apache.logging.log4j.test.appender;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.Serializable;
 
 import org.apache.logging.log4j.core.Layout;
@@ -28,11 +27,11 @@ import org.apache.logging.log4j.core.filter.CompositeFilter;
 /**
  *
  */
-public class InMemoryAppender extends AbstractOutputStreamAppender<InMemoryAppender.InMemoryManager> {
+public class InMemoryAppender extends AbstractOutputStreamAppender {
 
     public InMemoryAppender(final String name, final Layout<? extends Serializable> layout, final CompositeFilter filters,
-                            final boolean ignoreExceptions, final boolean writeHeader) {
-        super(name, layout, filters, ignoreExceptions, true, new InMemoryManager(name, layout, writeHeader));
+                            final boolean ignoreExceptions) {
+        super(name, layout, filters, ignoreExceptions, true, new InMemoryManager(name, layout));
     }
 
     @Override
@@ -40,20 +39,15 @@ public class InMemoryAppender extends AbstractOutputStreamAppender<InMemoryAppen
         return getManager().toString();
     }
 
-    static class InMemoryManager extends OutputStreamManager {
+    private static class InMemoryManager extends OutputStreamManager {
 
-        public InMemoryManager(final String name, final Layout<? extends Serializable> layout,
-                final boolean writeHeader) {
-            super(new ByteArrayOutputStream(), name, layout, writeHeader);
+        public InMemoryManager(final String name, final Layout<? extends Serializable> layout) {
+            super(new ByteArrayOutputStream(), name, layout);
         }
 
         @Override
         public String toString() {
-            try {
-                return getOutputStream().toString();
-            } catch (final IOException e) {
-                throw new IllegalStateException(e);
-            }
+            return getOutputStream().toString();
         }
     }
 }

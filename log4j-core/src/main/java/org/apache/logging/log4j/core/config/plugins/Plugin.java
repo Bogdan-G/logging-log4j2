@@ -16,48 +16,25 @@
  */
 package org.apache.logging.log4j.core.config.plugins;
 
-import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.apache.logging.log4j.util.Strings;
-
 /**
  * Annotation that identifies a Class as a Plugin.
  */
-@Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Plugin {
-
     /**
      * Value of the elementType when none is specified.
      */
-    String EMPTY = Strings.EMPTY;
+    String EMPTY = "";
 
-    /**
-     * Name of the plugin. Note that this name is case-insensitive.
-     */
     String name();
-
-    /**
-     * Category to place the plugin under. Category names are case-sensitive.
-     */
     String category();
-
-    /**
-     * Name of the corresponding category of elements this plugin belongs under. For example, {@code appender} would
-     * indicate an {@link org.apache.logging.log4j.core.Appender} plugin which would be in the
-     * {@code <Appenders/>} element of a {@link org.apache.logging.log4j.core.config.Configuration}.
-     */
     String elementType() default EMPTY;
-
-    /**
-     * Indicates if the plugin class implements a useful {@link Object#toString()} method for use in log messages.
-     */
     boolean printObject() default false;
-
     boolean deferChildren() default false;
 }

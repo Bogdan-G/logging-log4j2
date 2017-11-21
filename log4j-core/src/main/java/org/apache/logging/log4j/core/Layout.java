@@ -19,9 +19,6 @@ package org.apache.logging.log4j.core;
 import java.io.Serializable;
 import java.util.Map;
 
-import org.apache.logging.log4j.core.layout.ByteBufferDestination;
-import org.apache.logging.log4j.core.layout.Encoder;
-
 /**
  * Lays out a {@linkplain LogEvent} in different formats.
  *
@@ -36,24 +33,16 @@ import org.apache.logging.log4j.core.layout.Encoder;
  * <li>
  * {@linkplain LogEvent}</li>
  * </ul>
- * <p>
- * Since 2.6, Layouts can {@linkplain Encoder#encode(Object, ByteBufferDestination) encode} a {@code LogEvent} directly
- * to a {@link ByteBufferDestination} without creating temporary intermediary objects.
- * </p>
  *
  * @param <T>
  *            The {@link Serializable} type returned by {@link #toSerializable(LogEvent)}
+ *
+ * @doubt There is still a need for a character-based layout for character based event sinks (databases, etc). Would
+ * introduce an EventEncoder, EventRenderer or something similar for the logging event to byte encoding. (RG) A layout
+ * can be configured with a Charset and then Strings can be converted to byte arrays. OTOH, it isn't possible to write
+ * byte arrays as character streams.
  */
-public interface Layout<T extends Serializable> extends Encoder<LogEvent> {
-
-    /**
-     * Main {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() plugin element type} for
-     * Layout plugins.
-     *
-     * @since 2.1
-     */
-    String ELEMENT_TYPE = "layout";
-
+public interface Layout<T extends Serializable> {
     /**
      * Returns the format for the layout format.
      * @return The footer.
@@ -71,6 +60,9 @@ public interface Layout<T extends Serializable> extends Encoder<LogEvent> {
      *
      * @param event The Logging Event.
      * @return The formatted event.
+     * @doubt Likely better to write to a OutputStream instead of return a byte[]. (RG) That limits how the
+     * Appender can use the Layout. For example, it might concatenate information in front or behind the
+     * data and then write it all to the OutputStream in one call.
      */
     byte[] toByteArray(LogEvent event);
 
@@ -92,8 +84,8 @@ public interface Layout<T extends Serializable> extends Encoder<LogEvent> {
     /**
      * Returns a description of the content format.
      *
-     * @return a Map of key/value pairs describing the Layout-specific content format, or an empty Map if no content
-     * format descriptors are specified.
+     * @return a Map of key/value pairs describing the Layout-specific content format, or an empty Map if no content format descriptors are specified.
+     *
      */
     Map<String, String> getContentFormat();
 }

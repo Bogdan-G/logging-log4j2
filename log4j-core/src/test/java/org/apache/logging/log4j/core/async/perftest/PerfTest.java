@@ -18,25 +18,14 @@ package org.apache.logging.log4j.core.async.perftest;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.core.util.Loader;
 
 import com.lmax.disruptor.collections.Histogram;
 
-/**
- * Single-threaded performance test. Usually invoked from PerfTestDriver as part of a series of tests.
- * <p>
- * To run a single instance of this class for the log4j2 test runner:<br>
- * java -Dlog4j.configurationFile=mylog4j2.xml org.apache.logging.log4j.core.async.perftest.PerfTest \
- * org.apache.logging.log4j.core.async.perftest.RunLog4j2 <name> <resultfile.txt> <-verbose> <-throughput>
- */
 public class PerfTest {
 
     private static final String LINE100 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!\"#$%&'()-=^~|\\@`[]{};:+*,.<>/?_123456";
-    public static final String LINE500 = LINE100 + LINE100 + LINE100 + LINE100 + LINE100;
+    public static final String LINE500 = LINE100 + LINE100 + LINE100 + LINE100
+            + LINE100;
 
     static boolean verbose = false;
     static boolean throughput;
@@ -77,12 +66,13 @@ public class PerfTest {
 
     public void doMain(final String[] args) throws Exception {
         final String runnerClass = args[0];
-        final IPerfTestRunner runner = Loader.newCheckedInstanceOf(runnerClass, IPerfTestRunner.class);
+        final IPerfTestRunner runner = (IPerfTestRunner) Class.forName(runnerClass)
+                .newInstance();
         final String name = args[1];
         final String resultFile = args.length > 2 ? args[2] : null;
         for (final String arg : args) {
             if (verbose && throughput) {
-                break;
+               break;
             }
             if ("-verbose".equalsIgnoreCase(arg)) {
                 verbose = true;
@@ -91,81 +81,68 @@ public class PerfTest {
                 throughput = true;
             }
         }
-        final int threadCount = 1;
-        printf("Starting %s %s (%d)...%n", getClass().getSimpleName(), name, threadCount);
+        final int threadCount = args.length > 2 ? Integer.parseInt(args[3]) : 3;
+        printf("Starting %s %s (%d)...%n", getClass().getSimpleName(), name,
+                threadCount);
         runTestAndPrintResult(runner, name, threadCount, resultFile);
         runner.shutdown();
         System.exit(0);
     }
 
-    public void runTestAndPrintResult(final IPerfTestRunner runner, final String name, final int threadCount,
-            final String resultFile) throws Exception {
+    public void runTestAndPrintResult(final IPerfTestRunner runner,
+            final String name, final int threadCount, final String resultFile)
+            throws Exception {
         final Histogram warmupHist = createHistogram();
 
         // ThreadContext.put("aKey", "mdcVal");
         println("Warming up the JVM...");
         final long t1 = System.nanoTime();
 
-        // warmup at least 10 seconds
-        final int LINES = 50000;
-        int iterations = 0;
-        final long stop = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        do {
+        // warmup at least 2 rounds and at most 1 minute
+        final long stop = System.currentTimeMillis() + (60 * 1000);
+        for (int i = 0; i < 10; i++) {
+            final int LINES = throughput ? 50000 : 200000;
             runTest(runner, LINES, null, warmupHist, 1);
-            iterations++;
-        } while (System.nanoTime() - stop < 0);
+            if (i > 0 && System.currentTimeMillis() >= stop) {
+                return;
+            }
+        }
 
-        printf("Warmup complete in %.1f seconds (%d iterations)%n", (System.nanoTime() - t1)
-                / (1000.0 * 1000.0 * 1000.0), iterations);
+        printf("Warmup complete in %.1f seconds%n", (System.nanoTime() - t1)
+                / (1000.0 * 1000.0 * 1000.0));
         println("Waiting 10 seconds for buffers to drain warmup data...");
-
-        Thread.sleep(3000);
-        //forceRemap(LINES, iterations, runner);
-        Thread.sleep(7000);
+        Thread.sleep(10000);
 
         println("Starting the main test...");
-        runSingleThreadedTest(runner, LINES, name, resultFile);
+        // test
+        throughput = false;
+        runSingleThreadedTest(runner, name, resultFile);
+
         Thread.sleep(1000);
+
+        throughput = true;
+        runSingleThreadedTest(runner, name, resultFile);
     }
 
-    /**
-     * Log some extra bytes to fill the memory mapped buffer to force it to remap.
-     */
-    private void forceRemap(final int linesPerIteration, final int iterations, final IPerfTestRunner runner) {
-        final int LINESEP = System.lineSeparator().getBytes(Charset.defaultCharset()).length;
-        final int bytesPerLine = 0 + IPerfTestRunner.THROUGHPUT_MSG.getBytes().length;
-        final int bytesWritten = bytesPerLine * linesPerIteration * iterations;
-        final int threshold = 1073741824; // magic number: defined in perf9MMapLocation.xml
-
-        int todo = threshold - bytesWritten;
-        if (todo <= 0) {
-            return;
-        }
-        final byte[] filler = new byte[4096];
-        Arrays.fill(filler, (byte) 'X');
-        final String str = new String(filler, Charset.defaultCharset());
-        do {
-            runner.log(str);
-        } while ((todo -= (4096 + LINESEP)) > 0);
-    }
-
-    private int runSingleThreadedTest(final IPerfTestRunner runner, final int LINES, final String name,
+    private int runSingleThreadedTest(final IPerfTestRunner runner, final String name,
             final String resultFile) throws IOException {
         final Histogram latency = createHistogram();
+        final int LINES = throughput ? 50000 : 5000000;
         runTest(runner, LINES, "end", latency, 1);
         reportResult(resultFile, name, latency);
         return LINES;
     }
 
-    static void reportResult(final String file, final String name, final Histogram histogram) throws IOException {
+    static void reportResult(final String file, final String name, final Histogram histogram)
+            throws IOException {
         final String result = createSamplingReport(name, histogram);
         println(result);
 
         if (file != null) {
-            try (final FileWriter writer = new FileWriter(file, true)) {
-                writer.write(result);
-                writer.write(System.lineSeparator());
-            }
+            final FileWriter writer = new FileWriter(file, true);
+            writer.write(result);
+            writer.write(System.getProperty("line.separator"));
+            writer.close();
         }
     }
 
@@ -186,8 +163,8 @@ public class PerfTest {
         if (throughput) {
             return data.getMax() + " operations/second";
         }
-        final String result = String.format("avg=%.0f 99%%=%d 99.99%%=%d sampleCount=%d", //
-                data.getMean(), //
+        final String result = String.format(
+                "avg=%.0f 99%%=%d 99.99%%=%d sampleCount=%d", data.getMean(), //
                 data.getTwoNinesUpperBound(), //
                 data.getFourNinesUpperBound(), //
                 data.getCount() //

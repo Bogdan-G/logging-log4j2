@@ -16,31 +16,19 @@
  */
 package org.apache.logging.log4j.core.appender;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.FileOwnerAttributeView;
-import java.nio.file.attribute.PosixFileAttributeView;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.util.Constants;
-import org.apache.logging.log4j.core.util.FileUtils;
 
 
 /**
@@ -51,105 +39,15 @@ public class FileManager extends OutputStreamManager {
     private static final FileManagerFactory FACTORY = new FileManagerFactory();
 
     private final boolean isAppend;
-    private final boolean createOnDemand;
     private final boolean isLocking;
     private final String advertiseURI;
-    private final int bufferSize;
-    private final Set<PosixFilePermission> filePermissions;
-    private final String fileOwner;
-    private final String fileGroup;
-    private final boolean attributeViewEnabled;
 
-    /**
-     * @deprecated
-     */
-    @Deprecated
     protected FileManager(final String fileName, final OutputStream os, final boolean append, final boolean locking,
-            final String advertiseURI, final Layout<? extends Serializable> layout, final int bufferSize,
-            final boolean writeHeader) {
-        this(fileName, os, append, locking, advertiseURI, layout, writeHeader, ByteBuffer.wrap(new byte[bufferSize]));
-    }
-
-    /**
-     * @deprecated
-     * @since 2.6
-     */
-    @Deprecated
-    protected FileManager(final String fileName, final OutputStream os, final boolean append, final boolean locking,
-            final String advertiseURI, final Layout<? extends Serializable> layout, final boolean writeHeader,
-            final ByteBuffer buffer) {
-        super(os, fileName, layout, writeHeader, buffer);
+                          final String advertiseURI, final Layout<? extends Serializable> layout) {
+        super(os, fileName, layout);
         this.isAppend = append;
-        this.createOnDemand = false;
         this.isLocking = locking;
         this.advertiseURI = advertiseURI;
-        this.bufferSize = buffer.capacity();
-        this.filePermissions = null;
-        this.fileOwner = null;
-        this.fileGroup = null;
-        this.attributeViewEnabled = false;
-    }
-
-    /**
-     * @deprecated
-     * @since 2.7
-     */
-    @Deprecated
-    protected FileManager(final LoggerContext loggerContext, final String fileName, final OutputStream os, final boolean append, final boolean locking,
-            final boolean createOnDemand, final String advertiseURI, final Layout<? extends Serializable> layout,
-            final boolean writeHeader, final ByteBuffer buffer) {
-        super(loggerContext, os, fileName, createOnDemand, layout, writeHeader, buffer);
-        this.isAppend = append;
-        this.createOnDemand = createOnDemand;
-        this.isLocking = locking;
-        this.advertiseURI = advertiseURI;
-        this.bufferSize = buffer.capacity();
-        this.filePermissions = null;
-        this.fileOwner = null;
-        this.fileGroup = null;
-        this.attributeViewEnabled = false;
-    }
-
-    /**
-     * @since 2.9
-     */
-    protected FileManager(final LoggerContext loggerContext, final String fileName, final OutputStream os, final boolean append, final boolean locking,
-            final boolean createOnDemand, final String advertiseURI, final Layout<? extends Serializable> layout,
-            final String filePermissions, final String fileOwner, final String fileGroup, final boolean writeHeader,
-            final ByteBuffer buffer) {
-        super(loggerContext, os, fileName, createOnDemand, layout, writeHeader, buffer);
-        this.isAppend = append;
-        this.createOnDemand = createOnDemand;
-        this.isLocking = locking;
-        this.advertiseURI = advertiseURI;
-        this.bufferSize = buffer.capacity();
-
-        final Set<String> views = FileSystems.getDefault().supportedFileAttributeViews();
-        if (views.contains("posix")) {
-            this.filePermissions = filePermissions != null ? PosixFilePermissions.fromString(filePermissions) : null;
-            this.fileGroup = fileGroup;
-        } else {
-            this.filePermissions = null;
-            this.fileGroup = null;
-            if (filePermissions != null) {
-                LOGGER.warn("Posix file attribute permissions defined but it is not supported by this files system.");
-            }
-            if (fileGroup != null) {
-                LOGGER.warn("Posix file attribute group defined but it is not supported by this files system.");
-            }
-        }
-
-        if (views.contains("owner")) {
-            this.fileOwner = fileOwner;
-        } else {
-            this.fileOwner = null;
-            if (fileOwner != null) {
-                LOGGER.warn("Owner file attribute defined but it is not supported by this files system.");
-            }
-        }
-
-        // Supported and defined
-        this.attributeViewEnabled = this.filePermissions != null || this.fileOwner != null || this.fileGroup != null;
     }
 
     /**
@@ -157,108 +55,47 @@ public class FileManager extends OutputStreamManager {
      * @param fileName The name of the file to manage.
      * @param append true if the file should be appended to, false if it should be overwritten.
      * @param locking true if the file should be locked while writing, false otherwise.
-     * @param bufferedIo true if the contents should be buffered as they are written.
-     * @param createOnDemand true if you want to lazy-create the file (a.k.a. on-demand.)
-     * @param advertiseUri the URI to use when advertising the file
+     * @param bufferedIO true if the contents should be buffered as they are written.
+     * @param advertiseURI the URI to use when advertising the file
      * @param layout The layout
-     * @param bufferSize buffer size for buffered IO
-     * @param filePermissions File permissions
-     * @param fileOwner File owner
-     * @param fileOwner File group
-     * @param configuration The configuration.
      * @return A FileManager for the File.
      */
     public static FileManager getFileManager(final String fileName, final boolean append, boolean locking,
-            final boolean bufferedIo, final boolean createOnDemand, final String advertiseUri,
-            final Layout<? extends Serializable> layout,
-            final int bufferSize, final String filePermissions, final String fileOwner, final String fileGroup,
-            final Configuration configuration) {
+                                             final boolean bufferedIO, final String advertiseURI,
+                                             final Layout<? extends Serializable> layout) {
 
-        if (locking && bufferedIo) {
+        if (locking && bufferedIO) {
             locking = false;
         }
-        return narrow(FileManager.class, getManager(fileName, new FactoryData(append, locking, bufferedIo, bufferSize,
-                createOnDemand, advertiseUri, layout, filePermissions, fileOwner, fileGroup, configuration), FACTORY));
+        return (FileManager) getManager(fileName, new FactoryData(append, locking, bufferedIO, advertiseURI, layout),
+            FACTORY);
     }
 
     @Override
-    protected OutputStream createOutputStream() throws IOException {
-        final String filename = getFileName();
-        LOGGER.debug("Now writing to {} at {}", filename, new Date());
-        final FileOutputStream fos = new FileOutputStream(filename, isAppend);
-        defineAttributeView(Paths.get(filename));
-        return fos;
-    }
+    protected synchronized void write(final byte[] bytes, final int offset, final int length)  {
 
-    protected void defineAttributeView(final Path path) {
-        if (attributeViewEnabled) {
-            try {
-                // FileOutputStream may not create new file on all jvm
-                path.toFile().createNewFile();
-
-                FileUtils.defineFilePosixAttributeView(path, filePermissions, fileOwner, fileGroup);
-            } catch (final Exception e) {
-                LOGGER.error("Could not define attribute view on path \"{}\" got {}", path, e.getMessage(), e);
-            }
-        }
-    }
-
-    @Override
-    protected synchronized void write(final byte[] bytes, final int offset, final int length,
-            final boolean immediateFlush) {
         if (isLocking) {
+            final FileChannel channel = ((FileOutputStream) getOutputStream()).getChannel();
             try {
-                @SuppressWarnings("resource")
-                final FileChannel channel = ((FileOutputStream) getOutputStream()).getChannel();
-                /*
-                 * Lock the whole file. This could be optimized to only lock from the current file position. Note that
-                 * locking may be advisory on some systems and mandatory on others, so locking just from the current
-                 * position would allow reading on systems where locking is mandatory. Also, Java 6 will throw an
-                 * exception if the region of the file is already locked by another FileChannel in the same JVM.
-                 * Hopefully, that will be avoided since every file should have a single file manager - unless two
-                 * different files strings are configured that somehow map to the same file.
-                 */
-                try (final FileLock lock = channel.lock(0, Long.MAX_VALUE, false)) {
-                    super.write(bytes, offset, length, immediateFlush);
+                /* Lock the whole file. This could be optimized to only lock from the current file
+                   position. Note that locking may be advisory on some systems and mandatory on others,
+                   so locking just from the current position would allow reading on systems where
+                   locking is mandatory.  Also, Java 6 will throw an exception if the region of the
+                   file is already locked by another FileChannel in the same JVM. Hopefully, that will
+                   be avoided since every file should have a single file manager - unless two different
+                   files strings are configured that somehow map to the same file.*/
+                final FileLock lock = channel.lock(0, Long.MAX_VALUE, false);
+                try {
+                    super.write(bytes, offset, length);
+                } finally {
+                    lock.release();
                 }
             } catch (final IOException ex) {
                 throw new AppenderLoggingException("Unable to obtain lock on " + getName(), ex);
             }
-        } else {
-            super.write(bytes, offset, length, immediateFlush);
-        }
-    }
 
-    /**
-     * Overrides {@link OutputStreamManager#writeToDestination(byte[], int, int)} to add support for file locking.
-     *
-     * @param bytes the array containing data
-     * @param offset from where to write
-     * @param length how many bytes to write
-     * @since 2.8
-     */
-    @Override
-    protected synchronized void writeToDestination(final byte[] bytes, final int offset, final int length) {
-        if (isLocking) {
-            try {
-                @SuppressWarnings("resource")
-                final FileChannel channel = ((FileOutputStream) getOutputStream()).getChannel();
-                /*
-                 * Lock the whole file. This could be optimized to only lock from the current file position. Note that
-                 * locking may be advisory on some systems and mandatory on others, so locking just from the current
-                 * position would allow reading on systems where locking is mandatory. Also, Java 6 will throw an
-                 * exception if the region of the file is already locked by another FileChannel in the same JVM.
-                 * Hopefully, that will be avoided since every file should have a single file manager - unless two
-                 * different files strings are configured that somehow map to the same file.
-                 */
-                try (final FileLock lock = channel.lock(0, Long.MAX_VALUE, false)) {
-                    super.writeToDestination(bytes, offset, length);
-                }
-            } catch (final IOException ex) {
-                throw new AppenderLoggingException("Unable to obtain lock on " + getName(), ex);
-            }
         } else {
-            super.writeToDestination(bytes, offset, length);
+            super.write(bytes, offset, length);
         }
     }
 
@@ -269,20 +106,13 @@ public class FileManager extends OutputStreamManager {
     public String getFileName() {
         return getName();
     }
+
     /**
      * Returns the append status.
      * @return true if the file will be appended to, false if it is overwritten.
      */
     public boolean isAppend() {
         return isAppend;
-    }
-
-    /**
-     * Returns the lazy-create.
-     * @return true if the file will be lazy-created.
-     */
-    public boolean isCreateOnDemand() {
-        return createOnDemand;
     }
 
     /**
@@ -294,61 +124,13 @@ public class FileManager extends OutputStreamManager {
     }
 
     /**
-     * Returns the buffer size to use if the appender was configured with BufferedIO=true, otherwise returns a negative
-     * number.
-     * @return the buffer size, or a negative number if the output stream is not buffered
-     */
-    public int getBufferSize() {
-        return bufferSize;
-    }
-
-    /**
-     * Returns posix file permissions if defined and the OS supports posix file attribute,
-     * null otherwise.
-     * @return File posix permissions
-     * @see PosixFileAttributeView
-     */
-    public Set<PosixFilePermission> getFilePermissions() {
-        return filePermissions;
-    }
-
-    /**
-     * Returns file owner if defined and the OS supports owner file attribute view,
-     * null otherwise.
-     * @return File owner
-     * @see FileOwnerAttributeView
-     */
-    public String getFileOwner() {
-        return fileOwner;
-    }
-
-    /**
-     * Returns file group if defined and the OS supports posix/group file attribute view,
-     * null otherwise.
-     * @return File group
-     * @see PosixFileAttributeView
-     */
-    public String getFileGroup() {
-        return fileGroup;
-    }
-
-    /**
-     * Returns true if file attribute view enabled for this file manager.
-     *
-     * @return True if posix or owner supported and defined false otherwise.
-     */
-    public boolean isAttributeViewEnabled() {
-        return attributeViewEnabled;
-    }
-
-    /**
      * FileManager's content format is specified by: <code>Key: "fileURI" Value: provided "advertiseURI" param</code>.
      *
      * @return Map of content format keys supporting FileManager
      */
     @Override
     public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>(super.getContentFormat());
+        final Map<String, String> result = new HashMap<String, String>(super.getContentFormat());
         result.put("fileURI", advertiseURI);
         return result;
     }
@@ -356,47 +138,27 @@ public class FileManager extends OutputStreamManager {
     /**
      * Factory Data.
      */
-    private static class FactoryData extends ConfigurationFactoryData {
+    private static class FactoryData {
         private final boolean append;
         private final boolean locking;
-        private final boolean bufferedIo;
-        private final int bufferSize;
-        private final boolean createOnDemand;
+        private final boolean bufferedIO;
         private final String advertiseURI;
         private final Layout<? extends Serializable> layout;
-        private final String filePermissions;
-        private final String fileOwner;
-        private final String fileGroup;
 
         /**
          * Constructor.
          * @param append Append status.
          * @param locking Locking status.
-         * @param bufferedIo Buffering flag.
-         * @param bufferSize Buffer size.
-         * @param createOnDemand if you want to lazy-create the file (a.k.a. on-demand.)
+         * @param bufferedIO Buffering flag.
          * @param advertiseURI the URI to use when advertising the file
-         * @param layout The layout
-         * @param filePermissions File permissions
-         * @param fileOwner File owner
-         * @param fileGroup File group
-         * @param configuration the configuration
          */
-        public FactoryData(final boolean append, final boolean locking, final boolean bufferedIo, final int bufferSize,
-                final boolean createOnDemand, final String advertiseURI, final Layout<? extends Serializable> layout,
-                final String filePermissions, final String fileOwner, final String fileGroup,
-                final Configuration configuration) {
-            super(configuration);
+        public FactoryData(final boolean append, final boolean locking, final boolean bufferedIO,
+                           final String advertiseURI, final Layout<? extends Serializable> layout) {
             this.append = append;
             this.locking = locking;
-            this.bufferedIo = bufferedIo;
-            this.bufferSize = bufferSize;
-            this.createOnDemand = createOnDemand;
+            this.bufferedIO = bufferedIO;
             this.advertiseURI = advertiseURI;
             this.layout = layout;
-            this.filePermissions = filePermissions;
-            this.fileOwner = fileOwner;
-            this.fileGroup = fileGroup;
         }
     }
 
@@ -406,7 +168,7 @@ public class FileManager extends OutputStreamManager {
     private static class FileManagerFactory implements ManagerFactory<FileManager, FactoryData> {
 
         /**
-         * Creates a FileManager.
+         * Create a FileManager.
          * @param name The name of the File.
          * @param data The FactoryData
          * @return The FileManager for the File.
@@ -414,21 +176,20 @@ public class FileManager extends OutputStreamManager {
         @Override
         public FileManager createManager(final String name, final FactoryData data) {
             final File file = new File(name);
+            final File parent = file.getParentFile();
+            if (null != parent && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            OutputStream os;
             try {
-                FileUtils.makeParentDirs(file);
-                final boolean writeHeader = !data.append || !file.exists();
-                final int actualSize = data.bufferedIo ? data.bufferSize : Constants.ENCODER_BYTE_BUFFER_SIZE;
-                final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[actualSize]);
-                final FileOutputStream fos = data.createOnDemand ? null : new FileOutputStream(file, data.append);
-                final FileManager fm = new FileManager(data.getLoggerContext(), name, fos, data.append, data.locking,
-                        data.createOnDemand, data.advertiseURI, data.layout,
-                        data.filePermissions, data.fileOwner, data.fileGroup, writeHeader, byteBuffer);
-                if (fos != null && fm.attributeViewEnabled) {
-                    fm.defineAttributeView(file.toPath());
+                os = new FileOutputStream(name, data.append);
+                if (data.bufferedIO) {
+                    os = new BufferedOutputStream(os);
                 }
-                return fm;
-            } catch (final IOException ex) {
-                LOGGER.error("FileManager (" + name + ") " + ex, ex);
+                return new FileManager(name, os, data.append, data.locking, data.advertiseURI, data.layout);
+            } catch (final FileNotFoundException ex) {
+                LOGGER.error("FileManager (" + name + ") " + ex);
             }
             return null;
         }

@@ -63,7 +63,7 @@ public class ClientEditConfigPanel extends JPanel {
         @Override
         public void actionPerformed(final ActionEvent e) {
             try {
-                contextAdmin.setConfigLocationUri(locationTextField.getText());
+                contextAdmin.setConfigLocationURI(locationTextField.getText());
                 populateWidgets();
                 showConfirmation();
             } catch (final Exception ex) {
@@ -119,7 +119,7 @@ public class ClientEditConfigPanel extends JPanel {
             ex.printStackTrace(new PrintWriter(sw));
             configTextArea.setText(sw.toString());
         }
-        final String uri = contextAdmin.getConfigLocationUri();
+        final String uri = contextAdmin.getConfigLocationURI();
         locationTextField.setText(uri);
     }
 
@@ -128,7 +128,8 @@ public class ClientEditConfigPanel extends JPanel {
         // configTextArea.setEditable(false);
         configTextArea.setBackground(Color.white);
         configTextArea.setForeground(Color.black);
-        configTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, configTextArea.getFont().getSize()));
+        configTextArea.setFont(new Font("Monospaced", Font.PLAIN,
+                configTextArea.getFont().getSize()));
         final JScrollPane scrollConfig = new JScrollPane(configTextArea);
 
         locationTextField = new JTextField(LOCATION_TEXT_COLS);

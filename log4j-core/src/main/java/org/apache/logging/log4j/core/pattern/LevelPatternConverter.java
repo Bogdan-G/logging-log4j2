@@ -16,22 +16,18 @@
  */
 package org.apache.logging.log4j.core.pattern;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Locale;
-import java.util.Map;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.util.Patterns;
-import org.apache.logging.log4j.util.PerformanceSensitive;
 
 /**
  * Returns the event's level in a StringBuilder.
  */
-@Plugin(name = "LevelPatternConverter", category = PatternConverter.CATEGORY)
+@Plugin(name = "LevelPatternConverter", category = "Converter")
 @ConverterKeys({ "p", "level" })
-@PerformanceSensitive("allocation")
 public final class LevelPatternConverter extends LogEventPatternConverter {
     private static final String OPTION_LENGTH = "length";
     private static final String OPTION_LOWER = "lowerCase";
@@ -41,19 +37,19 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
      */
     private static final LevelPatternConverter INSTANCE = new LevelPatternConverter(null);
 
-    private final Map<Level, String> levelMap;
+    private final EnumMap<Level, String> levelMap;
 
     /**
      * Private constructor.
      */
-    private LevelPatternConverter(final Map<Level, String> map) {
+    private LevelPatternConverter(final EnumMap<Level, String> map) {
         super("Level", "level");
         this.levelMap = map;
     }
 
     /**
      * Obtains an instance of pattern converter.
-     *
+     * 
      * @param options
      *            options, may be null. May contain a list of level names and The value that should be displayed for the
      *            Level.
@@ -63,10 +59,10 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
         if (options == null || options.length == 0) {
             return INSTANCE;
         }
-        final Map<Level, String> levelMap = new HashMap<>();
+        final EnumMap<Level, String> levelMap = new EnumMap<Level, String>(Level.class);
         int length = Integer.MAX_VALUE; // More than the longest level name.
         boolean lowerCase = false;
-        final String[] definitions = options[0].split(Patterns.COMMA_SEPARATOR);
+        final String[] definitions = options[0].split(",");
         for (final String def : definitions) {
             final String[] pair = def.split("=");
             if (pair == null || pair.length != 2) {
@@ -88,7 +84,7 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
                 }
             }
         }
-        if (levelMap.isEmpty() && length == Integer.MAX_VALUE && !lowerCase) {
+        if (levelMap.size() == 0 && length == Integer.MAX_VALUE && !lowerCase) {
             return INSTANCE;
         }
         for (final Level level : Level.values()) {
@@ -102,7 +98,7 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
 
     /**
      * Returns the leftmost chars of the level name for the given level.
-     *
+     * 
      * @param level
      *            The level
      * @param length
@@ -110,7 +106,7 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
      * @return The abbreviated level name, or the whole level name if the {@code length} is greater than the level name
      *         length,
      */
-    private static String left(final Level level, final int length) {
+    private static String left(final Level level, int length) {
         final String string = level.toString();
         if (length >= string.length()) {
             return string;
@@ -132,7 +128,30 @@ public final class LevelPatternConverter extends LogEventPatternConverter {
     @Override
     public String getStyleClass(final Object e) {
         if (e instanceof LogEvent) {
-            return "level " + ((LogEvent) e).getLevel().name().toLowerCase(Locale.ENGLISH);
+            final Level level = ((LogEvent) e).getLevel();
+
+            switch (level) {
+            case TRACE:
+                return "level trace";
+
+            case DEBUG:
+                return "level debug";
+
+            case INFO:
+                return "level info";
+
+            case WARN:
+                return "level warn";
+
+            case ERROR:
+                return "level error";
+
+            case FATAL:
+                return "level fatal";
+
+            default:
+                return "level " + ((LogEvent) e).getLevel().toString();
+            }
         }
 
         return "level";
