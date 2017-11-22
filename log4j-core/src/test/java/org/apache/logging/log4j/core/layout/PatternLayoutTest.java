@@ -14,7 +14,7 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-package org.apache.logging.log4j.core.layout;
+/*package org.apache.logging.log4j.core.layout;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -34,11 +34,11 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
-
+*/
 /**
  *
  */
-public class PatternLayoutTest {
+/*public class PatternLayoutTest {
     static String OUTPUT_FILE   = "target/output/PatternParser";
     static String WITNESS_FILE  = "witness/PatternParser";
     LoggerContext ctx = (LoggerContext) LogManager.getContext();
@@ -60,11 +60,11 @@ public class PatternLayoutTest {
         ConfigurationFactory.removeConfigurationFactory(cf);
     }
 
-
+*/
     /**
      * Test case for MDC conversion pattern.
      */
-    @Test
+    /*@Test
     public void mdcPattern() throws Exception {
 
         final String mdcMsgPattern1 = "%m : %X%n";
@@ -143,4 +143,4 @@ public class PatternLayoutTest {
         final byte[] result = layout.toByteArray(event);
         assertEquals("org/apache/logging/log4j/core/layout/PatternLayoutTest Hello, world!", new String(result));
     }
-}
+}*/

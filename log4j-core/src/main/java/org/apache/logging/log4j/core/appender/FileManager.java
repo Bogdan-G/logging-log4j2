@@ -62,12 +62,12 @@ public class FileManager extends OutputStreamManager {
      */
     public static FileManager getFileManager(final String fileName, final boolean append, boolean locking,
                                              final boolean bufferedIO, final String advertiseURI,
-                                             final Layout<? extends Serializable> layout) {
+                                             final Layout<? extends Serializable> layout, final int bufferSize) {
 
         if (locking && bufferedIO) {
             locking = false;
         }
-        return (FileManager) getManager(fileName, new FactoryData(append, locking, bufferedIO, advertiseURI, layout),
+        return (FileManager) getManager(fileName, new FactoryData(append, locking, bufferedIO, bufferSize, advertiseURI, layout),
             FACTORY);
     }
 
@@ -142,6 +142,7 @@ public class FileManager extends OutputStreamManager {
         private final boolean append;
         private final boolean locking;
         private final boolean bufferedIO;
+        private final int bufferSize;
         private final String advertiseURI;
         private final Layout<? extends Serializable> layout;
 
@@ -152,11 +153,12 @@ public class FileManager extends OutputStreamManager {
          * @param bufferedIO Buffering flag.
          * @param advertiseURI the URI to use when advertising the file
          */
-        public FactoryData(final boolean append, final boolean locking, final boolean bufferedIO,
+        public FactoryData(final boolean append, final boolean locking, final boolean bufferedIO, final int bufferSize,
                            final String advertiseURI, final Layout<? extends Serializable> layout) {
             this.append = append;
             this.locking = locking;
             this.bufferedIO = bufferedIO;
+            this.bufferSize = bufferSize;
             this.advertiseURI = advertiseURI;
             this.layout = layout;
         }
@@ -185,7 +187,7 @@ public class FileManager extends OutputStreamManager {
             try {
                 os = new FileOutputStream(name, data.append);
                 if (data.bufferedIO) {
-                    os = new BufferedOutputStream(os);
+                    os = new BufferedOutputStream(os, data.bufferSize);
                 }
                 return new FileManager(name, os, data.append, data.locking, data.advertiseURI, data.layout);
             } catch (final FileNotFoundException ex) {

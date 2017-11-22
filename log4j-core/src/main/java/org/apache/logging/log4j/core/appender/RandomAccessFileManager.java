@@ -45,16 +45,16 @@ public class RandomAccessFileManager extends OutputStreamManager {
 
     protected RandomAccessFileManager(final RandomAccessFile file,
             final String fileName, final OutputStream os,
-            final boolean immediateFlush, final String advertiseURI,
-            final Layout<? extends Serializable> layout) {
+            final boolean immediateFlush, int bufferSize,
+            final String advertiseURI, final Layout<? extends Serializable> layout) {
         super(os, fileName, layout);
         this.isImmediateFlush = immediateFlush;
         this.randomAccessFile = file;
         this.advertiseURI = advertiseURI;
-        isEndOfBatch.set(Boolean.FALSE);
+        this.isEndOfBatch.set(Boolean.FALSE);
 
         // TODO make buffer size configurable?
-        buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
+        this.buffer = ByteBuffer.allocate(bufferSize);
     }
 
     /**
@@ -70,10 +70,10 @@ public class RandomAccessFileManager extends OutputStreamManager {
      * @return A RandomAccessFileManager for the File.
      */
     public static RandomAccessFileManager getFileManager(final String fileName,
-            final boolean append, final boolean isFlush,
+            final boolean append, final boolean isFlush, int bufferSize,
             final String advertiseURI, final Layout<? extends Serializable> layout) {
         return (RandomAccessFileManager) getManager(fileName, new FactoryData(append,
-                isFlush, advertiseURI, layout), FACTORY);
+                isFlush, bufferSize, advertiseURI, layout), FACTORY);
     }
 
     public Boolean isEndOfBatch() {
@@ -168,6 +168,7 @@ public class RandomAccessFileManager extends OutputStreamManager {
     private static class FactoryData {
         private final boolean append;
         private final boolean immediateFlush;
+        private final int bufferSize;
         private final String advertiseURI;
         private final Layout<? extends Serializable> layout;
 
@@ -177,9 +178,10 @@ public class RandomAccessFileManager extends OutputStreamManager {
          * @param append Append status.
          */
         public FactoryData(final boolean append, final boolean immediateFlush,
-                final String advertiseURI, final Layout<? extends Serializable> layout) {
+                int bufferSize, final String advertiseURI, final Layout<? extends Serializable> layout) {
             this.append = append;
             this.immediateFlush = immediateFlush;
+            this.bufferSize = bufferSize;
             this.advertiseURI = advertiseURI;
             this.layout = layout;
         }
@@ -219,7 +221,7 @@ public class RandomAccessFileManager extends OutputStreamManager {
                     raf.setLength(0);
                 }
                 return new RandomAccessFileManager(raf, name, os, data.immediateFlush,
-                        data.advertiseURI, data.layout);
+                        data.bufferSize, data.advertiseURI, data.layout);
             } catch (final Exception ex) {
                 LOGGER.error("RandomAccessFileManager (" + name + ") " + ex);
             }

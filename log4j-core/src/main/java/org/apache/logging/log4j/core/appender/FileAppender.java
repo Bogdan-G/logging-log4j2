@@ -29,6 +29,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.core.helpers.Integers;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.core.net.Advertiser;
 
@@ -38,6 +39,7 @@ import org.apache.logging.log4j.core.net.Advertiser;
 @Plugin(name = "File", category = "Core", elementType = "appender", printObject = true)
 public final class FileAppender extends AbstractOutputStreamAppender {
 
+    private static final int DEFAULT_BUFFER_SIZE = 8192;
     private final String fileName;
     private final Advertiser advertiser;
     private Object advertisement;
@@ -102,6 +104,7 @@ public final class FileAppender extends AbstractOutputStreamAppender {
             @PluginAttribute("immediateFlush") final String immediateFlush,
             @PluginAttribute("ignoreExceptions") final String ignore,
             @PluginAttribute("bufferedIO") final String bufferedIO,
+            @PluginAttribute("bufferSize") final String bufferSizeStr,
             @PluginElement("Layout") Layout<? extends Serializable> layout,
             @PluginElement("Filters") final Filter filter,
             @PluginAttribute("advertise") final String advertise,
@@ -117,6 +120,10 @@ public final class FileAppender extends AbstractOutputStreamAppender {
                 LOGGER.warn("Locking and buffering are mutually exclusive. No buffering will occur for " + fileName);
             }
             isBuffered = false;
+        }
+        final int bufferSize = Integers.parseInt(bufferSizeStr, DEFAULT_BUFFER_SIZE);
+        if (!isBuffered && bufferSize > 0) {
+            LOGGER.warn("The bufferSize is set to {} but bufferedIO is not true: {}", bufferSize, bufferedIO);
         }
         final boolean isFlush = Booleans.parseBoolean(immediateFlush, true);
         final boolean ignoreExceptions = Booleans.parseBoolean(ignore, true);
@@ -135,7 +142,7 @@ public final class FileAppender extends AbstractOutputStreamAppender {
         }
 
         final FileManager manager = FileManager.getFileManager(fileName, isAppend, isLocking, isBuffered, advertiseURI,
-            layout);
+            layout, bufferSize);
         if (manager == null) {
             return null;
         }
