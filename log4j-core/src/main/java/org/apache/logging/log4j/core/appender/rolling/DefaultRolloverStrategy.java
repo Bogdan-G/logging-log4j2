@@ -23,6 +23,7 @@ import java.util.zip.Deflater;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.appender.rolling.helper.Action;
+import org.apache.logging.log4j.core.appender.rolling.helper.Bzip2CompressAction;
 import org.apache.logging.log4j.core.appender.rolling.helper.FileRenameAction;
 import org.apache.logging.log4j.core.appender.rolling.helper.GZCompressAction;
 import org.apache.logging.log4j.core.appender.rolling.helper.ZipCompressAction;
@@ -143,6 +144,9 @@ public class DefaultRolloverStrategy implements RolloverStrategy {
                 renameTo = renameTo.substring(0, renameTo.length() - 4);
                 compressAction = new ZipCompressAction(new File(renameTo), new File(compressedName), true, 
                         compressionLevel);
+            } else if (renameTo.endsWith(".bz2")) {
+                renameTo = renameTo.substring(0, renameTo.length() - 4);
+                compressAction = new Bzip2CompressAction(new File(renameTo), new File(compressedName), true);
             }
 
             final FileRenameAction renameAction =

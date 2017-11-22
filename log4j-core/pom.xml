@@ -68,6 +68,12 @@
       <artifactId>jansi</artifactId>
       <optional>true</optional>
     </dependency>
+    <!-- Used for compressing to formats other than zip and gz -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>javax.jmdns</groupId>
       <artifactId>jmdns</artifactId>
