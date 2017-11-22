@@ -16,11 +16,13 @@
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.lookup.StrSubstitutor;
@@ -29,12 +31,14 @@ import org.apache.logging.log4j.core.pattern.DatePatternConverter;
 import org.apache.logging.log4j.core.pattern.FormattingInfo;
 import org.apache.logging.log4j.core.pattern.PatternConverter;
 import org.apache.logging.log4j.core.pattern.PatternParser;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Parse the rollover pattern.
  */
 public class PatternProcessor {
 
+    protected static final Logger LOGGER = StatusLogger.getLogger();
     private static final String KEY = "FileConverter";
 
     private static final char YEAR_CHAR = 'y';
@@ -100,21 +104,21 @@ public class PatternProcessor {
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.YEAR, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         if (frequency == RolloverFrequency.MONTHLY) {
             increment(cal, Calendar.MONTH, increment, modulus);
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.MONTH, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         if (frequency == RolloverFrequency.WEEKLY) {
             increment(cal, Calendar.WEEK_OF_YEAR, increment, modulus);
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.WEEK_OF_YEAR, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         cal.set(Calendar.DAY_OF_YEAR, currentCal.get(Calendar.DAY_OF_YEAR));
         if (frequency == RolloverFrequency.DAILY) {
@@ -122,7 +126,7 @@ public class PatternProcessor {
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.DAY_OF_YEAR, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         cal.set(Calendar.HOUR, currentCal.get(Calendar.HOUR));
         if (frequency == RolloverFrequency.HOURLY) {
@@ -130,7 +134,7 @@ public class PatternProcessor {
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.HOUR, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         cal.set(Calendar.MINUTE, currentCal.get(Calendar.MINUTE));
         if (frequency == RolloverFrequency.EVERY_MINUTE) {
@@ -138,7 +142,7 @@ public class PatternProcessor {
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.MINUTE, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         cal.set(Calendar.SECOND, currentCal.get(Calendar.SECOND));
         if (frequency == RolloverFrequency.EVERY_SECOND) {
@@ -146,13 +150,25 @@ public class PatternProcessor {
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.SECOND, -1);
             nextFileTime = cal.getTimeInMillis();
-            return nextTime;
+            return debugGetNextTime(nextTime);
         }
         increment(cal, Calendar.MILLISECOND, increment, modulus);
         nextTime = cal.getTimeInMillis();
         cal.add(Calendar.MILLISECOND, -1);
         nextFileTime = cal.getTimeInMillis();
+        return debugGetNextTime(nextTime);
+    }
+
+    private long debugGetNextTime(long nextTime) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("PatternProcessor.getNextTime returning {}, nextFileTime={}, prevFileTime={}, freq={}", //
+                    format(nextTime), format(nextFileTime), format(prevFileTime), frequency);
+        }
         return nextTime;
+    }
+
+    private String format(long time) {
+        return new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss.SSS").format(new Date(time));
     }
 
     private void increment(final Calendar cal, final int type, final int increment, final boolean modulate) {
