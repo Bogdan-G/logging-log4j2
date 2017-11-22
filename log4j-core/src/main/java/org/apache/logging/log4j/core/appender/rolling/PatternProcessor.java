@@ -106,6 +106,7 @@ public class PatternProcessor {
             nextFileTime = cal.getTimeInMillis();
             return debugGetNextTime(nextTime);
         }
+        cal.set(Calendar.MONTH, currentCal.get(Calendar.MONTH));
         if (frequency == RolloverFrequency.MONTHLY) {
             increment(cal, Calendar.MONTH, increment, modulus);
             nextTime = cal.getTimeInMillis();
@@ -114,7 +115,9 @@ public class PatternProcessor {
             return debugGetNextTime(nextTime);
         }
         if (frequency == RolloverFrequency.WEEKLY) {
+            cal.set(Calendar.WEEK_OF_YEAR, currentCal.get(Calendar.WEEK_OF_YEAR));
             increment(cal, Calendar.WEEK_OF_YEAR, increment, modulus);
+            cal.set(Calendar.DAY_OF_WEEK, currentCal.getFirstDayOfWeek());
             nextTime = cal.getTimeInMillis();
             cal.add(Calendar.WEEK_OF_YEAR, -1);
             nextFileTime = cal.getTimeInMillis();
@@ -128,11 +131,11 @@ public class PatternProcessor {
             nextFileTime = cal.getTimeInMillis();
             return debugGetNextTime(nextTime);
         }
-        cal.set(Calendar.HOUR, currentCal.get(Calendar.HOUR));
+        cal.set(Calendar.HOUR_OF_DAY, currentCal.get(Calendar.HOUR_OF_DAY));
         if (frequency == RolloverFrequency.HOURLY) {
-            increment(cal, Calendar.HOUR, increment, modulus);
+            increment(cal, Calendar.HOUR_OF_DAY, increment, modulus);
             nextTime = cal.getTimeInMillis();
-            cal.add(Calendar.HOUR, -1);
+            cal.add(Calendar.HOUR_OF_DAY, -1);
             nextFileTime = cal.getTimeInMillis();
             return debugGetNextTime(nextTime);
         }
@@ -152,6 +155,7 @@ public class PatternProcessor {
             nextFileTime = cal.getTimeInMillis();
             return debugGetNextTime(nextTime);
         }
+        cal.set(Calendar.MILLISECOND, currentCal.get(Calendar.MILLISECOND));
         increment(cal, Calendar.MILLISECOND, increment, modulus);
         nextTime = cal.getTimeInMillis();
         cal.add(Calendar.MILLISECOND, -1);
