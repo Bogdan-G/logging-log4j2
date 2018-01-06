@@ -95,6 +95,22 @@ public final class FileAppender extends AbstractOutputStreamAppender {
      * @param config The Configuration
      * @return The FileAppender.
      */
+    public static FileAppender createAppender(
+            final String fileName,
+            final String append,
+            final String locking,
+            final String name,
+            final String immediateFlush,
+            final String ignore,
+            final String bufferedIO,
+            Layout<? extends Serializable> layout,
+            final Filter filter,
+            final String advertise,
+            final String advertiseURI,
+            final Configuration config) {
+        return createAppender(fileName, append, locking, name, immediateFlush, ignore, bufferedIO, "8192", layout, filter, advertise, advertiseURI, config);
+    }
+     
     @PluginFactory
     public static FileAppender createAppender(
             @PluginAttribute("fileName") final String fileName,
